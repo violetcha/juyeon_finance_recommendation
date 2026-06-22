@@ -13,4 +13,5 @@ urlpatterns = [
     path('api/chatbot/', include('chatbot.urls')),
     path('api/maps/', include('maps.urls')),
     path('api/videos/', include('videos.urls')),
+    path('api/assets/', include('assets.urls')),
 ]

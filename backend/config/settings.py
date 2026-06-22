@@ -67,6 +67,7 @@ INSTALLED_APPS = [
     'chatbot',
     'maps',
     'videos',
+    'assets',
 ]
 
 MIDDLEWARE = [

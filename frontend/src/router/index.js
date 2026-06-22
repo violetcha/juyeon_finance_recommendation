@@ -87,7 +87,12 @@ const router = createRouter({
       path: '/main-bank',
       name: 'main-bank',
       component: MainBankView,
-    }
+    },
+    {
+      path: '/spot-assets',
+      name: 'SpotAsset',
+      component: () => import('@/views/SpotAssetView.vue'),
+    },
 
   ],
 })

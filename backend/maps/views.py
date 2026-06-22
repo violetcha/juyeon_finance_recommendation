@@ -82,3 +82,60 @@ def bank_search(request):
         'count': len(branches),
         'branches': branches,
     })
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def route_search(request):
+    origin_lat = request.GET.get('origin_lat')
+    origin_lng = request.GET.get('origin_lng')
+    destination_lat = request.GET.get('destination_lat')
+    destination_lng = request.GET.get('destination_lng')
+    priority = request.GET.get('priority', 'RECOMMEND')
+
+    if not all([origin_lat, origin_lng, destination_lat, destination_lng]):
+        return Response(
+            {'message': 'origin_lat, origin_lng, destination_lat, destination_lng 값이 필요합니다.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if not settings.KAKAO_REST_API_KEY:
+        return Response(
+            {'message': 'KAKAO_REST_API_KEY가 설정되지 않았습니다.'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    url = 'https://apis-navi.kakaomobility.com/v1/directions'
+
+    headers = {
+        'Authorization': f'KakaoAK {settings.KAKAO_REST_API_KEY}',
+        'Content-Type': 'application/json',
+    }
+
+    # Kakao Mobility도 origin/destination은 경도,위도 순서
+    params = {
+        'origin': f'{origin_lng},{origin_lat}',
+        'destination': f'{destination_lng},{destination_lat}',
+        'priority': priority,
+        'alternatives': 'false',
+        'road_details': 'true',
+        'summary': 'false',
+        'car_fuel': 'GASOLINE',
+        'car_hipass': 'false',
+    }
+
+    try:
+        response = requests.get(
+            url,
+            headers=headers,
+            params=params,
+            timeout=5,
+        )
+        response.raise_for_status()
+    except requests.RequestException as error:
+        print('Kakao route search error:', error)
+        return Response(
+            {'message': '카카오 경로 검색 중 오류가 발생했습니다.'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
+    return Response(response.json(), status=response.status_code)
