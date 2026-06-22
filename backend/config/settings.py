@@ -22,6 +22,7 @@ load_dotenv(BASE_DIR / '.env')
 FSS_API_KEY = os.getenv('FSS_API_KEY')
 EXCHANGE_API_KEY = os.getenv('EXCHANGE_API_KEY')
 KAKAO_REST_API_KEY = os.getenv('KAKAO_REST_API_KEY')
+YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
 
 GMS_API_KEY = os.getenv('GMS_API_KEY')
 GMS_BASE_URL = os.getenv(
@@ -65,6 +66,7 @@ INSTALLED_APPS = [
     'exchanges',
     'chatbot',
     'maps',
+    'videos',
 ]
 
 MIDDLEWARE = [

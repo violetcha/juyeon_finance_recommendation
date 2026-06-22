@@ -13,6 +13,7 @@ import PostDetailView from '@/views/PostDetailView.vue'
 import MyPageView from '@/views/MyPageView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SignupView from '@/views/SignupView.vue'
+import MainBankView from '@/views/MainBankView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -82,6 +83,12 @@ const router = createRouter({
       name: 'signup',
       component: SignupView,
     },
+    {
+      path: '/main-bank',
+      name: 'main-bank',
+      component: MainBankView,
+    }
+
   ],
 })
 
