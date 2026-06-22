@@ -1,11 +1,13 @@
-import api from './api'
+import api from '@/api/api'
 
-// 예금 상품 목록 조회
+export const saveDepositProducts = () => {
+  return api.get('/products/deposits/save/')
+}
+
 export const getDepositProducts = () => {
   return api.get('/products/deposits/')
 }
 
-// 예금 상품 상세 조회
 export const getDepositProductDetail = (productId) => {
   return api.get(`/products/deposits/${productId}/`)
 }

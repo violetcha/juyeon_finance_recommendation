@@ -5,12 +5,15 @@
     <main class="main">
       <RouterView />
     </main>
+
+    <ChatbotFloatingButton />
   </div>
 </template>
 
 <script setup>
 import { RouterView } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
+import ChatbotFloatingButton from '@/components/ChatbotFloatingButton.vue'
 </script>
 
 <style scoped>

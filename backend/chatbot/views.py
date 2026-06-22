@@ -200,7 +200,7 @@ def chatbot_response(request):
             model=getattr(settings, 'GMS_MODEL', 'gpt-5-nano'),
             messages=[
                 {
-                    'role': 'developer',
+                    'role': 'system',
                     'content': system_prompt
                 },
                 {
