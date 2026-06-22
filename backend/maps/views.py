@@ -1,82 +1,84 @@
 import requests
-
 from django.conf import settings
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 
 
-KAKAO_LOCAL_KEYWORD_URL = 'https://dapi.kakao.com/v2/local/search/keyword.json'
-
-
 @api_view(['GET'])
-def search_bank_branches(request):
-    keyword = request.GET.get('keyword', '은행')
-    x = request.GET.get('x')  # 경도
-    y = request.GET.get('y')  # 위도
-    radius = request.GET.get('radius', 2000)
+@permission_classes([AllowAny])
+def bank_search(request):
+    # 프론트에서 bank=국민은행 으로 보내고 있으므로 bank를 받아야 함
+    bank = request.GET.get('bank', '은행')
+    lat = request.GET.get('lat')
+    lng = request.GET.get('lng')
 
-    api_key = settings.KAKAO_REST_API_KEY
-
-    if not api_key:
+    if not lat or not lng:
         return Response(
-            {'message': 'KAKAO_REST_API_KEY가 설정되어 있지 않습니다. .env 파일을 확인해주세요.'},
+            {'message': 'lat, lng 값이 필요합니다.'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    if not settings.KAKAO_REST_API_KEY:
+        return Response(
+            {'message': 'KAKAO_REST_API_KEY가 설정되지 않았습니다.'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
+    url = 'https://dapi.kakao.com/v2/local/search/keyword.json'
+
+    headers = {
+        'Authorization': f'KakaoAK {settings.KAKAO_REST_API_KEY}'
+    }
+
+    # 중요:
+    # Kakao Local API에서 x = 경도(lng), y = 위도(lat)
     params = {
-        'query': keyword,
+        'query': bank,
+        'x': lng,
+        'y': lat,
+        'radius': 5000,
+        'sort': 'distance',
         'size': 15,
     }
 
-    # 사용자의 현재 위치가 있으면 주변 검색
-    if x and y:
-        params.update({
-            'x': x,
-            'y': y,
-            'radius': radius,
-            'sort': 'distance',
-        })
-
-    headers = {
-        'Authorization': f'KakaoAK {api_key}'
-    }
-
-    response = requests.get(
-        KAKAO_LOCAL_KEYWORD_URL,
-        headers=headers,
-        params=params
-    )
-
-    if response.status_code != 200:
+    try:
+        response = requests.get(
+            url,
+            headers=headers,
+            params=params,
+            timeout=5
+        )
+        response.raise_for_status()
+    except requests.RequestException as error:
+        print('Kakao bank search error:', error)
         return Response(
-            {
-                'message': '카카오 로컬 API 요청에 실패했습니다.',
-                'status_code': response.status_code,
-                'detail': response.text,
-            },
+            {'message': '카카오 은행 검색 중 오류가 발생했습니다.'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
-    data = response.json()
-    documents = data.get('documents', [])
+    documents = response.json().get('documents', [])
 
     branches = []
 
     for item in documents:
         branches.append({
+            'id': item.get('id'),
             'place_name': item.get('place_name'),
             'address_name': item.get('address_name'),
             'road_address_name': item.get('road_address_name'),
             'phone': item.get('phone'),
             'x': item.get('x'),  # 경도
             'y': item.get('y'),  # 위도
-            'place_url': item.get('place_url'),
             'distance': item.get('distance'),
+            'place_url': item.get('place_url'),
         })
 
     return Response({
-        'keyword': keyword,
+        'keyword': bank,
+        'lat': lat,
+        'lng': lng,
         'count': len(branches),
-        'branches': branches
+        'branches': branches,
     })

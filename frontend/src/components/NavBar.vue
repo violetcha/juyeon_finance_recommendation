@@ -10,6 +10,7 @@
         <RouterLink to="/products">상품조회</RouterLink>
         <RouterLink to="/recommend">예적금 추천</RouterLink>
         <RouterLink to="/bank-test">주거래은행 추천</RouterLink>
+        <RouterLink to="/main-bank">주거래은행 찾기</RouterLink>
         <RouterLink to="/exchange">환율 계산기</RouterLink>
         <RouterLink to="/community">커뮤니티</RouterLink>
         <RouterLink to="/map">지도</RouterLink>

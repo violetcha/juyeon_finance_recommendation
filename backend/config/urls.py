@@ -12,4 +12,5 @@ urlpatterns = [
     path('api/exchanges/', include('exchanges.urls')),
     path('api/chatbot/', include('chatbot.urls')),
     path('api/maps/', include('maps.urls')),
+    path('api/videos/', include('videos.urls')),
 ]

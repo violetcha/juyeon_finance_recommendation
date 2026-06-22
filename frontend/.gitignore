@@ -37,3 +37,16 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Environment variables
+.env
+.env.*
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+
+# Keep example env files
+!.env.example
+!backend/.env.example
+!frontend/.env.example
