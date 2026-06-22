@@ -49,4 +49,4 @@ frontend/.env.*
 # Keep example env files
 !.env.example
 !backend/.env.example
-!frontend/.env.example
+!frontend/.env.example.env
