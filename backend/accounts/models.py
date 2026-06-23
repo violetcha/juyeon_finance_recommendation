@@ -35,6 +35,13 @@ class UserProfile(models.Model):
         related_name='profile'
     )
 
+    profile_image = models.ImageField(
+        upload_to='profile_images/',
+        null=True,
+        blank=True
+    )
+
+
     age = models.PositiveIntegerField(
         null=True,
         blank=True
