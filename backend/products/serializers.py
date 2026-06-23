@@ -15,35 +15,65 @@ class ProductOptionSerializer(serializers.ModelSerializer):
             'id',
             'intr_rate_type',
             'intr_rate_type_nm',
-            'save_trm',
+            'rsrv_type',
+            'rsrv_type_nm',
             'intr_rate',
             'intr_rate2',
         )
 
 
+class BankSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bank
+        fields = [
+            'id',
+            'name',
+            'code',
+        ]
+
+
+class ProductOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductOption
+        fields = [
+            'id',
+            'intr_rate_type',
+            'intr_rate_type_nm',
+            'rsrv_type',
+            'rsrv_type_nm',
+            'save_trm',
+            'intr_rate',
+            'intr_rate2',
+        ]
+
+
 class FinancialProductListSerializer(serializers.ModelSerializer):
     bank = BankSerializer(read_only=True)
+    options = ProductOptionSerializer(many=True, read_only=True)
     max_interest_rate = serializers.SerializerMethodField()
 
     class Meta:
         model = FinancialProduct
-        fields = (
+        fields = [
             'id',
             'bank',
+            'product_type',
+            'fin_prdt_cd',
             'name',
             'join_way',
-            'max_limit',
-            'dcls_month',
+            'join_member',
             'max_interest_rate',
-        )
+            'options',
+        ]
 
     def get_max_interest_rate(self, obj):
-        options = obj.options.all()
-        rates = [
-            option.intr_rate2
-            for option in options
-            if option.intr_rate2 is not None
-        ]
+        rates = []
+
+        for option in obj.options.all():
+            if option.intr_rate2 is not None:
+                rates.append(option.intr_rate2)
+            elif option.intr_rate is not None:
+                rates.append(option.intr_rate)
 
         if not rates:
             return None
@@ -54,12 +84,15 @@ class FinancialProductListSerializer(serializers.ModelSerializer):
 class FinancialProductDetailSerializer(serializers.ModelSerializer):
     bank = BankSerializer(read_only=True)
     options = ProductOptionSerializer(many=True, read_only=True)
+    max_interest_rate = serializers.SerializerMethodField()
 
     class Meta:
         model = FinancialProduct
-        fields = (
+        fields = [
             'id',
             'bank',
+            'product_type',
+            'fin_prdt_cd',
             'name',
             'join_way',
             'mtrt_int',
@@ -72,5 +105,20 @@ class FinancialProductDetailSerializer(serializers.ModelSerializer):
             'dcls_strt_day',
             'dcls_end_day',
             'fin_co_subm_day',
+            'max_interest_rate',
             'options',
-        )
+        ]
+
+    def get_max_interest_rate(self, obj):
+        rates = []
+
+        for option in obj.options.all():
+            if option.intr_rate2 is not None:
+                rates.append(option.intr_rate2)
+            elif option.intr_rate is not None:
+                rates.append(option.intr_rate)
+
+        if not rates:
+            return None
+
+        return max(rates)

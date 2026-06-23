@@ -10,7 +10,7 @@ class Bank(models.Model):
 
 
 class FinancialProduct(models.Model):
-    # 금감원 정기예금 api, 적금 api 넣을 것을 대비해서 넣음
+    # 금감원 정기예금 api, 적금 api 넣d음
     PRODUCT_TYPE_CHOICES = [
         ('deposit', '예금'),
         ('saving', '적금'),
@@ -22,7 +22,7 @@ class FinancialProduct(models.Model):
         related_name='products'
     )
 
-    # 아래도 일단 놔둠
+    
     product_type = models.CharField(
         max_length=20,
         choices=PRODUCT_TYPE_CHOICES
@@ -59,12 +59,16 @@ class ProductOption(models.Model):
     )
     intr_rate_type = models.CharField(max_length=20, blank=True)
     intr_rate_type_nm = models.CharField(max_length=50, blank=True)
+
+    rsrv_type = models.CharField(max_length=20, blank=True)
+    rsrv_type_nm = models.CharField(max_length=50, blank=True)
+
     save_trm = models.IntegerField()
     intr_rate = models.FloatField(null=True, blank=True)
     intr_rate2 = models.FloatField(null=True, blank=True)
 
     class Meta:
-        unique_together = ('product', 'intr_rate_type', 'save_trm')
+        unique_together = ('product', 'intr_rate_type', 'rsrv_type', 'save_trm')
 
     def __str__(self):
-        return f'{self.product.name} / {self.save_trm}개월 / 최고 {self.intr_rate2}%'
+        return f'{self.product.name} / {self.save_trm}개월 / {self.rsrv_type_nm} / 최고 {self.intr_rate2}%'

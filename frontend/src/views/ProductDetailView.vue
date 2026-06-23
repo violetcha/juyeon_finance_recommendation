@@ -1,57 +1,132 @@
 <template>
   <div class="product-detail-view">
-    <h1>예금 상품 상세</h1>
+    <div class="page-header">
+      <p class="breadcrumb">상품 상세</p>
+      <h1>{{ productTypeLabel }} 상품 상세</h1>
+      <p class="description">
+        상품의 가입 조건, 우대 조건, 기간별 금리 옵션을 확인해보세요.
+      </p>
+    </div>
 
-    <p v-if="loading">상품 정보를 불러오는 중입니다...</p>
-    <p v-else-if="errorMessage">{{ errorMessage }}</p>
+    <p v-if="loading" class="status-message">상품 정보를 불러오는 중입니다...</p>
+    <p v-else-if="errorMessage" class="status-message error">{{ errorMessage }}</p>
 
-    <div v-else-if="product" class="product-detail-card">
-      <h2>{{ product.name }}</h2>
+    <div v-else-if="product" class="detail-layout">
+      <section class="product-summary-card">
+        <div class="summary-header">
+          <div>
+            <p class="bank-name">{{ product.bank?.name }}</p>
+            <h2>{{ product.name }}</h2>
+          </div>
 
-      <div class="product-info">
-        <p>은행명: {{ product.bank?.name }}</p>
-        <p>은행 코드: {{ product.bank?.code }}</p>
-        <p>가입 방법: {{ product.join_way }}</p>
-        <p>가입 대상: {{ product.join_member }}</p>
-        <p>가입 한도: {{ product.max_limit || '정보 없음' }}</p>
-        <p>최고 금리: {{ getProductMaxRate(product) }}</p>
-        <p>우대 조건: {{ product.spcl_cnd }}</p>
-        <p>기타 유의사항: {{ product.etc_note }}</p>
-        <p>공시 시작일: {{ product.dcls_strt_day }}</p>
-        <p>공시 종료일: {{ product.dcls_end_day || '없음' }}</p>
-      </div>
+          <span class="product-type-badge">
+            {{ productTypeLabel }}
+          </span>
+        </div>
 
-      <button
-        class="favorite-button"
-        :class="{ active: isFavorite }"
-        @click="handleFavoriteClick"
-      >
-        {{ isFavorite ? '관심상품 삭제' : '관심상품 등록' }}
-      </button>
+        <div class="max-rate-box">
+          <span>최고 금리</span>
+          <strong>{{ getProductMaxRate(product) }}</strong>
+        </div>
 
-      <div v-if="product.options && product.options.length > 0" class="option-section">
-        <h3>금리 옵션</h3>
+        <div class="summary-grid">
+          <div>
+            <span>은행 코드</span>
+            <strong>{{ product.bank?.code || '정보 없음' }}</strong>
+          </div>
 
-        <table>
-          <thead>
-            <tr>
-              <th>저축 기간</th>
-              <th>기본 금리</th>
-              <th>최고 우대 금리</th>
-            </tr>
-          </thead>
+          <div>
+            <span>가입 방법</span>
+            <strong>{{ product.join_way || '정보 없음' }}</strong>
+          </div>
 
-          <tbody>
-            <tr v-for="option in product.options" :key="option.id">
-              <td>{{ option.save_trm }}개월</td>
-              <td>{{ formatRate(option.intr_rate) }}</td>
-              <td>{{ formatRate(option.intr_rate2) }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+          <div>
+            <span>가입 대상</span>
+            <strong>{{ product.join_member || '정보 없음' }}</strong>
+          </div>
 
-      <p v-else>금리 옵션 정보가 없습니다.</p>
+          <div>
+            <span>가입 한도</span>
+            <strong>{{ formatLimit(product.max_limit) }}</strong>
+          </div>
+        </div>
+
+        <button
+          class="favorite-button"
+          :class="{ active: isFavorite }"
+          @click="handleFavoriteClick"
+        >
+          {{ isFavorite ? '관심상품 삭제' : '관심상품 등록' }}
+        </button>
+      </section>
+
+      <section class="detail-card">
+        <h3>상품 설명</h3>
+
+        <div class="info-block">
+          <h4>우대 조건</h4>
+          <p>{{ product.spcl_cnd || '정보 없음' }}</p>
+        </div>
+
+        <div class="info-block">
+          <h4>만기 후 이자율</h4>
+          <p>{{ product.mtrt_int || '정보 없음' }}</p>
+        </div>
+
+        <div class="info-block">
+          <h4>기타 유의사항</h4>
+          <p>{{ product.etc_note || '정보 없음' }}</p>
+        </div>
+
+        <div class="date-grid">
+          <p>공시 시작일: {{ product.dcls_strt_day || '정보 없음' }}</p>
+          <p>공시 종료일: {{ product.dcls_end_day || '없음' }}</p>
+          <p>공시 제출일: {{ product.fin_co_subm_day || '정보 없음' }}</p>
+        </div>
+      </section>
+
+      <section class="detail-card option-section">
+        <div class="section-title-row">
+          <h3>금리 옵션</h3>
+          <p>
+            {{ productType === 'saving'
+              ? '적금은 정액적립식/자유적립식에 따라 금리가 다를 수 있습니다.'
+              : '기간별 기본 금리와 최고 우대 금리를 확인하세요.'
+            }}
+          </p>
+        </div>
+
+        <div v-if="product.options && product.options.length > 0" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>저축 기간</th>
+                <th>이자 유형</th>
+                <th v-if="productType === 'saving'">적립 유형</th>
+                <th>기본 금리</th>
+                <th>최고 우대 금리</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr
+                v-for="option in sortedOptions"
+                :key="option.id"
+              >
+                <td>{{ option.save_trm }}개월</td>
+                <td>{{ option.intr_rate_type_nm || '정보 없음' }}</td>
+                <td v-if="productType === 'saving'">
+                  {{ option.rsrv_type_nm || '정보 없음' }}
+                </td>
+                <td>{{ formatRate(option.intr_rate) }}</td>
+                <td class="rate-highlight">{{ formatRate(option.intr_rate2) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p v-else class="empty-message">금리 옵션 정보가 없습니다.</p>
+      </section>
 
       <RouterLink :to="{ name: 'products' }" class="back-link">
         목록으로 돌아가기
@@ -61,9 +136,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getDepositProductDetail } from '@/api/products'
+import {
+  getDepositProductDetail,
+  getSavingProductDetail,
+} from '@/api/products'
 import { getFavorites, toggleFavoriteProduct } from '@/api/favorites'
 
 const route = useRoute()
@@ -73,40 +151,94 @@ const loading = ref(false)
 const errorMessage = ref('')
 const isFavorite = ref(false)
 
+const productType = computed(() => {
+  return route.query.type === 'saving' ? 'saving' : 'deposit'
+})
+
+const productTypeLabel = computed(() => {
+  return productType.value === 'saving' ? '적금' : '정기예금'
+})
+
+const sortedOptions = computed(() => {
+  if (!product.value?.options) {
+    return []
+  }
+
+  return [...product.value.options].sort((a, b) => {
+    const termA = Number(a.save_trm)
+    const termB = Number(b.save_trm)
+
+    if (termA !== termB) {
+      return termA - termB
+    }
+
+    const rsrvA = a.rsrv_type_nm || ''
+    const rsrvB = b.rsrv_type_nm || ''
+
+    return rsrvA.localeCompare(rsrvB)
+  })
+})
+
 const formatRate = (rate) => {
   if (rate === null || rate === undefined || rate === '') {
     return '정보 없음'
   }
 
-  return `${rate}%`
+  return `${Number(rate).toFixed(2)}%`
 }
 
-const getProductMaxRate = (product) => {
-  if (!product) {
+const formatLimit = (limit) => {
+  if (limit === null || limit === undefined || limit === '') {
+    return '정보 없음'
+  }
+
+  return `${Number(limit).toLocaleString()}원`
+}
+
+const getProductMaxRate = (targetProduct) => {
+  if (!targetProduct) {
     return '정보 없음'
   }
 
   if (
-    product.max_interest_rate !== null &&
-    product.max_interest_rate !== undefined &&
-    product.max_interest_rate !== ''
+    targetProduct.max_interest_rate !== null &&
+    targetProduct.max_interest_rate !== undefined &&
+    targetProduct.max_interest_rate !== ''
   ) {
-    return `${product.max_interest_rate}%`
+    return `${Number(targetProduct.max_interest_rate).toFixed(2)}%`
   }
 
-  if (!product.options || product.options.length === 0) {
+  if (!targetProduct.options || targetProduct.options.length === 0) {
     return '정보 없음'
   }
 
-  const rates = product.options
-    .map((option) => Number(option.intr_rate2))
-    .filter((rate) => !Number.isNaN(rate))
+  const rates = targetProduct.options
+    .map((option) => {
+      if (
+        option.intr_rate2 !== null &&
+        option.intr_rate2 !== undefined &&
+        option.intr_rate2 !== ''
+      ) {
+        return Number(option.intr_rate2)
+      }
+
+      if (
+        option.intr_rate !== null &&
+        option.intr_rate !== undefined &&
+        option.intr_rate !== ''
+      ) {
+        return Number(option.intr_rate)
+      }
+
+      return null
+    })
+    .filter((rate) => rate !== null && !Number.isNaN(rate))
 
   if (rates.length === 0) {
     return '정보 없음'
   }
 
-  return `${Math.max(...rates)}%`
+  return `${Math.max(...rates).toFixed(2)}%`
 }
 
 const checkFavoriteStatus = async () => {
@@ -149,7 +281,11 @@ const handleFavoriteClick = async () => {
 
     console.log('관심상품 응답:', response.data)
 
-    isFavorite.value = response.data.is_favorite
+    if (response.data.is_favorite !== undefined) {
+      isFavorite.value = response.data.is_favorite
+    } else {
+      isFavorite.value = !isFavorite.value
+    }
 
     if (isFavorite.value) {
       alert('관심상품에 등록되었습니다.')
@@ -157,7 +293,9 @@ const handleFavoriteClick = async () => {
       alert('관심상품에서 삭제되었습니다.')
     }
   } catch (error) {
-    console.error(error)
+    console.error('관심상품 처리 에러:', error)
+    console.error('상태코드:', error.response?.status)
+    console.error('에러 응답:', error.response?.data)
 
     if (error.response?.status === 401 || error.response?.status === 403) {
       alert('로그인이 필요한 기능입니다.')
@@ -174,8 +312,13 @@ const fetchProductDetail = async () => {
 
   try {
     const productId = route.params.id
+    let response
 
-    const response = await getDepositProductDetail(productId)
+    if (productType.value === 'saving') {
+      response = await getSavingProductDetail(productId)
+    } else {
+      response = await getDepositProductDetail(productId)
+    }
 
     console.log('상품 상세 응답:', response.data)
 
@@ -197,29 +340,141 @@ onMounted(() => {
 
 <style scoped>
 .product-detail-view {
-  padding: 24px;
+  min-height: 100vh;
+  padding: 28px;
+  background-color: #f6f7f9;
 }
 
-.product-detail-card {
-  padding: 20px;
+.page-header {
+  padding-bottom: 18px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #ddd;
+}
+
+.breadcrumb {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: #777;
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 26px;
+  color: #111;
+}
+
+.description {
+  margin: 8px 0 0;
+  color: #666;
+}
+
+.status-message {
+  padding: 18px;
+  background-color: #fff;
   border: 1px solid #ddd;
-  border-radius: 8px;
+  color: #555;
 }
 
-.product-info {
+.status-message.error {
+  color: #c0392b;
+}
+
+.detail-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.product-summary-card,
+.detail-card {
+  padding: 22px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+}
+
+.summary-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
   margin-bottom: 20px;
 }
 
-.product-info p {
-  margin: 8px 0;
+.bank-name {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 800;
+  color: #555;
+}
+
+.summary-header h2 {
+  margin: 0;
+  font-size: 28px;
+  color: #111;
+}
+
+.product-type-badge {
+  height: fit-content;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background-color: #333;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.max-rate-box {
+  padding: 20px;
+  margin-bottom: 20px;
+  background-color: #f3f3f3;
+}
+
+.max-rate-box span {
+  display: block;
+  margin-bottom: 6px;
+  color: #777;
+  font-size: 14px;
+}
+
+.max-rate-box strong {
+  font-size: 34px;
+  color: #111;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.summary-grid div {
+  padding: 14px;
+  border: 1px solid #e5e5e5;
+  background-color: #fafafa;
+}
+
+.summary-grid span {
+  display: block;
+  margin-bottom: 8px;
+  color: #777;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.summary-grid strong {
+  color: #222;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .favorite-button {
-  padding: 10px 16px;
-  margin-bottom: 24px;
+  width: 180px;
+  height: 42px;
   border: 1px solid #bbb;
-  border-radius: 6px;
   background-color: #fff;
+  color: #333;
+  font-weight: 800;
   cursor: pointer;
 }
 
@@ -229,25 +484,146 @@ onMounted(() => {
   border-color: #333;
 }
 
-.option-section {
-  margin-top: 16px;
+.detail-card h3 {
+  margin: 0 0 16px;
+  font-size: 20px;
+}
+
+.info-block {
+  padding: 14px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.info-block:last-of-type {
+  border-bottom: none;
+}
+
+.info-block h4 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #333;
+}
+
+.info-block p {
+  margin: 0;
+  color: #555;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+.date-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.date-grid p {
+  padding: 12px;
+  margin: 0;
+  background-color: #fafafa;
+  border: 1px solid #eee;
+  color: #555;
+  font-size: 14px;
+}
+
+.section-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.section-title-row h3 {
+  margin: 0;
+}
+
+.section-title-row p {
+  margin: 0;
+  color: #777;
+  font-size: 13px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid #ddd;
 }
 
 table {
   width: 100%;
+  min-width: 720px;
   border-collapse: collapse;
-  margin: 16px 0;
+  background-color: #fff;
+}
+
+thead {
+  background-color: #f3f3f3;
 }
 
 th,
 td {
-  padding: 10px;
-  border: 1px solid #ddd;
+  padding: 14px 12px;
+  border-bottom: 1px solid #e5e5e5;
   text-align: center;
+  font-size: 14px;
+}
+
+th {
+  color: #444;
+  font-weight: 800;
+}
+
+.rate-highlight {
+  font-weight: 900;
+  color: #111;
+}
+
+.empty-message {
+  padding: 18px;
+  background-color: #fafafa;
+  border: 1px solid #eee;
+  color: #666;
 }
 
 .back-link {
-  display: inline-block;
-  margin-top: 16px;
+  width: fit-content;
+  padding: 10px 14px;
+  border: 1px solid #333;
+  color: #222;
+  background-color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+}
+
+@media (max-width: 1000px) {
+  .summary-grid,
+  .date-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .section-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .product-detail-view {
+    padding: 18px;
+  }
+
+  .summary-header {
+    flex-direction: column;
+  }
+
+  .summary-grid,
+  .date-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .favorite-button {
+    width: 100%;
+  }
 }
 </style>

@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 
-from .serializers import SignupSerializer, UserSerializer
+from .serializers import SignupSerializer, UserSerializer, UserUpdateSerializer
+from .models import UserProfile
 
 
 @api_view(['POST'])
@@ -46,8 +47,9 @@ def login_user(request):
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # 수정 부분: 세션 로그인 제거
     token, created = Token.objects.get_or_create(user=user)
+
+    UserProfile.objects.get_or_create(user=user)
 
     return Response({
         'message': '로그인되었습니다.',
@@ -66,5 +68,31 @@ def logout_user(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def profile(request):
+    UserProfile.objects.get_or_create(user=request.user)
+
     serializer = UserSerializer(request.user)
     return Response(serializer.data)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_profile(request):
+    UserProfile.objects.get_or_create(user=request.user)
+
+    serializer = UserUpdateSerializer(
+        request.user,
+        data=request.data,
+        partial=True
+    )
+
+    if serializer.is_valid():
+        user = serializer.save()
+        return Response(
+            {
+                'message': '회원정보가 수정되었습니다.',
+                'user': UserSerializer(user).data
+            },
+            status=status.HTTP_200_OK
+        )
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
