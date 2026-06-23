@@ -1,6 +1,6 @@
 <template>
   <div class="product-detail-view">
-    <h1>예금 상품 상세</h1>
+    <h1>{{ productTypeLabel }} 상품 상세</h1>
 
     <p v-if="loading">상품 정보를 불러오는 중입니다...</p>
     <p v-else-if="errorMessage">{{ errorMessage }}</p>
@@ -9,6 +9,7 @@
       <h2>{{ product.name }}</h2>
 
       <div class="product-info">
+        <p>상품 유형: {{ productTypeLabel }}</p>
         <p>은행명: {{ product.bank?.name }}</p>
         <p>은행 코드: {{ product.bank?.code }}</p>
         <p>가입 방법: {{ product.join_way }}</p>
@@ -36,6 +37,8 @@
           <thead>
             <tr>
               <th>저축 기간</th>
+              <th>이자 유형</th>
+              <th v-if="productType === 'saving'">적립 유형</th>
               <th>기본 금리</th>
               <th>최고 우대 금리</th>
             </tr>
@@ -44,6 +47,10 @@
           <tbody>
             <tr v-for="option in product.options" :key="option.id">
               <td>{{ option.save_trm }}개월</td>
+              <td>{{ option.intr_rate_type_nm || '정보 없음' }}</td>
+              <td v-if="productType === 'saving'">
+                {{ option.rsrv_type_nm || '정보 없음' }}
+              </td>
               <td>{{ formatRate(option.intr_rate) }}</td>
               <td>{{ formatRate(option.intr_rate2) }}</td>
             </tr>
@@ -61,9 +68,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { getDepositProductDetail } from '@/api/products'
+import {
+  getDepositProductDetail,
+  getSavingProductDetail,
+} from '@/api/products'
 import { getFavorites, toggleFavoriteProduct } from '@/api/favorites'
 
 const route = useRoute()
@@ -72,6 +82,14 @@ const product = ref(null)
 const loading = ref(false)
 const errorMessage = ref('')
 const isFavorite = ref(false)
+
+const productType = computed(() => {
+  return route.query.type === 'saving' ? 'saving' : 'deposit'
+})
+
+const productTypeLabel = computed(() => {
+  return productType.value === 'saving' ? '적금' : '예금'
+})
 
 const formatRate = (rate) => {
   if (rate === null || rate === undefined || rate === '') {
@@ -174,8 +192,13 @@ const fetchProductDetail = async () => {
 
   try {
     const productId = route.params.id
+    let response
 
-    const response = await getDepositProductDetail(productId)
+    if (productType.value === 'saving') {
+      response = await getSavingProductDetail(productId)
+    } else {
+      response = await getDepositProductDetail(productId)
+    }
 
     console.log('상품 상세 응답:', response.data)
 
