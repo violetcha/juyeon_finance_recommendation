@@ -217,6 +217,10 @@ const errorMessage = ref('')
 
 const terms = ['6', '12', '24', '36']
 
+const getStoredToken = () => {
+  return localStorage.getItem('token') || localStorage.getItem('accessToken')
+}
+
 const formatRate = (rate) => {
   if (rate === null || rate === undefined || rate === '') {
     return '-'
@@ -394,7 +398,7 @@ const fetchProducts = async () => {
 
     console.log('상품 목록 응답:', response.data)
 
-    products.value = response.data
+    products.value = Array.isArray(response.data) ? response.data : []
   } catch (error) {
     console.error(error)
     errorMessage.value = '상품 목록을 불러오지 못했습니다.'
@@ -404,7 +408,7 @@ const fetchProducts = async () => {
 }
 
 const fetchFavorites = async () => {
-  const token = localStorage.getItem('token')
+  const token = getStoredToken()
 
   if (!token) {
     favoriteProductIds.value = []
@@ -427,7 +431,7 @@ const fetchFavorites = async () => {
 }
 
 const handleToggleFavorite = async (productId) => {
-  const token = localStorage.getItem('token')
+  const token = getStoredToken()
 
   if (!token) {
     alert('로그인이 필요한 기능입니다.')

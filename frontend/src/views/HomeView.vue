@@ -72,7 +72,11 @@
           </p>
 
           <RouterLink
-            :to="{ name: 'product-detail', params: { id: product.id } }"
+            :to="{
+              name: 'product-detail',
+              params: { id: product.id },
+              query: { type: 'deposit' }
+            }"
             class="detail-link"
           >
             상품 보러가기
@@ -81,12 +85,10 @@
       </div>
 
       <div v-else class="empty-box">
-        <h4>저장된 예금 상품이 없습니다.</h4>
+        <h4>조회된 예금 상품이 없습니다.</h4>
         <p>
-          먼저 백엔드에서 금융감독원 예금 상품 저장 API를 한 번 실행해야 합니다.
+          상품 데이터가 아직 준비되지 않았습니다. 잠시 후 다시 시도해주세요.
         </p>
-
-        <code>http://127.0.0.1:8000/api/products/deposits/save/</code>
 
         <RouterLink to="/products" class="detail-link empty-link">
           상품조회 페이지로 이동
@@ -130,7 +132,6 @@ const getRateWidth = (rate) => {
     return '0%'
   }
 
-  // 예금 금리 5%를 100% 기준으로 잡음
   const percent = Math.min((numberRate / 5) * 100, 100)
 
   return `${percent}%`
@@ -141,6 +142,7 @@ const fetchPreviewProducts = async () => {
   errorMessage.value = ''
 
   try {
+    // 백엔드 목록 API가 DB가 비어 있으면 자동 저장 후 목록을 반환함
     const response = await getDepositProducts()
 
     products.value = Array.isArray(response.data) ? response.data : []
@@ -384,16 +386,6 @@ onMounted(() => {
 .empty-box p {
   margin: 0 0 12px;
   color: #6b7280;
-}
-
-.empty-box code {
-  display: block;
-  margin-bottom: 16px;
-  padding: 12px;
-  overflow-x: auto;
-  border-radius: 10px;
-  background: #111827;
-  color: white;
 }
 
 .empty-link {
