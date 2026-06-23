@@ -17,12 +17,20 @@ export function getVideoDetail(videoId) {
 
 export function saveVideo(video) {
   return api.post('/videos/saved/', {
-    video_id: video.id,
+    video_id: video.video_id,
     title: video.title,
-    channel_title: video.channelTitle,
-    channel_id: video.channelId,
+    channel_title: video.channel_title,
+    channel_id: video.channel_id,
     description: video.description,
-    thumbnail_url: video.thumbnail,
-    published_at: video.publishedAt,
+    thumbnail_url: video.thumbnail_url,
+    published_at: video.published_at,
   })
+}
+
+export function getSavedVideos() {
+  return api.get('/videos/saved/')
+}
+
+export function deleteSavedVideo(videoId) {
+  return api.delete(`/videos/saved/${videoId}/`)
 }

@@ -44,8 +44,6 @@ def youtube_search(request):
             except ValueError:
                 youtube_error = response.text
 
-            print('YouTube API error:', response.status_code, youtube_error)
-
             return Response(
                 {
                     'message': 'YouTube API 요청 중 오류가 발생했습니다.',
@@ -56,8 +54,6 @@ def youtube_search(request):
             )
 
     except requests.RequestException as error:
-        print('YouTube API request exception:', error)
-
         return Response(
             {
                 'message': 'YouTube API 요청 중 네트워크 오류가 발생했습니다.',
@@ -67,26 +63,24 @@ def youtube_search(request):
         )
 
     items = response.json().get('items', [])
-
     videos = []
 
     for item in items:
         snippet = item.get('snippet', {})
         thumbnails = snippet.get('thumbnails', {})
-
         video_id = item.get('id', {}).get('videoId')
 
         if not video_id:
             continue
 
         videos.append({
-            'id': video_id,
+            'video_id': video_id,
             'title': snippet.get('title', ''),
             'description': snippet.get('description', ''),
-            'channelTitle': snippet.get('channelTitle', ''),
-            'channelId': snippet.get('channelId', ''),
-            'publishedAt': snippet.get('publishedAt'),
-            'thumbnail': (
+            'channel_title': snippet.get('channelTitle', ''),
+            'channel_id': snippet.get('channelId', ''),
+            'published_at': snippet.get('publishedAt'),
+            'thumbnail_url': (
                 thumbnails.get('medium', {}).get('url')
                 or thumbnails.get('default', {}).get('url')
                 or ''
@@ -115,10 +109,28 @@ def youtube_detail(request, video_id):
             },
             timeout=5,
         )
-        response.raise_for_status()
-    except requests.RequestException:
+
+        if response.status_code != 200:
+            try:
+                youtube_error = response.json()
+            except ValueError:
+                youtube_error = response.text
+
+            return Response(
+                {
+                    'message': 'YouTube API 요청 중 오류가 발생했습니다.',
+                    'youtube_status_code': response.status_code,
+                    'youtube_error': youtube_error,
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    except requests.RequestException as error:
         return Response(
-            {'message': 'YouTube API 요청 중 오류가 발생했습니다.'},
+            {
+                'message': 'YouTube API 요청 중 네트워크 오류가 발생했습니다.',
+                'error': str(error),
+            },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -136,18 +148,18 @@ def youtube_detail(request, video_id):
     thumbnails = snippet.get('thumbnails', {})
 
     video = {
-        'id': item.get('id'),
+        'video_id': item.get('id'),
         'title': snippet.get('title', ''),
         'description': snippet.get('description', ''),
-        'channelTitle': snippet.get('channelTitle', ''),
-        'channelId': snippet.get('channelId', ''),
-        'publishedAt': snippet.get('publishedAt'),
-        'thumbnail': (
+        'channel_title': snippet.get('channelTitle', ''),
+        'channel_id': snippet.get('channelId', ''),
+        'published_at': snippet.get('publishedAt'),
+        'thumbnail_url': (
             thumbnails.get('medium', {}).get('url')
             or thumbnails.get('default', {}).get('url')
             or ''
         ),
-        'viewCount': statistics.get('viewCount'),
+        'view_count': statistics.get('viewCount'),
     }
 
     return Response(video)
