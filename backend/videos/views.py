@@ -37,10 +37,32 @@ def youtube_search(request):
             },
             timeout=5,
         )
-        response.raise_for_status()
-    except requests.RequestException:
+
+        if response.status_code != 200:
+            try:
+                youtube_error = response.json()
+            except ValueError:
+                youtube_error = response.text
+
+            print('YouTube API error:', response.status_code, youtube_error)
+
+            return Response(
+                {
+                    'message': 'YouTube API 요청 중 오류가 발생했습니다.',
+                    'youtube_status_code': response.status_code,
+                    'youtube_error': youtube_error,
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    except requests.RequestException as error:
+        print('YouTube API request exception:', error)
+
         return Response(
-            {'message': 'YouTube API 요청 중 오류가 발생했습니다.'},
+            {
+                'message': 'YouTube API 요청 중 네트워크 오류가 발생했습니다.',
+                'error': str(error),
+            },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 

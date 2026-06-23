@@ -5,10 +5,7 @@
     <section class="page-header">
       <p class="eyebrow">Main Bank Finder</p>
       <h1>내 주변 주거래은행 찾기</h1>
-      <p>
-        5대 은행의 특징을 비교하고, 원하는 지역과 은행을 선택해 주변 지점을 지도에서 확인할 수 있습니다.
-        금융 가이드 영상은 검색 후 마이페이지에 저장할 수 있습니다.
-      </p>
+
     </section>
 
     <section class="bank-map-section">
