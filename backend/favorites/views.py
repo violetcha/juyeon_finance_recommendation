@@ -30,7 +30,6 @@ def favorite_toggle(request, product_id):
     try:
         product = FinancialProduct.objects.get(
             id=product_id,
-            product_type='deposit'
         )
     except FinancialProduct.DoesNotExist:
         return Response(
