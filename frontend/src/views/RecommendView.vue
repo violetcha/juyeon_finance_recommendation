@@ -53,6 +53,16 @@
             <option value="우리은행">우리은행</option>
             <option value="하나은행">하나은행</option>
             <option value="농협은행">NH농협은행</option>
+            <option value="광주은행">광주은행</option>
+            <option value="기업은행">IBK기업은행</option>
+            <option value="카카오뱅크">카카오뱅크</option>
+            <option value="케이뱅크">케이뱅크</option>
+            <option value="토스뱅크">토스뱅크</option>
+            <option value="부산은행">부산은행</option>
+            <option value="대구은행">대구은행</option>
+            <option value="전북은행">전북은행</option>
+            <option value="경남은행">경남은행</option>
+            <option value="제주은행">제주은행</option>
           </select>
         </div>
 
@@ -85,6 +95,14 @@
 
         <button type="submit" class="submit-button" :disabled="loading">
           {{ loading ? '추천 중...' : '추천받기' }}
+        </button>
+
+        <button
+          type="button"
+          class="reset-button"
+          @click="handleReset"
+        >
+          조건 초기화
         </button>
 
         <p v-if="errorMessage" class="error-message">
@@ -204,15 +222,17 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch, onMounted, computed } from 'vue'
 import { recommendProducts } from '@/api/recommendations'
+import { getProfile } from '@/api/accounts'
 
 const loading = ref(false)
 const hasSearched = ref(false)
 const errorMessage = ref('')
 const recommendations = ref([])
+const currentUserId = ref(null)
 
-const form = reactive({
+const defaultForm = {
   saving_style: 'unknown',
   product_type: 'auto',
   preferred_term: '12',
@@ -220,13 +240,110 @@ const form = reactive({
   bank_filter: 'all',
   condition_preference: 'unknown',
   join_preference: 'online',
+}
+
+const form = reactive({ ...defaultForm })
+
+const handleReset = () => {
+  Object.assign(form, { ...defaultForm })
+
+  recommendations.value = []
+  hasSearched.value = false
+  errorMessage.value = ''
+
+  if (storageKey.value) {
+    localStorage.removeItem(storageKey.value)
+  }
+}
+
+const storageKey = computed(() => {
+  if (!currentUserId.value) {
+    return null
+  }
+
+  return `productRecommendationState:user:${currentUserId.value}`
 })
+
+const loadCurrentUser = async () => {
+  try {
+    const response = await getProfile()
+    currentUserId.value = response.data.id
+  } catch (error) {
+    console.error('현재 사용자 정보 조회 실패:', error)
+    currentUserId.value = null
+  }
+}
+
+const restoreRecommendationState = () => {
+  if (!storageKey.value) {
+    return
+  }
+
+  const savedState = localStorage.getItem(storageKey.value)
+
+  if (!savedState) {
+    return
+  }
+
+  try {
+    const parsedState = JSON.parse(savedState)
+
+    if (parsedState.form) {
+      Object.assign(form, {
+        ...defaultForm,
+        ...parsedState.form,
+      })
+    }
+
+    if (Array.isArray(parsedState.recommendations)) {
+      recommendations.value = parsedState.recommendations
+    }
+
+    if (typeof parsedState.hasSearched === 'boolean') {
+      hasSearched.value = parsedState.hasSearched
+    }
+  } catch (error) {
+    console.error('추천 조건 복원 실패:', error)
+    localStorage.removeItem(storageKey.value)
+  }
+}
+
+const saveRecommendationState = () => {
+  if (!storageKey.value) {
+    return
+  }
+
+  localStorage.setItem(
+    storageKey.value,
+    JSON.stringify({
+      userId: currentUserId.value,
+      form: { ...form },
+      recommendations: recommendations.value,
+      hasSearched: hasSearched.value,
+    })
+  )
+}
+
+onMounted(async () => {
+  await loadCurrentUser()
+  restoreRecommendationState()
+})
+
+watch(
+  form,
+  () => {
+    saveRecommendationState()
+  },
+  { deep: true }
+)
 
 const handleRecommend = async () => {
   loading.value = true
   hasSearched.value = true
   errorMessage.value = ''
   recommendations.value = []
+
+  saveRecommendationState()
 
   try {
     const response = await recommendProducts({
@@ -240,12 +357,16 @@ const handleRecommend = async () => {
     })
 
     recommendations.value = response.data.recommendations || []
+
+    saveRecommendationState()
   } catch (error) {
     console.error(error)
 
     errorMessage.value =
       error.response?.data?.message ||
       '추천 상품을 불러오지 못했습니다. recommendations API를 확인해주세요.'
+
+    saveRecommendationState()
   } finally {
     loading.value = false
   }
@@ -578,6 +699,22 @@ const handleFavoriteClick = () => {
   background: #e5e7eb;
 }
 
+.reset-button {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 12px;
+  padding: 13px;
+  background: #ffffff;
+  color: #374151;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.reset-button:hover {
+  background: #f9fafb;
+}
+
 @media (max-width: 960px) {
   .recommend-layout {
     grid-template-columns: 1fr;
@@ -591,5 +728,7 @@ const handleFavoriteClick = () => {
   .detail-info {
     grid-template-columns: 1fr;
   }
+
+
 }
 </style>
