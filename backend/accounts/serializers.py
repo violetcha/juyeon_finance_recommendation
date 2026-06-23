@@ -140,3 +140,4 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         profile.save()
 
         return instance
+    

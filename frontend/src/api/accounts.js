@@ -14,3 +14,13 @@ export const login = (loginData) => {
 export const getProfile = () => {
   return api.get('/accounts/profile/')
 }
+
+// 프로필 수정
+export const updateProfile = (profileData) => {
+  return api.patch('/accounts/profile/update/', profileData)
+}
+
+// 프로필 선택지 조회
+export const getProfileOptions = () => {
+  return api.get('/accounts/profile/options/')
+}
