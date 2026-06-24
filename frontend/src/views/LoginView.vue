@@ -1,9 +1,9 @@
 <template>
   <main class="auth-page">
     <section class="auth-visual-panel">
-      <p class="eyebrow">SMART FINANCE START</p>
+      <p class="eyebrow">JUYEON FINANCE START</p>
       <h1>
-        첫금융과 함께<br>
+        주연과 함께<br>
         <span>똑똑한 금융생활</span>을 시작하세요
       </h1>
       <p class="visual-description">
@@ -51,8 +51,8 @@
       <div class="signup-benefit-card">
         <span>🎁</span>
         <div>
-          <strong>가입만 해도 금융생활 시작 준비 완료</strong>
-          <p>마이페이지 프로필을 채우면 추천 정확도가 더 좋아집니다.</p>
+          <strong>가입 후 맞춤 추천 준비 완료</strong>
+          <p>금융 프로필을 채우면 추천 정확도가 더 좋아집니다.</p>
         </div>
       </div>
     </section>
@@ -757,4 +757,79 @@ onMounted(() => {
     flex-direction: column;
   }
 }
+
+/* Juyeon clean auth override */
+.auth-page {
+  align-items: start;
+  padding: 48px 0 68px;
+}
+
+.auth-visual-panel {
+  padding: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow-soft);
+}
+
+.auth-visual-panel h1 {
+  font-size: clamp(34px, 4.4vw, 52px);
+}
+
+.auth-illustration {
+  display: none;
+}
+
+.auth-card {
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: var(--shadow-card);
+}
+
+.auth-tabs {
+  background: #f8fafc;
+}
+
+.form-panel,
+.signup-guide-panel {
+  padding: 32px;
+}
+
+.form-group input,
+.password-field,
+.form-group select {
+  border-color: var(--color-border-strong);
+  background: #fff;
+}
+
+.submit-button,
+.outline-cta {
+  border-radius: 13px;
+}
+
+.signup-benefit-card,
+.benefit-list article,
+.auth-notice,
+.profile-benefits li {
+  border-radius: 18px;
+}
+
+@media (max-width: 1180px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .auth-page {
+    width: min(100% - 28px, var(--container-width));
+    padding: 28px 0 44px;
+  }
+
+  .form-panel,
+  .signup-guide-panel {
+    padding: 26px 22px;
+  }
+}
+
 </style>

@@ -1,8 +1,9 @@
 <template>
   <header class="navbar">
     <div class="nav-inner">
-      <RouterLink :to="{ name: 'home' }" class="logo" aria-label="첫금융 홈">
-        첫금융
+      <RouterLink :to="{ name: 'home' }" class="logo" aria-label="주연 홈" @click="closeMenu">
+        <span class="logo-mark">주</span>
+        <span class="logo-text">주연</span>
       </RouterLink>
 
       <button
@@ -12,36 +13,27 @@
         aria-label="메뉴 열기"
         @click="isMenuOpen = !isMenuOpen"
       >
-        ☰
+        <span></span>
+        <span></span>
+        <span></span>
       </button>
 
       <nav class="nav-menu" :class="{ open: isMenuOpen }" aria-label="주요 메뉴">
-        <RouterLink :to="{ name: 'products' }" @click="closeMenu">
-          예적금
-        </RouterLink>
-        <RouterLink :to="{ name: 'recommend' }" @click="closeMenu">
-          맞춤추천
-        </RouterLink>
-        <RouterLink :to="{ name: 'main-bank' }" @click="closeMenu">
-          주거래은행
-        </RouterLink>
-        <RouterLink :to="{ name: 'exchange' }" @click="closeMenu">
-          환율
-        </RouterLink>
-        <RouterLink :to="{ name: 'community' }" @click="closeMenu">
-          커뮤니티
-        </RouterLink>
-        <RouterLink :to="{ name: 'mypage' }" @click="closeMenu">
-          마이페이지
+        <RouterLink
+          v-for="link in navLinks"
+          :key="link.name"
+          :to="{ name: link.name }"
+          @click="closeMenu"
+        >
+          {{ link.label }}
         </RouterLink>
       </nav>
 
       <div class="nav-actions" :class="{ open: isMenuOpen }">
-        <button type="button" class="search-btn" aria-label="검색">
-          🔎
-        </button>
-
         <template v-if="isLoggedIn">
+          <RouterLink :to="{ name: 'mypage' }" class="mypage-btn" @click="closeMenu">
+            내 정보
+          </RouterLink>
           <button type="button" class="login-btn" @click="handleLogout">
             로그아웃
           </button>
@@ -67,6 +59,14 @@ import { RouterLink, useRouter } from 'vue-router'
 const router = useRouter()
 const isMenuOpen = ref(false)
 const isLoggedIn = ref(!!localStorage.getItem('token'))
+
+const navLinks = [
+  { name: 'products', label: '예적금' },
+  { name: 'recommend', label: '맞춤추천' },
+  { name: 'main-bank', label: '주거래은행' },
+  { name: 'exchange', label: '환율' },
+  { name: 'community', label: '커뮤니티' },
+]
 
 const closeMenu = () => {
   isMenuOpen.value = false
@@ -102,7 +102,7 @@ onBeforeUnmount(() => {
   top: 0;
   z-index: 50;
   height: var(--header-height);
-  border-bottom: 1px solid rgba(229, 234, 243, 0.9);
+  border-bottom: 1px solid rgba(227, 232, 242, 0.9);
   background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(18px);
 }
@@ -113,15 +113,37 @@ onBeforeUnmount(() => {
   margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 28px;
 }
 
 .logo {
   flex-shrink: 0;
-  color: var(--color-primary);
-  font-size: 30px;
-  font-weight: 1000;
-  letter-spacing: -0.08em;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--color-text);
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -0.05em;
+}
+
+.logo-mark {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+  color: #fff;
+  font-size: 18px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  box-shadow: 0 10px 20px rgba(31, 79, 216, 0.18);
+}
+
+.logo-text {
+  font-weight: 950;
 }
 
 .nav-menu {
@@ -129,80 +151,76 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(18px, 3vw, 42px);
+  gap: clamp(16px, 2.7vw, 34px);
 }
 
 .nav-menu a {
   position: relative;
-  padding: 21px 0;
-  color: var(--color-text);
+  padding: 22px 0;
+  color: var(--color-text-muted);
   font-size: 15px;
-  font-weight: 850;
+  font-weight: 800;
   white-space: nowrap;
+  transition: color 0.16s ease;
 }
 
 .nav-menu a::after {
   content: '';
   position: absolute;
-  left: 50%;
-  bottom: 0;
-  width: 0;
-  height: 3px;
+  left: 0;
+  right: 0;
+  bottom: 13px;
+  height: 2px;
   border-radius: 999px;
   background: var(--color-primary);
-  transform: translateX(-50%);
-  transition: width 0.18s ease;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.16s ease;
 }
 
-.nav-menu a.router-link-active {
+.nav-menu a.router-link-active,
+.nav-menu a:hover {
   color: var(--color-primary);
 }
 
 .nav-menu a.router-link-active::after,
 .nav-menu a:hover::after {
-  width: 100%;
+  transform: scaleX(1);
 }
 
 .nav-actions {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
-.search-btn,
 .login-btn,
-.signup-btn {
-  min-height: 42px;
+.signup-btn,
+.mypage-btn {
+  min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  font-weight: 900;
+  font-weight: 850;
   white-space: nowrap;
 }
 
-.search-btn {
-  width: 42px;
-  border: 0;
-  background: transparent;
-  color: var(--color-text);
-  font-size: 18px;
-}
-
-.login-btn {
-  padding: 0 18px;
+.login-btn,
+.mypage-btn {
+  padding: 0 15px;
   border: 1px solid var(--color-border-strong);
   background: #fff;
   color: var(--color-text);
 }
 
 .signup-btn {
-  padding: 0 18px;
+  padding: 0 16px;
   border: 1px solid var(--color-primary);
   background: var(--color-primary);
   color: #fff;
-  box-shadow: 0 10px 22px rgba(17, 22, 184, 0.18);
+  box-shadow: 0 10px 20px rgba(31, 79, 216, 0.18);
 }
 
 .mobile-toggle {
@@ -214,7 +232,15 @@ onBeforeUnmount(() => {
   border-radius: 12px;
   background: #fff;
   color: var(--color-text);
-  font-size: 19px;
+}
+
+.mobile-toggle span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  margin: 4px auto;
+  border-radius: 999px;
+  background: currentColor;
 }
 
 @media (max-width: 980px) {
@@ -232,9 +258,7 @@ onBeforeUnmount(() => {
   }
 
   .mobile-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    display: inline-block;
   }
 
   .nav-menu,
@@ -265,6 +289,7 @@ onBeforeUnmount(() => {
 
   .nav-actions {
     padding: 0 0 16px;
+    flex-wrap: wrap;
   }
 }
 </style>

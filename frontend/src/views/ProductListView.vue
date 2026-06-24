@@ -2,81 +2,36 @@
   <div class="product-list-page">
     <section class="product-hero">
       <div>
-        <span class="eyebrow">FINANCIAL PRODUCTS</span>
         <h1>예적금 상품 한눈에 보기</h1>
-        <p>
-          금융감독원 API로 저장된 실제 예금·적금 데이터를 기준으로 검색하고,
-          금리와 가입 조건을 비교해보세요.
-        </p>
       </div>
-
-      <div class="hero-art" aria-hidden="true">
-        <div class="piggy-visual">🐷</div>
-        <div class="chart-visual">
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <div class="coin-visual">₩</div>
-      </div>
-
-      <RouterLink :to="{ name: 'recommend' }" class="guide-card">
-        <span>⭐</span>
-        <div>
-          <strong>사회초년생 추천</strong>
-          <p>목돈 마련을 시작하는 첫 단계, 나에게 맞는 상품을 찾아보세요.</p>
-        </div>
-        <em>›</em>
-      </RouterLink>
-    </section>
-
-    <section class="tag-guide-bar card">
-      <div class="popular-tags">
-        <strong>인기 태그</strong>
-        <button
-          v-for="tag in quickTags"
-          :key="tag.value"
-          type="button"
-          class="tag-button"
-          :class="{ active: activeQuickTag === tag.value }"
-          @click="applyQuickTag(tag.value)"
-        >
-          # {{ tag.label }}
-        </button>
-      </div>
-
-      <RouterLink :to="{ name: 'recommend' }" class="recommend-guide-link">
-        <strong>추천 가이드</strong>
-        <span>사회초년생을 위한 예적금 가이드 보기</span>
-        <em>›</em>
-      </RouterLink>
     </section>
 
     <div class="product-layout">
       <aside class="filter-panel card">
-        <div class="filter-title-row">
-          <h2>필터</h2>
-          <button type="button" @click="resetFilters">
-            초기화 ↻
-          </button>
-        </div>
+        <div class="filter-top-sync">
+          <div class="filter-title-row">
+            <h2>필터</h2>
+            <button type="button" @click="resetFilters">
+              초기화 ↻
+            </button>
+          </div>
 
-        <div class="filter-block">
-          <h3>상품 유형</h3>
-          <div class="radio-row">
-            <label>
-              <input v-model="selectedType" type="radio" value="all" @change="goFirstPage">
-              <span>전체</span>
-            </label>
-            <label>
-              <input v-model="selectedType" type="radio" value="deposit" @change="goFirstPage">
-              <span>예금</span>
-            </label>
-            <label>
-              <input v-model="selectedType" type="radio" value="saving" @change="goFirstPage">
-              <span>적금</span>
-            </label>
+          <div class="filter-block filter-type-block">
+            <h3>상품 유형</h3>
+            <div class="radio-row">
+              <label>
+                <input v-model="selectedType" type="radio" value="all" @change="goFirstPage">
+                <span>전체</span>
+              </label>
+              <label>
+                <input v-model="selectedType" type="radio" value="deposit" @change="goFirstPage">
+                <span>예금</span>
+              </label>
+              <label>
+                <input v-model="selectedType" type="radio" value="saving" @change="goFirstPage">
+                <span>적금</span>
+              </label>
+            </div>
           </div>
         </div>
 
@@ -172,7 +127,6 @@
         <div class="filter-block">
           <h3>정렬</h3>
           <select v-model="sortMode" class="input-base" @change="goFirstPage">
-            <option value="recommend">추천순</option>
             <option value="max_rate_desc">최고 금리 높은순</option>
             <option value="base_rate_desc">기본 금리 높은순</option>
             <option value="term_asc">가입 기간 짧은순</option>
@@ -205,7 +159,7 @@
               <input
                 v-model.trim="searchKeyword"
                 type="search"
-                placeholder="상품명, 은행명 검색"
+                placeholder="상품명 검색"
                 @input="goFirstPage"
               >
               <span>⌕</span>
@@ -218,21 +172,18 @@
         </div>
 
         <div class="result-summary-row">
-          <div>
-            <strong>총 {{ filteredProducts.length.toLocaleString() }}개 상품</strong>
-            <p>
-              실제 저장된 상품 {{ allProducts.length.toLocaleString() }}개 중 현재 조건에 맞는 결과입니다.
-            </p>
-          </div>
+          <strong>총 {{ filteredProducts.length.toLocaleString() }}개 상품</strong>
+        </div>
 
-          <label class="compare-all-check">
-            <input
-              type="checkbox"
-              :checked="isCurrentPageAllCompared"
-              @change="toggleCurrentPageCompare"
-            >
-            <span>현재 페이지 비교함 담기</span>
-          </label>
+        <div class="product-table-header" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span>기본금리</span>
+          <span>최고금리</span>
+          <span>가입기간</span>
+          <span>가입방식</span>
+          <span class="favorite-label">관심상품</span>
         </div>
 
         <p v-if="loading" class="state-message">상품을 불러오는 중입니다...</p>
@@ -256,8 +207,17 @@
               >
             </div>
 
-            <span class="bank-avatar" :class="getAvatarTone(product, index)">
-              {{ getBankInitial(product) }}
+            <span
+              class="bank-logo-badge"
+              :class="!getBankLogoSrc(product) ? getAvatarTone(product, index) : ''"
+            >
+              <img
+                v-if="getBankLogoSrc(product)"
+                :src="getBankLogoSrc(product)"
+                :alt="`${getBankName(product)} 로고`"
+                loading="lazy"
+              >
+              <span v-else>{{ getBankInitial(product) }}</span>
             </span>
 
             <div class="product-info-area">
@@ -269,49 +229,25 @@
                 {{ product.name || '상품명 없음' }}
               </RouterLink>
 
-              <div class="product-badges">
-                <span class="badge" :class="getTypeTone(product)">
-                  {{ getProductTypeLabel(product) }}
-                </span>
-                <span
-                  v-for="badge in getProductBadges(product)"
-                  :key="badge.label"
-                  class="badge"
-                  :class="badge.tone"
-                >
-                  {{ badge.label }}
-                </span>
-              </div>
-
-              <p class="product-note">
-                {{ getShortDescription(product) }}
-              </p>
             </div>
 
             <div class="rate-column">
-              <span>기본 금리 <small>(연, 세전)</small></span>
               <strong>{{ formatRate(getBaseRate(product)) }}</strong>
             </div>
 
             <div class="rate-column highlight">
-              <span>최고 금리 <small>(연, 세전)</small></span>
               <strong>{{ formatRate(getBestRate(product)) }}</strong>
             </div>
 
             <div class="meta-column">
-              <span>가입 기간</span>
               <strong>{{ getTermSummary(product) }}</strong>
             </div>
 
             <div class="meta-column">
-              <span>가입 방식</span>
               <strong>{{ getJoinWaySummary(product) }}</strong>
             </div>
 
             <div class="row-actions">
-              <RouterLink class="detail-button" :to="getDetailRoute(product)">
-                상세 보기
-              </RouterLink>
               <button
                 type="button"
                 class="heart-button"
@@ -326,28 +262,27 @@
           </article>
         </div>
 
-        <div v-if="totalPages > 1" class="pagination-row">
-          <button type="button" :disabled="currentPage === 1" @click="currentPage -= 1">‹</button>
-          <button
-            v-for="page in visiblePages"
-            :key="page"
-            type="button"
-            :class="{ active: currentPage === page }"
-            @click="currentPage = page"
-          >
-            {{ page }}
-          </button>
-          <button type="button" :disabled="currentPage === totalPages" @click="currentPage += 1">›</button>
+        <div class="pagination-row" :class="{ 'is-placeholder': totalPages <= 1 }">
+          <template v-if="totalPages > 1">
+            <button type="button" :disabled="currentPage === 1" @click="currentPage -= 1">‹</button>
+            <button
+              v-for="page in visiblePages"
+              :key="page"
+              type="button"
+              :class="{ active: currentPage === page }"
+              @click="currentPage = page"
+            >
+              {{ page }}
+            </button>
+            <button type="button" :disabled="currentPage === totalPages" @click="currentPage += 1">›</button>
+          </template>
         </div>
       </section>
     </div>
 
     <section v-if="compareProducts.length > 0" ref="compareSection" class="compare-section card">
       <div class="section-heading compact">
-        <div>
-          <h2>비교함</h2>
-          <p>선택한 상품을 실제 금리와 가입 조건 기준으로 비교합니다.</p>
-        </div>
+        <h2>비교함</h2>
         <button type="button" class="clear-compare" @click="clearCompare">
           전체 비우기
         </button>
@@ -355,7 +290,7 @@
 
       <div class="compare-grid">
         <article
-          v-for="product in compareProducts"
+          v-for="(product, index) in compareProducts"
           :key="product.id"
           class="compare-card"
         >
@@ -363,8 +298,22 @@
             ×
           </button>
           <span class="badge" :class="getTypeTone(product)">{{ getProductTypeLabel(product) }}</span>
+          <div class="compare-card-bank">
+            <span
+              class="compare-logo-badge"
+              :class="!getBankLogoSrc(product) ? getAvatarTone(product, index) : ''"
+            >
+              <img
+                v-if="getBankLogoSrc(product)"
+                :src="getBankLogoSrc(product)"
+                :alt="`${getBankName(product)} 로고`"
+                loading="lazy"
+              >
+              <span v-else>{{ getBankInitial(product) }}</span>
+            </span>
+            <p>{{ getBankName(product) }}</p>
+          </div>
           <h3>{{ product.name }}</h3>
-          <p>{{ getBankName(product) }}</p>
           <dl>
             <div>
               <dt>최고 금리</dt>
@@ -399,6 +348,7 @@ import {
   getSavingProducts,
 } from '@/api/products'
 import { getFavorites, toggleFavoriteProduct } from '@/api/favorites'
+import { BANK_LOGO_LIST, getBankDisplayName, getBankLogo } from '@/constants/bankLogoMap'
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -417,12 +367,12 @@ const minRate = ref('')
 const maxRate = ref('')
 const selectedJoinWays = ref([])
 const selectedBenefits = ref([])
-const sortMode = ref('recommend')
+const sortMode = ref('max_rate_desc')
 const searchKeyword = ref('')
 const activeQuickTag = ref('')
 
 const currentPage = ref(1)
-const pageSize = 8
+const pageSize = 10
 const compareSection = ref(null)
 
 const typeTabs = [
@@ -482,13 +432,62 @@ const allProducts = computed(() => {
   ]
 })
 
-const bankOptions = computed(() => {
-  const banks = allProducts.value
-    .map((product) => product.bank?.name)
-    .filter(Boolean)
+const bankOrderMap = new Map(BANK_LOGO_LIST.map((bank, index) => [bank.name, index]))
 
-  return [...new Set(banks)].sort((a, b) => a.localeCompare(b, 'ko'))
-})
+const fixedBankOptions = [
+  '전체 은행',
+  '국민은행',
+  '신한은행',
+  '하나은행',
+  '우리은행',
+  'NH농협은행',
+  '부산은행',
+  '경남은행',
+  '광주은행',
+  '전북은행',
+  '제주은행',
+  'IBK기업은행',
+  'SC제일은행',
+  'iM뱅크',
+  'KDB산업은행',
+  '수협은행',
+  '카카오뱅크',
+  '토스뱅크',
+  '케이뱅크',
+]
+
+
+const bankFilterAliasMap = {
+  국민은행: ['국민은행', 'KB국민은행', '케이비국민은행'],
+  신한은행: ['신한은행', '제주은행'],
+  하나은행: ['하나은행', 'KEB하나은행', '주식회사 하나은행'],
+  우리은행: ['우리은행'],
+  NH농협은행: ['NH농협은행', '농협은행', '농협은행주식회사'],
+  부산은행: ['부산은행', '경남은행'],
+  경남은행: ['경남은행', '부산은행'],
+  광주은행: ['광주은행', '전북은행'],
+  전북은행: ['전북은행', '광주은행'],
+  제주은행: ['제주은행', '신한은행'],
+  IBK기업은행: ['IBK기업은행', '기업은행', '중소기업은행'],
+  SC제일은행: ['SC제일은행', '한국스탠다드차타드은행'],
+  iM뱅크: ['iM뱅크', 'IM뱅크', '아이엠뱅크', '대구은행'],
+  KDB산업은행: ['KDB산업은행', '산업은행', '한국산업은행'],
+  수협은행: ['수협은행'],
+  카카오뱅크: ['카카오뱅크', '주식회사 카카오뱅크'],
+  토스뱅크: ['토스뱅크', '토스뱅크 주식회사'],
+  케이뱅크: ['케이뱅크', '주식회사 케이뱅크'],
+}
+
+const isBankMatched = (rawBankName, selectedBankName) => {
+  if (!selectedBankName || selectedBankName === '전체 은행') return true
+
+  const raw = String(rawBankName || '')
+  const aliases = bankFilterAliasMap[selectedBankName] || [selectedBankName]
+
+  return aliases.some((alias) => raw.includes(alias) || alias.includes(raw))
+}
+
+const bankOptions = computed(() => fixedBankOptions)
 
 const termOptions = computed(() => {
   const terms = allProducts.value.flatMap((product) => {
@@ -564,7 +563,8 @@ const getMinTerm = (product) => {
 const getProductSearchText = (product) => {
   return [
     product.name,
-    product.bank?.name,
+    getBankName(product),
+    getRawBankName(product),
     product.join_way,
     product.join_member,
     product.spcl_cnd,
@@ -574,6 +574,10 @@ const getProductSearchText = (product) => {
     .filter(Boolean)
     .join(' ')
     .toLowerCase()
+}
+
+const getProductNameSearchText = (product) => {
+  return String(product.name || '').toLowerCase()
 }
 
 const hasJoinWay = (product, way) => {
@@ -643,7 +647,7 @@ const filteredProducts = computed(() => {
   }
 
   if (selectedBank.value !== 'all') {
-    filtered = filtered.filter((product) => product.bank?.name === selectedBank.value)
+    filtered = filtered.filter((product) => getBankName(product) === selectedBank.value)
   }
 
   if (selectedTerm.value !== 'all') {
@@ -683,14 +687,14 @@ const filteredProducts = computed(() => {
   }
 
   if (searchKeyword.value) {
-    const keyword = searchKeyword.value.toLowerCase()
-    filtered = filtered.filter((product) => getProductSearchText(product).includes(keyword))
+    const keyword = searchKeyword.value.toLowerCase().trim()
+    filtered = filtered.filter((product) => getProductNameSearchText(product).includes(keyword))
   }
 
   filtered = filtered.filter((product) => matchesQuickTag(product))
 
   filtered.sort((a, b) => {
-    if (sortMode.value === 'max_rate_desc' || sortMode.value === 'recommend') {
+    if (sortMode.value === 'max_rate_desc') {
       return (getBestRate(b) ?? -1) - (getBestRate(a) ?? -1)
     }
 
@@ -735,11 +739,6 @@ const compareProducts = computed(() => {
     .filter(Boolean)
 })
 
-const isCurrentPageAllCompared = computed(() => {
-  return paginatedProducts.value.length > 0 && paginatedProducts.value.every((product) => {
-    return compareProductKeys.value.includes(getProductKey(product))
-  })
-})
 
 const getTypeCount = (type) => {
   if (type === 'all') {
@@ -753,13 +752,27 @@ const getProductKey = (product) => {
   return `${product.product_type}-${product.id}`
 }
 
+const getRawBankName = (product) => {
+  return product.bank?.name
+    || product.bank_name
+    || product.bankName
+    || product.kor_co_nm
+    || product.fin_co_nm
+    || ''
+}
+
 const getBankName = (product) => {
-  return product.bank?.name || '은행명 없음'
+  const rawBankName = getRawBankName(product)
+  return rawBankName ? getBankDisplayName(rawBankName) : '은행명 없음'
 }
 
 const getBankInitial = (product) => {
   const name = getBankName(product)
   return name.slice(0, 1).toUpperCase()
+}
+
+const getBankLogoSrc = (product) => {
+  return getBankLogo(getRawBankName(product) || getBankName(product))
 }
 
 const getAvatarTone = (product, index) => {
@@ -909,7 +922,7 @@ const resetFilters = () => {
   maxRate.value = ''
   selectedJoinWays.value = []
   selectedBenefits.value = []
-  sortMode.value = 'recommend'
+  sortMode.value = 'max_rate_desc'
   searchKeyword.value = ''
   activeQuickTag.value = ''
   currentPage.value = 1
@@ -934,28 +947,6 @@ const toggleCompare = (product) => {
   compareProductKeys.value.push(productKey)
 }
 
-const toggleCurrentPageCompare = () => {
-  if (isCurrentPageAllCompared.value) {
-    const currentKeys = paginatedProducts.value.map((product) => getProductKey(product))
-    compareProductKeys.value = compareProductKeys.value.filter((key) => !currentKeys.includes(key))
-    return
-  }
-
-  paginatedProducts.value.forEach((product) => {
-    const productKey = getProductKey(product)
-
-    if (!compareProductKeys.value.includes(productKey) && compareProductKeys.value.length < 4) {
-      compareProductKeys.value.push(productKey)
-    }
-  })
-
-  if (compareProductKeys.value.length >= 4) {
-    favoriteMessage.value = '비교함에는 최대 4개 상품까지 담을 수 있습니다.'
-    window.setTimeout(() => {
-      favoriteMessage.value = ''
-    }, 1800)
-  }
-}
 
 const clearCompare = () => {
   compareProductKeys.value = []
@@ -1087,217 +1078,74 @@ onMounted(async () => {
 }
 
 .product-hero {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 320px 330px;
-  gap: 24px;
-  align-items: center;
-  min-height: 180px;
-  margin-bottom: 24px;
-}
-
-.eyebrow {
-  display: inline-flex;
-  margin-bottom: 10px;
-  color: var(--color-primary);
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  margin-bottom: 38px;
 }
 
 .product-hero h1 {
   margin: 0;
   color: var(--color-text);
-  font-size: clamp(34px, 4.2vw, 48px);
+  font-size: clamp(34px, 4.2vw, 46px);
   line-height: 1.12;
   font-weight: 950;
   letter-spacing: -0.06em;
-}
-
-.product-hero p {
-  max-width: 610px;
-  margin: 14px 0 0;
-  color: var(--color-text-muted);
-  font-size: 17px;
-}
-
-.hero-art {
-  position: relative;
-  min-height: 140px;
-}
-
-.piggy-visual,
-.coin-visual,
-.chart-visual {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: var(--shadow-soft);
-}
-
-.piggy-visual {
-  left: 30px;
-  top: 34px;
-  width: 88px;
-  height: 88px;
-  border-radius: 32px;
-  background: var(--color-accent-soft);
-  font-size: 46px;
-}
-
-.chart-visual {
-  left: 122px;
-  top: 20px;
-  width: 118px;
-  height: 92px;
-  align-items: flex-end;
-  gap: 9px;
-  padding: 18px;
-  border-radius: 24px;
-}
-
-.chart-visual span {
-  width: 12px;
-  border-radius: 99px;
-  background: linear-gradient(180deg, #6875ff, var(--color-primary));
-}
-
-.chart-visual span:nth-child(1) { height: 24px; }
-.chart-visual span:nth-child(2) { height: 42px; }
-.chart-visual span:nth-child(3) { height: 56px; }
-.chart-visual span:nth-child(4) { height: 70px; background: linear-gradient(180deg, #3ee5ca, var(--color-accent)); }
-
-.coin-visual {
-  right: 24px;
-  bottom: 20px;
-  width: 72px;
-  height: 72px;
-  border-radius: 28px;
-  background: #fff7e5;
-  color: #d97706;
-  font-size: 34px;
-  font-weight: 950;
-}
-
-.guide-card {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 14px;
-  align-items: center;
-  padding: 22px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: var(--shadow-soft);
-}
-
-.guide-card > span {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 16px;
-  background: #fff8e6;
-}
-
-.guide-card strong {
-  display: block;
-  color: var(--color-primary);
-  font-size: 17px;
-}
-
-.guide-card p {
-  margin: 4px 0 0;
-  color: var(--color-text-muted);
-  font-size: 14px;
-}
-
-.guide-card em {
-  color: var(--color-text);
-  font-size: 30px;
-  font-style: normal;
-}
-
-.tag-guide-bar {
-  display: flex;
-  justify-content: space-between;
-  gap: 24px;
-  align-items: center;
-  padding: 12px 18px;
-  margin-bottom: 22px;
-}
-
-.popular-tags,
-.recommend-guide-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.popular-tags strong,
-.recommend-guide-link strong {
-  margin-right: 10px;
-  color: var(--color-text);
-  font-weight: 950;
-}
-
-.tag-button {
-  min-height: 36px;
-  padding: 0 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.tag-button.active,
-.tag-button:hover {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-}
-
-.recommend-guide-link {
-  flex-shrink: 0;
-  padding-left: 22px;
-  border-left: 1px solid var(--color-border);
-  color: var(--color-text-muted);
-}
-
-.recommend-guide-link span {
-  font-weight: 700;
-}
-
-.recommend-guide-link em {
-  color: var(--color-primary);
-  font-style: normal;
-  font-size: 22px;
 }
 
 .product-layout {
   display: grid;
   grid-template-columns: 270px minmax(0, 1fr);
   gap: 18px;
-  align-items: flex-start;
+  align-items: stretch;
+  --product-top-sync-height: 166px;
+  --product-row-height: 72px;
+  --product-visible-row-count: 10;
+  --product-list-min-height: calc(var(--product-row-height) * var(--product-visible-row-count));
+  --product-pagination-height: 74px;
+  --product-card-min-height: calc(
+    var(--product-top-sync-height) +
+    var(--product-list-min-height) +
+    var(--product-pagination-height)
+  );
 }
 
 .filter-panel {
   position: sticky;
   top: calc(var(--header-height) + 18px);
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  min-height: var(--product-card-min-height);
+  padding: 0 20px 20px;
+  box-sizing: border-box;
+}
+
+
+.filter-top-sync {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: var(--product-top-sync-height);
+  border-bottom: 1px solid var(--color-border);
+  padding-top: 0;
+  box-sizing: border-box;
+}
+
+.filter-type-block {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  border-bottom: 0;
+  padding-top: 18px;
+  padding-bottom: 12px;
 }
 
 .filter-title-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  min-height: 64px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--color-border);
+  box-sizing: border-box;
 }
 
 .filter-title-row h2 {
@@ -1315,8 +1163,12 @@ onMounted(async () => {
 }
 
 .filter-block {
-  padding: 16px 0;
+  padding: 18px 0;
   border-top: 1px solid var(--color-border);
+}
+
+.filter-top-sync + .filter-block {
+  border-top: 0;
 }
 
 .filter-block h3 {
@@ -1337,7 +1189,7 @@ onMounted(async () => {
 .radio-row,
 .check-grid {
   display: grid;
-  gap: 10px;
+  gap: 11px;
 }
 
 .radio-row {
@@ -1405,30 +1257,49 @@ onMounted(async () => {
 
 .filter-submit {
   width: 100%;
-  margin-top: 16px;
+  margin-top: auto;
+  min-height: 46px;
+}
+
+.filter-panel::after {
+  content: '';
+  display: block;
+  height: 0;
 }
 
 .product-main-card {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  overflow: hidden;
+  min-height: var(--product-card-min-height);
+  overflow: visible;
+  box-sizing: border-box;
 }
 
 .list-toolbar {
   display: flex;
   justify-content: space-between;
   gap: 18px;
-  align-items: center;
-  padding: 18px 20px 0;
+  align-items: stretch;
+  min-height: 64px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--color-border);
+  box-sizing: border-box;
 }
 
 .type-tabs {
   display: flex;
   gap: 6px;
+  align-items: stretch;
 }
 
 .type-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 100px;
-  padding: 14px 12px;
+  min-height: 64px;
+  padding: 0 12px;
   border: 0;
   border-bottom: 3px solid transparent;
   background: transparent;
@@ -1451,6 +1322,7 @@ onMounted(async () => {
   display: flex;
   gap: 10px;
   align-items: center;
+  align-self: center;
 }
 
 .search-box {
@@ -1494,12 +1366,13 @@ onMounted(async () => {
 
 .result-summary-row {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 18px;
   align-items: flex-start;
-  padding: 14px 20px 18px;
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
+  min-height: 60px;
+  padding: 18px 20px 0;
+  border-top: 0;
+  box-sizing: border-box;
 }
 
 .result-summary-row strong {
@@ -1509,21 +1382,55 @@ onMounted(async () => {
 }
 
 .result-summary-row p {
-  margin: 3px 0 0;
+  margin: 0;
   color: var(--color-text-muted);
   font-size: 13px;
 }
 
+.product-table-header {
+  display: grid;
+  grid-template-columns: 22px 56px minmax(190px, 1fr) 94px 94px 78px 72px 58px;
+  column-gap: 16px;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 20px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--color-border);
+  background: #fff;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.product-table-header span {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.product-table-header small {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.product-table-header .favorite-label {
+  text-align: left;
+}
+
 .product-row-list {
   display: grid;
+  align-content: start;
+  min-height: var(--product-list-min-height);
 }
 
 .product-list-row {
   display: grid;
-  grid-template-columns: 22px 56px minmax(200px, 1.7fr) minmax(90px, 0.9fr) minmax(90px, 0.9fr) minmax(72px, 0.75fr) minmax(72px, 0.72fr) minmax(112px, auto);
-  gap: 14px;
+  grid-template-columns: 22px 56px minmax(190px, 1fr) 94px 94px 78px 72px 58px;
+  column-gap: 16px;
   align-items: center;
-  padding: 18px 20px;
+  min-height: var(--product-row-height);
+  padding: 0 20px;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--color-border);
   background: rgba(255, 255, 255, 0.72);
 }
@@ -1532,29 +1439,49 @@ onMounted(async () => {
   background: var(--color-surface-soft);
 }
 
-.bank-avatar {
+.bank-logo-badge {
   display: grid;
   place-items: center;
   width: 54px;
   height: 54px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
   border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(15, 27, 61, 0.06);
+}
+
+.bank-logo-badge img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.bank-logo-badge > span {
   color: #fff;
   font-size: 24px;
   font-weight: 950;
 }
 
-.bank-avatar.blue { background: linear-gradient(135deg, #4f6bff, var(--color-primary)); }
-.bank-avatar.mint { background: linear-gradient(135deg, #4be0c8, #0f9f8b); }
-.bank-avatar.purple { background: linear-gradient(135deg, #a679ff, var(--color-purple)); }
-.bank-avatar.orange { background: linear-gradient(135deg, #fb923c, #ea580c); }
-.bank-avatar.sky { background: linear-gradient(135deg, #60a5fa, #2563eb); }
+.bank-logo-badge.blue,
+.compare-logo-badge.blue { background: linear-gradient(135deg, #4f6bff, var(--color-primary)); }
+.bank-logo-badge.mint,
+.compare-logo-badge.mint { background: linear-gradient(135deg, #4be0c8, #0f9f8b); }
+.bank-logo-badge.purple,
+.compare-logo-badge.purple { background: linear-gradient(135deg, #a679ff, var(--color-purple)); }
+.bank-logo-badge.orange,
+.compare-logo-badge.orange { background: linear-gradient(135deg, #fb923c, #ea580c); }
+.bank-logo-badge.sky,
+.compare-logo-badge.sky { background: linear-gradient(135deg, #60a5fa, #2563eb); }
 
 .product-info-area {
   min-width: 0;
+  align-self: center;
 }
 
 .bank-name {
-  margin: 0 0 2px;
+  margin: 0 0 4px;
   color: var(--color-text-muted);
   font-size: 13px;
   font-weight: 800;
@@ -1577,43 +1504,22 @@ onMounted(async () => {
   color: var(--color-primary);
 }
 
-.product-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-}
-
 .badge.blue {
   background: #eaf0ff;
   color: #3151db;
 }
 
-.product-note {
-  overflow: hidden;
-  margin: 7px 0 0;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 
 .rate-column,
 .meta-column {
-  display: grid;
-  gap: 2px;
-}
-
-.rate-column span,
-.meta-column span {
-  color: var(--color-text-light);
-  font-size: 12px;
-  font-weight: 800;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 .rate-column strong {
   color: var(--color-text);
-  font-size: 24px;
+  font-size: 23px;
   font-weight: 950;
   letter-spacing: -0.04em;
 }
@@ -1630,7 +1536,7 @@ onMounted(async () => {
 
 .row-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -1661,8 +1567,8 @@ onMounted(async () => {
 .heart-button {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   border: 1px solid var(--color-border);
   border-radius: 999px;
   background: #fff;
@@ -1696,10 +1602,20 @@ onMounted(async () => {
 }
 
 .pagination-row {
+  flex-shrink: 0;
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 8px;
-  padding: 18px 0 22px;
+  min-height: var(--product-pagination-height);
+  margin-top: 0;
+  padding: 18px 0 18px;
+  box-sizing: border-box;
+}
+
+.pagination-row.is-placeholder {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .pagination-row button {
@@ -1721,6 +1637,22 @@ onMounted(async () => {
 .compare-section {
   margin-top: 22px;
   padding: 22px;
+}
+
+.section-heading.compact {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.section-heading.compact h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
 }
 
 .compare-grid {
@@ -1759,10 +1691,43 @@ onMounted(async () => {
   font-weight: 950;
 }
 
+.compare-card-bank {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 12px 0 10px;
+}
+
+.compare-logo-badge {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.compare-logo-badge img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.compare-logo-badge > span {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 950;
+}
+
 .compare-card p {
-  margin: 0 0 12px;
+  margin: 0;
   color: var(--color-text-muted);
   font-size: 13px;
+  font-weight: 800;
 }
 
 .compare-card dl {
@@ -1815,9 +1780,6 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
-  .hero-art {
-    display: none;
-  }
 
   .product-layout {
     grid-template-columns: 1fr;
@@ -1825,10 +1787,26 @@ onMounted(async () => {
 
   .filter-panel {
     position: static;
+    height: auto;
+    min-height: auto;
   }
 
+  .filter-top-sync {
+    min-height: auto;
+  }
+
+  .product-main-card {
+    height: auto;
+    min-height: auto;
+  }
+
+  .product-row-list {
+    min-height: auto;
+  }
+
+  .product-table-header,
   .product-list-row {
-    grid-template-columns: 22px 56px minmax(180px, 1fr) 106px 106px 80px 80px 104px;
+    grid-template-columns: 22px 56px minmax(180px, 1fr) 88px 88px 72px 68px 48px;
   }
 
   .product-list-row .meta-column:nth-of-type(2) {
@@ -1845,17 +1823,12 @@ onMounted(async () => {
     width: min(100% - 28px, var(--container-width));
   }
 
-  .tag-guide-bar,
   .list-toolbar,
   .result-summary-row {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .recommend-guide-link {
-    padding-left: 0;
-    border-left: 0;
-  }
 
   .search-box {
     width: 100%;
@@ -1864,6 +1837,10 @@ onMounted(async () => {
   .search-actions {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .product-table-header {
+    display: none;
   }
 
   .product-list-row {

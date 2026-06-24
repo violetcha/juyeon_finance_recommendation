@@ -1,43 +1,33 @@
 <template>
   <footer class="app-footer">
     <div class="footer-inner">
-      <div class="footer-brand">
+      <section class="footer-brand">
         <RouterLink :to="{ name: 'home' }" class="footer-logo">
-          첫금융
+          <span>주</span>
+          주연
         </RouterLink>
-        <p>금융생활의 첫 시작, 첫금융이 함께합니다.</p>
-      </div>
+        <p>주거래은행과 예적금 상품을 연결하는 금융생활 시작 가이드입니다.</p>
+      </section>
 
-      <div class="footer-info">
+      <section class="footer-info">
         <nav class="footer-links" aria-label="푸터 메뉴">
-          <a href="#">회사소개</a>
-          <a href="#">이용약관</a>
-          <a href="#">개인정보처리방침</a>
-          <a href="#">금융상품 한눈에</a>
-          <a href="#">제휴문의</a>
-          <a href="#">고객센터</a>
+          <RouterLink :to="{ name: 'products' }">예적금</RouterLink>
+          <RouterLink :to="{ name: 'recommend' }">맞춤추천</RouterLink>
+          <RouterLink :to="{ name: 'main-bank' }">주거래은행</RouterLink>
+          <RouterLink :to="{ name: 'exchange' }">환율</RouterLink>
+          <RouterLink :to="{ name: 'community' }">커뮤니티</RouterLink>
         </nav>
 
         <p>
-          (주)첫금융 · 대표이사: 첫금융 · 사업자등록번호: 123-45-67890<br>
-          서울특별시 강남구 테헤란로 123 · 고객센터: 02-1234-5678 · help@cheotfinance.kr<br>
-          © Cheotfinance Inc. All rights reserved.
+          주연은 학습용 금융 추천 프로젝트입니다. 실제 금융상품 가입 전에는 각 금융기관의 공시와 약관을 확인해야 합니다.<br>
+          © Juyeon Finance Guide. All rights reserved.
         </p>
-      </div>
+      </section>
 
-      <div class="footer-apps">
-        <div class="socials" aria-label="SNS 링크">
-          <span>◎</span>
-          <span>💬</span>
-          <span>▶</span>
-        </div>
-        <strong>첫금융 앱 다운로드</strong>
-        <p>더 편리한 금융생활을 만나보세요.</p>
-        <div class="store-row">
-          <span>App Store</span>
-          <span>Google Play</span>
-        </div>
-      </div>
+      <section class="footer-note">
+        <strong>Project</strong>
+        <p>주거래은행 추천 · 예적금 비교 · 환율 조회 · 커뮤니티</p>
+      </section>
     </div>
   </footer>
 </template>
@@ -50,40 +40,56 @@ import { RouterLink } from 'vue-router'
 .app-footer {
   margin-top: 30px;
   border-top: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.76);
+  backdrop-filter: blur(12px);
 }
 
 .footer-inner {
   width: min(var(--container-width), calc(100% - 48px));
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 220px 1fr 250px;
-  gap: 34px;
-  padding: 34px 0 40px;
+  grid-template-columns: 240px minmax(0, 1fr) 260px;
+  gap: 32px;
+  padding: 32px 0 38px;
   color: var(--color-text-muted);
 }
 
 .footer-logo {
-  display: inline-block;
-  margin-bottom: 10px;
-  color: var(--color-primary);
-  font-size: 30px;
-  font-weight: 1000;
-  letter-spacing: -0.08em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--color-text);
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -0.05em;
+}
+
+.footer-logo span {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 11px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 17px;
+  font-weight: 950;
 }
 
 .footer-brand p,
 .footer-info p,
-.footer-apps p {
+.footer-note p {
   margin: 0;
   font-size: 13px;
-  line-height: 1.75;
+  line-height: 1.7;
 }
 
 .footer-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 20px;
+  gap: 10px 18px;
   margin-bottom: 12px;
 }
 
@@ -93,66 +99,26 @@ import { RouterLink } from 'vue-router'
   font-weight: 800;
 }
 
-.footer-apps {
-  text-align: right;
-}
-
-.footer-apps strong {
-  display: block;
-  margin-top: 10px;
-  color: var(--color-text);
-  font-size: 15px;
-}
-
-.socials {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.socials span {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.footer-note {
+  padding: 18px;
   border: 1px solid var(--color-border);
-  border-radius: 50%;
-  background: #fff;
+  border-radius: 18px;
+  background: var(--color-surface);
+}
+
+.footer-note strong {
+  display: block;
+  margin-bottom: 6px;
   color: var(--color-primary);
   font-size: 13px;
   font-weight: 900;
-}
-
-.store-row {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.store-row span {
-  padding: 8px 12px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: 10px;
-  background: #fff;
-  color: var(--color-text);
-  font-size: 12px;
-  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 @media (max-width: 980px) {
   .footer-inner {
     grid-template-columns: 1fr;
-  }
-
-  .footer-apps {
-    text-align: left;
-  }
-
-  .socials,
-  .store-row {
-    justify-content: flex-start;
   }
 }
 

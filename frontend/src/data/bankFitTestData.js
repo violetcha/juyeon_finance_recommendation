@@ -10,7 +10,7 @@ export const BANK_CODES = {
 
 export const BANK_PROFILES = {
   KB: {
-    name: 'KB국민은행',
+    name: '국민은행',
     searchName: '국민은행',
     typeName: '든든한 생활금융형',
     summary:
