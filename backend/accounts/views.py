@@ -284,6 +284,14 @@ def profile_options(request):
         for age in range(19, 71)
     ]
 
+    gender_options = [
+        {
+            'value': value,
+            'label': label,
+        }
+        for value, label in UserProfile.GENDER_CHOICES
+    ]
+
     income_options = [
         {
             'value': value,
@@ -349,6 +357,7 @@ def profile_options(request):
 
     return Response({
         'age': age_options,
+        'gender': gender_options,
         'monthly_income_range': income_options,
         'monthly_saving_amount': saving_options,
         'lump_sum_amount': lump_sum_options,

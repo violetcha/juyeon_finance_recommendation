@@ -4,11 +4,8 @@ import HomeView from '@/views/HomeView.vue'
 import ProductListView from '@/views/ProductListView.vue'
 import ProductDetailView from '@/views/ProductDetailView.vue'
 import RecommendView from '@/views/RecommendView.vue'
-import BankTestView from '@/views/BankTestView.vue'
-import BankTestResultView from '@/views/BankTestResultView.vue'
 import ExchangeView from '@/views/ExchangeView.vue'
 import CommunityView from '@/views/CommunityView.vue'
-import PostDetailView from '@/views/PostDetailView.vue'
 import MyPageView from '@/views/MyPageView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SignupView from '@/views/SignupView.vue'
@@ -40,16 +37,6 @@ const router = createRouter({
       component: RecommendView,
     },
     {
-      path: '/bank-test',
-      name: 'bank-test',
-      component: BankTestView,
-    },
-    {
-      path: '/bank-test/result',
-      name: 'bank-test-result',
-      component: BankTestResultView,
-    },
-    {
       path: '/exchange',
       name: 'exchange',
       component: ExchangeView,
@@ -70,11 +57,6 @@ const router = createRouter({
       component: CommunityView,
     },
     {
-      path: '/community/:id',
-      name: 'post-detail',
-      component: PostDetailView,
-    },
-    {
       path: '/mypage',
       name: 'mypage',
       component: MyPageView,
@@ -90,12 +72,6 @@ const router = createRouter({
       component: SignupView,
     },
     {
-      path: '/spot-assets',
-      name: 'SpotAsset',
-      component: () => import('@/views/SpotAssetView.vue'),
-    },
-
-    {
       path: '/find-username',
       name: 'find-username',
       component: FindUsernameView,
@@ -104,6 +80,11 @@ const router = createRouter({
       path: '/reset-password',
       name: 'reset-password',
       component: ResetPasswordView,
+    },
+    {
+      path: '/spot-assets',
+      name: 'SpotAsset',
+      component: () => import('@/views/SpotAssetView.vue'),
     },
   ],
 })
