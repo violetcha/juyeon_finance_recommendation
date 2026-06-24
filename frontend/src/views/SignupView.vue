@@ -1,7 +1,7 @@
 <template>
   <main class="signup-page">
     <section class="signup-visual-panel">
-      <p class="eyebrow">JOIN FIRST FINANCE</p>
+      <p class="eyebrow">JOIN JUYEON</p>
       <h1>
         간단하게 가입하고<br>
         <span>맞춤 금융 추천</span>을 받아보세요
@@ -1108,4 +1108,78 @@ onMounted(() => {
     flex-direction: column;
   }
 }
+
+/* Juyeon clean signup override */
+.signup-page {
+  align-items: start;
+  padding: 48px 0 68px;
+}
+
+.signup-visual-panel {
+  padding: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: var(--shadow-soft);
+}
+
+.signup-visual-panel h1 {
+  font-size: clamp(34px, 4.2vw, 50px);
+}
+
+.signup-illustration {
+  display: none;
+}
+
+.signup-shell {
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: var(--shadow-card);
+}
+
+.auth-tabs {
+  background: #f8fafc;
+}
+
+.signup-main-card,
+.signup-guide-panel {
+  padding: 32px;
+}
+
+.form-group input,
+.form-group select {
+  border-color: var(--color-border-strong);
+  background: #fff;
+}
+
+.next-button,
+.prev-button,
+.submit-button {
+  border-radius: 13px;
+}
+
+.join-benefit-list li,
+.summary-box,
+.recommend-tip-card {
+  border-radius: 18px;
+}
+
+@media (max-width: 1180px) {
+  .signup-page {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .signup-page {
+    width: min(100% - 28px, var(--container-width));
+    padding: 28px 0 44px;
+  }
+
+  .signup-main-card,
+  .signup-guide-panel {
+    padding: 26px 22px;
+  }
+}
+
 </style>

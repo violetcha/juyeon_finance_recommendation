@@ -10,9 +10,17 @@
     <template v-else-if="product">
       <section class="detail-hero card">
         <div class="hero-main">
-          <span class="bank-avatar" :class="avatarTone">
-            {{ bankInitial }}
-          </span>
+          <div class="bank-logo-frame">
+            <img
+              v-if="bankLogoSrc"
+              :src="bankLogoSrc"
+              :alt="`${bankName} 로고`"
+              class="bank-logo-img"
+            />
+            <span v-else class="bank-logo-fallback" :class="avatarTone">
+              {{ bankInitial }}
+            </span>
+          </div>
 
           <div class="hero-title-area">
             <div class="badge-row">
@@ -26,9 +34,6 @@
 
             <p class="bank-name">{{ bankName }}</p>
             <h1>{{ product.name }}</h1>
-            <p class="hero-description">
-              실제 저장된 금융상품 데이터 기준으로 가입 조건, 우대 조건, 기간별 금리 옵션을 확인합니다.
-            </p>
           </div>
         </div>
 
@@ -85,7 +90,6 @@
           <section class="card rate-section">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">RATE OPTIONS</p>
                 <h2>기간별 금리 옵션</h2>
                 <p>
                   {{ productType === 'saving'
@@ -138,24 +142,29 @@
           <section class="card info-section">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">PRODUCT CONDITIONS</p>
                 <h2>상품 조건 상세</h2>
               </div>
             </div>
 
-            <div class="info-block">
+            <div class="info-block readable-block">
               <h3>우대 조건</h3>
-              <p>{{ product.spcl_cnd || '우대 조건 정보가 없습니다.' }}</p>
+              <div class="condition-text-box">
+                {{ formatInfoText(product.spcl_cnd) || '우대 조건 정보가 없습니다.' }}
+              </div>
             </div>
 
-            <div class="info-block">
+            <div class="info-block readable-block">
               <h3>만기 후 이자율</h3>
-              <p>{{ product.mtrt_int || '만기 후 이자율 정보가 없습니다.' }}</p>
+              <div class="condition-text-box">
+                {{ formatInfoText(product.mtrt_int) || '만기 후 이자율 정보가 없습니다.' }}
+              </div>
             </div>
 
-            <div class="info-block">
+            <div class="info-block readable-block">
               <h3>기타 유의사항</h3>
-              <p>{{ product.etc_note || '기타 유의사항 정보가 없습니다.' }}</p>
+              <div class="condition-text-box">
+                {{ formatInfoText(product.etc_note) || '기타 유의사항 정보가 없습니다.' }}
+              </div>
             </div>
           </section>
         </div>
@@ -164,7 +173,6 @@
           <section class="card side-card">
             <div class="section-heading compact">
               <div>
-                <p class="eyebrow">JOIN INFO</p>
                 <h2>가입 정보</h2>
               </div>
             </div>
@@ -188,35 +196,9 @@
               </div>
             </dl>
           </section>
-
-          <section class="card side-card eligibility-card">
+<section class="card side-card date-card">
             <div class="section-heading compact">
               <div>
-                <p class="eyebrow">CHECK POINT</p>
-                <h2>추천 확인 포인트</h2>
-              </div>
-            </div>
-
-            <ul>
-              <li>
-                <span>1</span>
-                가입대상 문구에 나이·성별 조건이 있는지 확인하세요.
-              </li>
-              <li>
-                <span>2</span>
-                최고 금리는 우대조건 충족 시 적용될 수 있습니다.
-              </li>
-              <li>
-                <span>3</span>
-                실제 가입 가능 여부는 금융회사 최종 안내를 확인해야 합니다.
-              </li>
-            </ul>
-          </section>
-
-          <section class="card side-card date-card">
-            <div class="section-heading compact">
-              <div>
-                <p class="eyebrow">DISCLOSURE</p>
                 <h2>공시 정보</h2>
               </div>
             </div>
@@ -254,6 +236,7 @@ import {
   getSavingProductDetail,
 } from '@/api/products'
 import { getFavorites, toggleFavoriteProduct } from '@/api/favorites'
+import { getBankDisplayName, getBankLogo } from '@/constants/bankLogoMap'
 
 const route = useRoute()
 
@@ -272,8 +255,27 @@ const productTypeLabel = computed(() => {
   return productType.value === 'saving' ? '적금' : '정기예금'
 })
 
+const rawBankName = computed(() => {
+  return product.value?.bank?.name || product.value?.bank_name || product.value?.kor_co_nm || ''
+})
+
+const normalizeFinalBankDisplayName = (bankName) => {
+  const displayName = getBankDisplayName(bankName)
+
+  const finalNameMap = {
+    KB국민은행: '국민은행',
+    KEB하나은행: '하나은행',
+  }
+
+  return finalNameMap[displayName] || displayName
+}
+
 const bankName = computed(() => {
-  return product.value?.bank?.name || '은행명 없음'
+  return normalizeFinalBankDisplayName(rawBankName.value) || '은행명 없음'
+})
+
+const bankLogoSrc = computed(() => {
+  return getBankLogo(rawBankName.value || bankName.value)
 })
 
 const bankInitial = computed(() => {
@@ -405,6 +407,17 @@ const joinDenyLabel = computed(() => {
 
   return labels[value] || value || '정보 없음'
 })
+
+const formatInfoText = (value) => {
+  return String(value || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n')
+}
+
 
 const safeNumber = (value) => {
   if (value === null || value === undefined || value === '') {
@@ -1130,4 +1143,244 @@ watch(
     grid-template-columns: 42px minmax(0, 1fr) 74px;
   }
 }
+
+/* === 주연: 상품 상세 페이지 정리 === */
+.hero-description,
+.eyebrow,
+.eligibility-card {
+  display: none !important;
+}
+
+.detail-hero {
+  grid-template-columns: minmax(0, 1fr) 250px;
+}
+
+.hero-main {
+  align-items: flex-start;
+}
+
+.bank-logo-frame {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  flex-shrink: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 14px 30px rgba(15, 27, 61, 0.06);
+}
+
+.bank-logo-img {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+}
+
+.bank-logo-fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #fff;
+  font-size: 30px;
+  font-weight: 950;
+}
+
+.bank-name {
+  color: var(--color-text-muted);
+}
+
+.section-heading {
+  margin-bottom: 16px;
+}
+
+.section-heading h2 {
+  font-size: 24px;
+}
+
+.side-column {
+  gap: 18px;
+}
+
+.info-section {
+  padding: 24px;
+}
+
+.info-block.readable-block {
+  padding: 20px 0;
+}
+
+.info-block.readable-block:first-of-type {
+  padding-top: 2px;
+}
+
+.info-block h3 {
+  margin-bottom: 12px;
+  font-size: 17px;
+}
+
+.condition-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.condition-list li {
+  position: relative;
+  min-height: 38px;
+  padding: 11px 14px 11px 38px;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff, var(--color-surface-soft));
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.62;
+  font-weight: 800;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.condition-list li::before {
+  content: '';
+  position: absolute;
+  top: 17px;
+  left: 17px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-primary-soft);
+}
+
+.empty-info {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: 14px;
+  background: var(--color-surface-soft);
+  color: var(--color-text-muted);
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.date-card {
+  margin-top: 0;
+}
+
+@media (max-width: 1100px) {
+  .detail-hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .bank-logo-frame {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+  }
+}
+
+
+/* === 주연: 상품 상세 조건 박스/히어로 정렬 재수정 === */
+.detail-hero {
+  align-items: center !important;
+  min-height: 210px;
+  padding: 30px 32px !important;
+}
+
+.hero-main {
+  align-items: center !important;
+}
+
+.bank-logo-frame {
+  width: 96px !important;
+  height: 96px !important;
+  border-radius: 28px !important;
+}
+
+.bank-logo-img {
+  width: 78% !important;
+  height: 78% !important;
+}
+
+.bank-logo-fallback {
+  font-size: 36px !important;
+}
+
+.hero-title-area {
+  display: flex;
+  min-height: 112px;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.badge-row {
+  margin-bottom: 10px !important;
+}
+
+.bank-name {
+  margin: 0 0 7px !important;
+  font-size: 15px !important;
+}
+
+.hero-title-area h1 {
+  line-height: 1.12 !important;
+}
+
+.info-block.readable-block {
+  padding: 22px 0 !important;
+}
+
+.info-block.readable-block:first-of-type {
+  padding-top: 0 !important;
+}
+
+.condition-list {
+  display: none !important;
+}
+
+.condition-text-box {
+  min-height: 88px;
+  padding: 18px 20px;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #fff, var(--color-surface-soft));
+  color: var(--color-text);
+  font-size: 14px;
+  line-height: 1.85;
+  font-weight: 800;
+  white-space: pre-line;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+.empty-info {
+  display: none !important;
+}
+
+@media (max-width: 720px) {
+  .detail-hero {
+    min-height: 0;
+  }
+
+  .hero-main {
+    align-items: flex-start !important;
+  }
+
+  .bank-logo-frame {
+    width: 74px !important;
+    height: 74px !important;
+    border-radius: 22px !important;
+  }
+
+  .hero-title-area {
+    min-height: 0;
+  }
+}
+
 </style>

@@ -1,0 +1,163 @@
+[
+  {
+    "category": "commercial",
+    "file": "frontend/src/assets/banks/commercial/woori.svg",
+    "displayName": "우리은행",
+    "source": "zip:woori",
+    "note": "우리은행 원본"
+  },
+  {
+    "category": "commercial",
+    "file": "frontend/src/assets/banks/commercial/sc.png",
+    "displayName": "SC제일은행",
+    "source": "zip:sc",
+    "note": "SC제일은행은 원본이 PNG"
+  },
+  {
+    "category": "commercial",
+    "file": "frontend/src/assets/banks/commercial/shinhan.svg",
+    "displayName": "신한은행",
+    "source": "zip:shinhan",
+    "note": "신한/제주 공통 원본"
+  },
+  {
+    "category": "commercial",
+    "file": "frontend/src/assets/banks/commercial/kb.svg",
+    "displayName": "KB국민은행",
+    "source": "zip:kb",
+    "note": "KB국민은행 원본"
+  },
+  {
+    "category": "commercial",
+    "file": "frontend/src/assets/banks/commercial/hana.svg",
+    "displayName": "하나은행",
+    "source": "zip:hana",
+    "note": "KEB하나은행 원본"
+  },
+  {
+    "category": "commercial",
+    "file": "frontend/src/assets/banks/commercial/citi.svg",
+    "displayName": "시티은행",
+    "source": "zip:citi",
+    "note": "시티은행 원본"
+  },
+  {
+    "category": "commercial",
+    "file": "frontend/src/assets/banks/commercial/im.svg",
+    "displayName": "iM뱅크",
+    "source": "zip:im",
+    "note": "iM뱅크 원본"
+  },
+  {
+    "category": "local",
+    "file": "frontend/src/assets/banks/local/busan.svg",
+    "displayName": "부산은행",
+    "source": "zip:busan",
+    "note": "부산/경남 공통 원본"
+  },
+  {
+    "category": "local",
+    "file": "frontend/src/assets/banks/local/gyeongnam.svg",
+    "displayName": "경남은행",
+    "source": "zip:busan",
+    "note": "부산은행 마크로 구분"
+  },
+  {
+    "category": "local",
+    "file": "frontend/src/assets/banks/local/gwangju.svg",
+    "displayName": "광주은행",
+    "source": "zip:gwangju",
+    "note": "광주/전북 공통 원본"
+  },
+  {
+    "category": "local",
+    "file": "frontend/src/assets/banks/local/jeonbuk.svg",
+    "displayName": "전북은행",
+    "source": "zip:gwangju",
+    "note": "광주은행 마크로 구분"
+  },
+  {
+    "category": "local",
+    "file": "frontend/src/assets/banks/local/jeju.svg",
+    "displayName": "제주은행",
+    "source": "zip:shinhan",
+    "note": "신한은행 마크로 구분"
+  },
+  {
+    "category": "policy",
+    "file": "frontend/src/assets/banks/policy/ibk.svg",
+    "displayName": "IBK기업은행",
+    "source": "zip:ibk",
+    "note": "IBK기업은행 원본"
+  },
+  {
+    "category": "policy",
+    "file": "frontend/src/assets/banks/policy/kdb.svg",
+    "displayName": "KDB산업은행",
+    "source": "zip:kdb",
+    "note": "KDB산업은행 원본"
+  },
+  {
+    "category": "policy",
+    "file": "frontend/src/assets/banks/policy/post.svg",
+    "displayName": "우체국",
+    "source": "zip:post",
+    "note": "우체국 mono 원본"
+  },
+  {
+    "category": "cooperative",
+    "file": "frontend/src/assets/banks/cooperative/nh.svg",
+    "displayName": "NH농협은행",
+    "source": "file:NH농협은행.svg",
+    "note": "업로드 SVG"
+  },
+  {
+    "category": "cooperative",
+    "file": "frontend/src/assets/banks/cooperative/suhyup.svg",
+    "displayName": "수협은행",
+    "source": "file:수협은행.svg",
+    "note": "업로드 SVG"
+  },
+  {
+    "category": "cooperative",
+    "file": "frontend/src/assets/banks/cooperative/mg.svg",
+    "displayName": "새마을금고",
+    "source": "file:Frame 19.svg",
+    "note": "Frame 19를 새마을금고로 지정"
+  },
+  {
+    "category": "cooperative",
+    "file": "frontend/src/assets/banks/cooperative/shinhyup.svg",
+    "displayName": "신협",
+    "source": "zip:shinhyup",
+    "note": "신협 mono 원본"
+  },
+  {
+    "category": "savings",
+    "file": "frontend/src/assets/banks/savings/sbi.svg",
+    "displayName": "SBI저축은행",
+    "source": "zip:sbi",
+    "note": "SBI저축은행 원본"
+  },
+  {
+    "category": "internet",
+    "file": "frontend/src/assets/banks/internet/kakao.svg",
+    "displayName": "카카오뱅크",
+    "source": "zip:kakao",
+    "note": "업로드 SVG"
+  },
+  {
+    "category": "internet",
+    "file": "frontend/src/assets/banks/internet/toss.svg",
+    "displayName": "토스뱅크",
+    "source": "zip:toss",
+    "note": "업로드 SVG"
+  },
+  {
+    "category": "internet",
+    "file": "frontend/src/assets/banks/internet/kbank.svg",
+    "displayName": "케이뱅크",
+    "source": "zip:kbank",
+    "note": "업로드 SVG"
+  }
+]

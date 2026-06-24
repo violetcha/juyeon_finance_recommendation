@@ -2,34 +2,41 @@
 
 <template>
   <main class="main-bank-page">
-    <section class="map-guide-banner">
-      <div class="banner-icon">🗺️</div>
+<section class="page-header map-heading">
       <div>
-        <strong>내 주변 주거래은행을 한눈에 비교해 보세요</strong>
-        <p>성향 테스트와 현재 위치, 지역 검색, 지도 접근성을 함께 확인할 수 있습니다.</p>
-      </div>
-    </section>
-
-    <section class="page-header map-heading">
-      <div>
-        <p class="eyebrow">MAIN BANK FINDER</p>
         <h1>내 주변 주거래은행 찾기</h1>
-        <p>나에게 맞는 은행을 테스트하고, 선택한 지역 또는 현재 위치 기준으로 가까운 지점을 확인해보세요.</p>
       </div>
 
-      <div class="page-actions">
-        <button type="button" class="ghost-action" @click="moveToUserLocation">
-          ◎ 내 위치 다시 찾기
-        </button>
-        <button type="button" class="ghost-action" @click="searchBySelectedRegion">
-          ⌕ 선택 지역 검색
-        </button>
-      </div>
+      <button type="button" class="video-jump-button" @click="scrollToVideoSection">
+        ▶ 영상 보기
+      </button>
     </section>
 
-    <section class="bank-map-section">
+<section class="bank-map-section">
       <aside class="bank-list">
-        <BankFitTest class="bank-fit-test-panel" @recommend="handleRecommendBank" />
+        <BankFitTest
+          ref="bankFitTestRef"
+          :key="bankFitTestKey"
+          class="bank-fit-test-panel"
+          @recommend="handleRecommendBank"
+        />
+
+        <section class="test-control-panel">
+          <div class="control-icon">↺</div>
+          <div>
+            <h3>이전 질문 다시 선택</h3>
+            <p>선택을 바꾸고 싶다면 이전 질문으로 돌아가거나 처음부터 다시 시작할 수 있습니다.</p>
+          </div>
+
+          <div class="control-buttons">
+            <button type="button" class="control-button outline" @click="handlePreviousQuestion">
+              ← 이전 질문
+            </button>
+            <button type="button" class="control-button primary" @click="handleRestartTest">
+              ↻ 처음부터 다시
+            </button>
+          </div>
+        </section>
       </aside>
 
       <section class="map-area">
@@ -137,14 +144,10 @@
       </section>
     </section>
 
-    <section class="video-section">
+    <section ref="videoSection" id="bank-guide-videos" class="video-section">
       <div class="video-header">
         <div>
-          <p class="eyebrow">Financial Guide</p>
           <h2>주거래은행 선택 가이드 영상</h2>
-          <p>
-            기본 영상 3개를 먼저 보여주고, 검색어를 입력하면 다른 금융 가이드 영상도 확인할 수 있습니다.
-          </p>
         </div>
       </div>
 
@@ -224,6 +227,9 @@ const startRouteMarker = ref(null)
 const endRouteMarker = ref(null)
 const mapError = ref('')
 const mapMessage = ref('')
+const videoSection = ref(null)
+const bankFitTestRef = ref(null)
+const bankFitTestKey = ref(0)
 
 const BANK_SEARCH_RADIUS = 1500
 const MAX_BANK_RESULTS = 15
@@ -237,7 +243,7 @@ const selectedPlace = ref(null)
 
 const summaryBanks = [
   {
-    name: 'KB국민은행',
+    name: '국민은행',
     keyword: '국민은행',
     icon: '🟡',
     description:
@@ -266,7 +272,7 @@ const summaryBanks = [
   },
   {
     name: 'NH농협은행',
-    keyword: '농협은행',
+    keyword: 'NH농협은행',
     icon: '🌱',
     description:
       '지역 접근성과 생활 밀착 금융이 강점입니다. 지방 거주자나 가까운 지점 접근성을 중시하는 사용자에게 적합합니다.',
@@ -281,21 +287,20 @@ const bankOptions = [
   '신한은행',
   '하나은행',
   '우리은행',
-  '농협은행',
-  '기업은행',
-  'SC제일은행',
-  '씨티은행',
-  '산업은행',
-  '수협은행',
-  '광주은행',
-  '전북은행',
-  '대구은행',
+  'NH농협은행',
   '부산은행',
   '경남은행',
+  '광주은행',
+  '전북은행',
   '제주은행',
-  '새마을금고',
-  '신협',
-  '우체국',
+  'IBK기업은행',
+  'SC제일은행',
+  'iM뱅크',
+  'KDB산업은행',
+  '수협은행',
+  '카카오뱅크',
+  '토스뱅크',
+  '케이뱅크',
 ]
 
 const selectedBankKeyword = ref('국민은행')
@@ -305,7 +310,16 @@ const bankCodeToKeywordMap = {
   SHINHAN: '신한은행',
   HANA: '하나은행',
   WOORI: '우리은행',
-  NH: '농협은행',
+  NH: 'NH농협은행',
+}
+
+
+const bankSearchKeywordMap = {
+  '전체 은행': '은행',
+  'NH농협은행': '농협은행',
+  'iM뱅크': '대구은행',
+  'IBK기업은행': '기업은행',
+  'KDB산업은행': '산업은행',
 }
 
 const regionData = {
@@ -1035,7 +1049,7 @@ const normalizeBankResults = (data) => {
 }
 
 const getSearchKeyword = () => {
-  return selectedBankKeyword.value === '전체 은행' ? '은행' : selectedBankKeyword.value
+  return bankSearchKeywordMap[selectedBankKeyword.value] || selectedBankKeyword.value
 }
 
 const searchNearbyBanks = async () => {
@@ -1356,6 +1370,32 @@ const handleVideoSearch = () => {
   loadVideos(videoKeyword.value, 9)
 }
 
+const scrollToVideoSection = () => {
+  videoSection.value?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
+}
+
+const handlePreviousQuestion = () => {
+  if (bankFitTestRef.value?.goPreviousQuestion) {
+    bankFitTestRef.value.goPreviousQuestion()
+    return
+  }
+
+  bankFitTestKey.value += 1
+}
+
+const handleRestartTest = () => {
+  if (bankFitTestRef.value?.resetTest) {
+    bankFitTestRef.value.resetTest()
+    return
+  }
+
+  bankFitTestKey.value += 1
+}
+
+
 const handleToggleSaveVideo = async (video) => {
   const token = localStorage.getItem('token')
   const videoId = getVideoId(video)
@@ -1528,8 +1568,7 @@ onMounted(async () => {
 }
 
 .bank-fit-test-panel {
-  position: sticky;
-  top: calc(var(--header-height, 64px) + 18px);
+  position: static;
 }
 
 .map-area {
@@ -1888,4 +1927,184 @@ onMounted(async () => {
     padding: 12px;
   }
 }
+
+/* === 주연: 주거래은행 페이지 최종 정리 === */
+.map-guide-banner {
+  display: none !important;
+}
+
+.main-bank-page {
+  padding-top: 28px;
+}
+
+.map-heading {
+  margin-bottom: 22px;
+  align-items: center;
+}
+
+.map-heading h1 {
+  margin: 0;
+  font-size: clamp(36px, 4vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -0.07em;
+}
+
+.video-jump-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid #cbd8ee;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1116b8;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(15, 27, 61, 0.06);
+}
+
+.video-jump-button:hover {
+  border-color: #1116b8;
+  transform: translateY(-1px);
+}
+
+.bank-map-section {
+  align-items: start;
+}
+
+.bank-list {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.test-control-panel {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dbe4f0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f8fbff, #fff);
+  box-shadow: 0 16px 34px rgba(15, 27, 61, 0.06);
+}
+
+.control-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #1116b8;
+  font-size: 24px;
+  font-weight: 950;
+}
+
+.test-control-panel h3 {
+  margin: 2px 0 5px;
+  color: #0f1b3d;
+  font-size: 16px;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+}
+
+.test-control-panel p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.control-buttons {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 4px;
+}
+
+.control-button {
+  min-height: 42px;
+  border-radius: 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.control-button.outline {
+  border: 1px solid #cbd8ee;
+  background: #fff;
+  color: #1116b8;
+}
+
+.control-button.primary {
+  border: 0;
+  background: #1116b8;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(17, 22, 184, 0.16);
+}
+
+.map-area {
+  border-radius: 22px;
+}
+
+.video-section {
+  scroll-margin-top: calc(var(--header-height, 64px) + 18px);
+}
+
+.video-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.video-header h2 {
+  margin-bottom: 8px;
+}
+
+.video-search {
+  margin-top: 18px;
+}
+
+@media (max-width: 1180px) {
+  .test-control-panel {
+    position: static;
+  }
+}
+
+@media (max-width: 640px) {
+  .map-heading {
+    align-items: flex-start;
+  }
+
+  .video-jump-button {
+    width: 100%;
+  }
+
+  .control-buttons {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* === 주연: 주거래은행 페이지 스크롤/영상 문구 보정 === */
+.bank-fit-test-panel {
+  position: static !important;
+  top: auto !important;
+}
+
+.bank-list {
+  align-self: start;
+}
+
+.video-header p {
+  display: none !important;
+}
+
+.video-section {
+  margin-top: 34px;
+}
+
 </style>

@@ -2,7 +2,6 @@
   <main class="recommend-page page-wrap">
     <section class="recommend-hero">
       <div class="hero-copy">
-        <span class="eyebrow">PERSONAL RECOMMENDATION</span>
         <h1>맞춤 추천 결과</h1>
         <p>
           마이페이지 금융 프로필과 추천 조건을 바탕으로 실제 저장된 예금·적금 상품 중
@@ -26,7 +25,6 @@
       <form class="condition-card card" @submit.prevent="handleRecommend">
         <div class="condition-title">
           <div>
-            <span class="eyebrow small">RECOMMEND SETTINGS</span>
             <h2>추천 조건</h2>
           </div>
           <button type="button" class="reset-text-button" @click="handleReset">
@@ -60,21 +58,24 @@
           <span>내 주거래은행</span>
           <select v-model="form.main_bank" class="input-base">
             <option value="없음">마이페이지 정보 사용 또는 아직 없음</option>
-            <option value="국민은행">KB국민은행</option>
+            <option value="국민은행">국민은행</option>
             <option value="신한은행">신한은행</option>
-            <option value="우리은행">우리은행</option>
             <option value="하나은행">하나은행</option>
-            <option value="농협은행">NH농협은행</option>
-            <option value="광주은행">광주은행</option>
-            <option value="기업은행">IBK기업은행</option>
-            <option value="카카오뱅크">카카오뱅크</option>
-            <option value="케이뱅크">케이뱅크</option>
-            <option value="토스뱅크">토스뱅크</option>
+            <option value="우리은행">우리은행</option>
+            <option value="NH농협은행">NH농협은행</option>
             <option value="부산은행">부산은행</option>
-            <option value="대구은행">대구은행</option>
-            <option value="전북은행">전북은행</option>
             <option value="경남은행">경남은행</option>
+            <option value="광주은행">광주은행</option>
+            <option value="전북은행">전북은행</option>
             <option value="제주은행">제주은행</option>
+            <option value="IBK기업은행">IBK기업은행</option>
+            <option value="SC제일은행">SC제일은행</option>
+            <option value="iM뱅크">iM뱅크</option>
+            <option value="KDB산업은행">KDB산업은행</option>
+            <option value="수협은행">수협은행</option>
+            <option value="카카오뱅크">카카오뱅크</option>
+            <option value="토스뱅크">토스뱅크</option>
+            <option value="케이뱅크">케이뱅크</option>
           </select>
         </label>
 
@@ -120,10 +121,6 @@
           {{ errorMessage }}
         </p>
 
-        <p v-if="successMessage" class="notice-message success">
-          {{ successMessage }}
-        </p>
-
         <div v-if="loading" class="state-card card">
           <div class="loading-icon">⌛</div>
           <h2>추천 결과를 분석하고 있습니다.</h2>
@@ -145,22 +142,21 @@
           <p>은행 필터를 전체 은행으로 바꾸거나 기간 조건을 완화해보세요.</p>
         </div>
 
-        <div v-else class="result-dashboard">
+        <div v-else class="result-dashboard card">
           <div class="product-analysis-grid">
             <section class="recommended-products">
               <div class="section-heading compact-heading">
                 <div>
                   <h2>추천 예적금 상품</h2>
-                  <p>추천 API가 반환한 실제 추천 상품 전체입니다.</p>
                 </div>
                 <span>{{ visibleRecommendations.length }}개 추천</span>
               </div>
 
-              <div class="product-card-grid">
+              <div class="product-card-grid recommendation-row-list">
                 <article
                   v-for="(item, index) in visibleRecommendations"
                   :key="`${item.product_type}-${item.product_id}-${item.option_id || item.save_trm}`"
-                  class="recommend-product-card card"
+                  class="recommend-product-card card recommendation-row-card"
                   :class="{ selected: isSelectedRecommendation(item) }"
                   role="button"
                   tabindex="0"
@@ -168,64 +164,73 @@
                   @keydown.enter.prevent="selectRecommendation(item)"
                   @keydown.space.prevent="selectRecommendation(item)"
                 >
-                  <div class="product-card-top">
+                  <div class="recommend-row-top">
                     <span class="rank-badge">추천 {{ index + 1 }}</span>
-                    <button
-                      type="button"
-                      class="heart-button"
-                      :class="{ active: isFavoriteProduct(item.product_id) }"
-                      :disabled="favoriteLoadingProductId === item.product_id"
-                      :title="isFavoriteProduct(item.product_id) ? '관심상품 해제' : '관심상품 등록'"
-                      @click.stop="handleFavoriteClick(item)"
-                    >
-                      {{ isFavoriteProduct(item.product_id) ? '♥' : '♡' }}
-                    </button>
-                  </div>
-
-                  <span class="badge" :class="item.product_type === 'deposit' ? 'mint' : 'purple'">
-                    {{ item.product_type_label }}
-                  </span>
-
-                  <h3>{{ item.product_name }}</h3>
-                  <p class="bank-line">{{ item.bank_name }}</p>
-
-                  <div class="product-rate-row">
-                    <div>
-                      <small>기본 금리</small>
-                      <strong>{{ formatRate(item.base_rate) }}%</strong>
-                    </div>
-                    <div>
-                      <small>최고 금리</small>
-                      <strong>{{ formatRate(item.max_rate) }}%</strong>
+                    <div class="recommend-row-actions">
+                      <span class="badge" :class="item.product_type === 'deposit' ? 'mint' : 'purple'">
+                        {{ item.product_type_label }}
+                      </span>
+                      <button
+                        type="button"
+                        class="heart-button"
+                        :class="{ active: isFavoriteProduct(item.product_id) }"
+                        :disabled="favoriteLoadingProductId === item.product_id"
+                        :title="isFavoriteProduct(item.product_id) ? '관심상품 해제' : '관심상품 등록'"
+                        @click.stop="handleFavoriteClick(item)"
+                      >
+                        {{ isFavoriteProduct(item.product_id) ? '♥' : '♡' }}
+                      </button>
                     </div>
                   </div>
 
-                  <dl class="product-mini-info">
-                    <div>
-                      <dt>가입 기간</dt>
-                      <dd>{{ item.save_trm }}개월</dd>
+                  <div class="recommend-row-body">
+                    <div class="product-title-block">
+                      <h3>{{ item.product_name }}</h3>
+                      <p class="bank-line">{{ displayBankName(item.bank_name) }}</p>
                     </div>
-                    <div>
-                      <dt>조건</dt>
-                      <dd>{{ item.condition_label }}</dd>
-                    </div>
-                  </dl>
 
-                  <p class="recommend-reason">
-                    {{ item.reasons?.[0] || '입력한 조건과 금리 정보를 종합해 추천한 상품입니다.' }}
-                  </p>
+                    <div class="product-rate-row">
+                      <div>
+                        <small>기본 금리</small>
+                        <strong>{{ formatRate(item.base_rate) }}%</strong>
+                      </div>
+                      <div>
+                        <small>최고 금리</small>
+                        <strong>{{ formatRate(item.max_rate) }}%</strong>
+                      </div>
+                    </div>
+
+                    <dl class="product-mini-info">
+                      <div>
+                        <dt>가입 기간</dt>
+                        <dd>{{ item.save_trm }}개월</dd>
+                      </div>
+                      <div>
+                        <dt>조건</dt>
+                        <dd>{{ item.condition_label }}</dd>
+                      </div>
+                    </dl>
+                  </div>
 
                   <RouterLink class="detail-button full" :to="getDetailRoute(item)" @click.stop>
                     상품 자세히 보기 ›
                   </RouterLink>
                 </article>
               </div>
+
+              <p
+                v-if="successMessage"
+                class="notice-message result-notice"
+                :class="noticeTone"
+              >
+                {{ successMessage }}
+              </p>
             </section>
 
             <aside class="score-detail-card card">
               <h2>맞춤 점수 상세 분석</h2>
               <p v-if="selectedRecommendation" class="selected-score-product">
-                {{ selectedRecommendation.bank_name }} · {{ selectedRecommendation.product_name }}
+                {{ displayBankName(selectedRecommendation.bank_name) }} · {{ selectedRecommendation.product_name }}
               </p>
 
               <div
@@ -260,11 +265,13 @@ import { reactive, ref, watch, onMounted, computed } from 'vue'
 import { recommendProducts } from '@/api/recommendations'
 import { getProfile } from '@/api/accounts'
 import { getFavoriteProducts, toggleFavoriteProduct } from '@/api/favorites'
+import { getBankDisplayName } from '@/constants/bankLogoMap'
 
 const loading = ref(false)
 const hasSearched = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const noticeTone = ref('success')
 const recommendations = ref([])
 const selectedRecommendationKey = ref(null)
 const currentUserId = ref(null)
@@ -324,7 +331,7 @@ const selectedRecommendation = computed(() => {
   return selectedItem || recommendations.value[0]
 })
 
-const visibleRecommendations = computed(() => recommendations.value)
+const visibleRecommendations = computed(() => recommendations.value.slice(0, 3))
 
 const recommendedBankName = computed(() => {
   if (topRecommendation.value?.bank_name) {
@@ -470,7 +477,16 @@ const scoreDetails = computed(() => {
   const joinWay = String(item.join_way || '')
   const conditionLabel = String(item.condition_label || '')
   const selectedMainBank = form.main_bank !== '없음' ? form.main_bank : profileUsed.value?.main_bank
-  const bankMatched = selectedMainBank && item.bank_name?.includes(selectedMainBank.replace('KB', '').replace('NH', ''))
+  const normalizedSelectedMainBank = String(selectedMainBank || '')
+    .replace('KB', '')
+    .replace('KEB', '')
+    .replace('NH', '')
+    .replace('IBK', '')
+    .replace('KDB', '')
+    .replace('iM', '')
+    .replace('뱅크', '은행')
+
+  const bankMatched = selectedMainBank && item.bank_name?.includes(normalizedSelectedMainBank)
 
   return [
     {
@@ -572,6 +588,7 @@ const handleReset = () => {
   hasSearched.value = false
   errorMessage.value = ''
   successMessage.value = ''
+  noticeTone.value = 'success'
 
   if (storageKey.value) {
     localStorage.removeItem(storageKey.value)
@@ -718,6 +735,7 @@ const handleRecommend = async () => {
   hasSearched.value = true
   errorMessage.value = ''
   successMessage.value = ''
+  noticeTone.value = 'success'
   recommendations.value = []
   selectedRecommendationKey.value = null
 
@@ -758,6 +776,7 @@ const handleFavoriteClick = async (item) => {
 
   errorMessage.value = ''
   successMessage.value = ''
+  noticeTone.value = 'success'
 
   if (!token) {
     errorMessage.value = '로그인 후 관심상품을 등록할 수 있습니다.'
@@ -775,9 +794,11 @@ const handleFavoriteClick = async (item) => {
     if (isFavorite) {
       nextFavoriteIds.add(item.product_id)
       successMessage.value = '관심상품에 등록되었습니다.'
+      noticeTone.value = 'success'
     } else {
       nextFavoriteIds.delete(item.product_id)
       successMessage.value = '관심상품에서 해제되었습니다.'
+      noticeTone.value = 'danger'
     }
 
     favoriteProductIds.value = nextFavoriteIds
@@ -822,6 +843,8 @@ const isSelectedRecommendation = (item) => {
   return getRecommendationKey(item) === getRecommendationKey(selectedRecommendation.value)
 }
 
+const displayBankName = (bankName) => getBankDisplayName(bankName)
+
 const formatRate = (value) => {
   const numberValue = Number(value)
 
@@ -850,118 +873,238 @@ watch(
 )
 </script>
 
+<!-- FINAL OVERRIDE: 추천 카드 가로형 행 배치 보정 -->
+<!-- FINAL OVERRIDE: 맞춤추천 결과 카드 가독성 재정리 -->
 <style scoped>
+/* FINAL FIX: 맞춤추천 카드 행형 정리 + 알림 위치/은행명 표기 */
 .recommend-page {
-  padding-top: 34px;
+  padding-top: 18px !important;
 }
 
 .recommend-hero {
+  margin-bottom: 20px !important;
+}
+
+.result-dashboard.card {
+  padding: 20px !important;
+}
+
+.product-analysis-grid {
   display: grid;
-  grid-template-columns: 1fr 360px;
-  gap: 28px;
-  align-items: center;
-  margin-bottom: 24px;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 14px;
+  align-items: start;
 }
 
-.eyebrow {
-  display: inline-flex;
-  margin-bottom: 8px;
-  color: var(--color-primary);
-  font-size: 12px;
+.score-detail-card {
+  width: 100% !important;
+  padding: 18px !important;
+  border-radius: 20px !important;
+}
+
+.score-detail-card h2 {
+  font-size: 18px !important;
+}
+
+.selected-score-product {
+  margin-bottom: 10px !important;
+  font-size: 12px !important;
+}
+
+.section-heading.compact-heading {
+  margin-bottom: 12px !important;
+}
+
+.section-heading.compact-heading h2 {
+  margin: 0 !important;
+  font-size: 22px !important;
+}
+
+.recommendation-row-list {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 14px !important;
+}
+
+.recommendation-row-card,
+.recommend-product-card.recommendation-row-card,
+.recommend-product-card.recommendation-row-card:nth-child(3) {
+  display: block !important;
+  min-height: 0 !important;
+  padding: 18px 20px !important;
+  border-radius: 20px !important;
+  overflow: hidden !important;
+}
+
+.recommend-row-top {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-start !important;
+  gap: 16px !important;
+  margin-bottom: 12px !important;
+}
+
+.recommend-row-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex: 0 0 auto !important;
+}
+
+.recommend-row-actions .badge {
+  margin: 0 !important;
+}
+
+.rank-badge {
+  align-self: flex-start !important;
+}
+
+.recommend-row-body {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+.product-title-block {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.product-title-block h3,
+.recommend-product-card h3 {
+  display: block;
+  min-height: 0;
+  margin: 0 0 4px;
+  color: var(--color-text);
+  font-size: 18px;
+  line-height: 1.28;
   font-weight: 950;
-  letter-spacing: 0.12em;
+  letter-spacing: -0.045em;
+  writing-mode: horizontal-tb;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-orientation: mixed;
 }
 
-.eyebrow.small {
-  margin-bottom: 4px;
-  font-size: 11px;
+.product-title-block .bank-line,
+.bank-line {
+  margin: 0 !important;
+  font-size: 13px !important;
+}
+
+.recommendation-row-card .product-rate-row {
+  grid-column: 1 / span 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+}
+
+.recommendation-row-card .product-rate-row > div {
+  padding: 12px 10px !important;
+  border-radius: 14px !important;
+}
+
+.recommendation-row-card .product-rate-row strong {
+  font-size: 18px !important;
+}
+
+.recommendation-row-card .product-mini-info {
+  grid-column: 3 / span 2;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
+}
+
+.recommendation-row-card .product-mini-info div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-surface-soft);
+}
+
+.recommendation-row-card .detail-button.full {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.result-notice.notice-message {
+  margin: 14px 0 0 !important;
+}
+
+@media (max-width: 1260px) {
+  .product-analysis-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 14px;
+  align-items: start;
+}
+
+  .score-detail-card {
+    position: static !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .recommend-row-body {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+}
+</style>
+
+<style scoped>
+.recommend-page {
+  width: min(var(--container-width, 1360px), calc(100% - 48px));
+  margin: 0 auto;
+  padding: 18px 0 72px;
+}
+
+.recommend-hero {
+  margin: 0 0 22px;
 }
 
 .hero-copy h1 {
   margin: 0;
   color: var(--color-text);
-  font-size: clamp(36px, 4vw, 52px);
-  line-height: 1.12;
+  font-size: clamp(38px, 4vw, 52px);
+  line-height: 1.08;
   font-weight: 950;
-  letter-spacing: -0.06em;
+  letter-spacing: -0.07em;
 }
 
-.hero-copy p {
-  max-width: 720px;
-  margin: 14px 0 0;
-  color: var(--color-text-muted);
-  font-size: 17px;
+.hero-copy p,
+.hero-visual,
+.eyebrow,
+.eyebrow.small {
+  display: none;
 }
-
-.hero-visual {
-  position: relative;
-  min-height: 170px;
-}
-
-.hero-card {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--color-border);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: var(--shadow-soft);
-}
-
-.piggy {
-  left: 110px;
-  top: 54px;
-  width: 88px;
-  height: 88px;
-  border-radius: 32px;
-  background: var(--color-accent-soft);
-  font-size: 44px;
-}
-
-.score-bubble {
-  right: 28px;
-  top: 42px;
-  width: 70px;
-  height: 70px;
-  border-radius: 26px;
-  color: var(--color-primary);
-  font-size: 32px;
-  font-weight: 950;
-}
-
-.mini-chart {
-  left: 0;
-  top: 12px;
-  width: 130px;
-  height: 100px;
-  align-items: end;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 9px;
-  padding: 18px;
-  border-radius: 26px;
-}
-
-.mini-chart span {
-  width: 14px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, #6875ff, var(--color-primary));
-}
-
-.mini-chart span:nth-child(1) { height: 28px; }
-.mini-chart span:nth-child(2) { height: 48px; }
-.mini-chart span:nth-child(3) { height: 36px; }
-.mini-chart span:nth-child(4) { height: 66px; background: linear-gradient(180deg, #3ee5ca, var(--color-accent)); }
 
 .recommend-workspace {
   display: grid;
   grid-template-columns: 330px minmax(0, 1fr);
-  gap: 20px;
+  gap: 22px;
   align-items: start;
 }
 
 .condition-card {
   position: sticky;
-  top: calc(var(--header-height) + 18px);
+  top: calc(var(--header-height, 64px) + 18px);
   padding: 22px;
+  border-radius: 22px;
+  box-shadow: 0 18px 44px rgba(15, 27, 61, 0.07);
 }
 
 .condition-title {
@@ -969,7 +1112,9 @@ watch(
   justify-content: space-between;
   gap: 14px;
   align-items: flex-start;
-  margin-bottom: 18px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .condition-title h2 {
@@ -985,12 +1130,13 @@ watch(
   background: transparent;
   color: var(--color-primary);
   font-weight: 950;
+  cursor: pointer;
 }
 
 .form-group {
   display: grid;
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 13px;
 }
 
 .form-group span {
@@ -999,11 +1145,17 @@ watch(
   font-weight: 950;
 }
 
+.input-base,
+.condition-card select {
+  min-height: 45px;
+  border-radius: 13px;
+}
+
 .profile-used-card {
-  margin: 18px 0;
-  padding: 14px;
+  margin: 16px 0;
+  padding: 14px 15px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border-radius: 16px;
   background: var(--color-surface-soft);
 }
 
@@ -1023,6 +1175,8 @@ watch(
 
 .recommend-submit {
   width: 100%;
+  min-height: 48px;
+  border-radius: 13px;
 }
 
 .result-section {
@@ -1031,21 +1185,27 @@ watch(
 
 .notice-message {
   margin: 0 0 14px;
-  padding: 14px 18px;
+  padding: 13px 16px;
   border-radius: 14px;
-  font-weight: 900;
+  font-size: 14px;
+  font-weight: 950;
 }
 
-.notice-message.error {
+.notice-message.error,
+.notice-message.danger {
   border: 1px solid #fecaca;
   background: #fff5f5;
-  color: var(--color-danger);
+  color: #dc2626;
 }
 
 .notice-message.success {
   border: 1px solid #bbf7d0;
   background: #f0fdf4;
   color: #15803d;
+}
+
+.result-notice {
+  margin: 14px 0 0;
 }
 
 .state-card {
@@ -1055,6 +1215,7 @@ watch(
   align-content: center;
   padding: 40px;
   text-align: center;
+  border-radius: 22px;
 }
 
 .state-card h2 {
@@ -1082,320 +1243,153 @@ watch(
 }
 
 .result-dashboard {
-  display: grid;
-  gap: 20px;
+  min-width: 0;
 }
 
-.summary-card {
-  display: grid;
-  grid-template-columns: 1fr 1fr 220px 1.35fr;
-  gap: 20px;
-  align-items: center;
-  padding: 24px;
-}
-
-.summary-block {
-  display: grid;
-  grid-template-columns: 58px 1fr;
-  gap: 14px;
-  align-items: center;
-}
-
-.summary-icon {
-  display: grid;
-  place-items: center;
-  width: 58px;
-  height: 58px;
-  border-radius: 21px;
-  font-size: 28px;
-}
-
-.summary-icon.mint {
-  background: var(--color-accent-soft);
-}
-
-.summary-icon.purple {
-  background: #f2ebff;
-}
-
-.summary-block small {
-  color: var(--color-text-light);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.summary-block strong {
-  display: block;
-  overflow: hidden;
-  color: var(--color-text);
-  font-size: 20px;
-  font-weight: 950;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.summary-block p {
-  margin: 4px 0 0;
-  color: var(--color-text-muted);
-  font-size: 13px;
-}
-
-.score-ring-card {
-  display: grid;
-  place-items: center;
-  gap: 8px;
-}
-
-.score-ring {
-  display: grid;
-  place-items: center;
-  width: 128px;
-  height: 128px;
-  border-radius: 50%;
-  background: conic-gradient(var(--color-accent) var(--score-degree), #e8eef8 0deg);
-}
-
-.score-ring > div {
-  display: grid;
-  place-items: center;
-  width: 94px;
-  height: 94px;
-  border-radius: 50%;
-  background: #fff;
-}
-
-.score-ring span {
-  color: var(--color-text-muted);
-  font-size: 11px;
-  font-weight: 900;
-}
-
-.score-ring strong {
-  color: var(--color-accent);
-  font-size: 28px;
-  font-weight: 950;
-}
-
-.score-ring-card p {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.reason-chip-box h3 {
-  margin: 0 0 12px;
-  color: var(--color-text);
-  font-size: 16px;
-  font-weight: 950;
-}
-
-.reason-chip-box > div {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.reason-chip {
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  min-height: 40px;
-  padding: 0 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--color-text);
-  font-size: 13px;
-  font-weight: 850;
-}
-
-.reason-chip em {
-  color: var(--color-primary);
-  font-style: normal;
-}
-
-.bank-result-card {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr 1fr;
-  gap: 22px;
-  padding: 24px;
-}
-
-.bank-main-info {
-  display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: 16px;
-  align-items: start;
-}
-
-.bank-large-icon {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 25px;
-  background: linear-gradient(135deg, var(--color-primary), #4f6bff);
-  color: #fff;
-  font-size: 34px;
-}
-
-.bank-main-info h2 {
-  margin: 9px 0 4px;
-  color: var(--color-text);
-  font-size: 25px;
-  font-weight: 950;
-  letter-spacing: -0.04em;
-}
-
-.bank-main-info p {
-  margin: 0 0 14px;
-  color: var(--color-text-muted);
-  font-size: 14px;
-}
-
-.bank-detail-button {
-  min-width: 190px;
-}
-
-.bank-info-column {
-  padding-left: 20px;
-  border-left: 1px solid var(--color-border);
-}
-
-.bank-info-column h3 {
-  margin: 0 0 12px;
-  color: var(--color-text);
-  font-size: 16px;
-  font-weight: 950;
-}
-
-.bank-info-column ul {
-  display: grid;
-  gap: 9px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.bank-info-column li {
-  position: relative;
-  padding-left: 20px;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.bank-info-column li::before {
-  content: '✓';
-  position: absolute;
-  left: 0;
-  color: var(--color-accent);
-  font-weight: 950;
-}
-
-.bank-info-column dl {
-  display: grid;
-  gap: 12px;
-  margin: 0;
-}
-
-.bank-info-column dl div {
-  padding-bottom: 11px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.bank-info-column dt {
-  color: var(--color-text-light);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.bank-info-column dd {
-  overflow: hidden;
-  margin: 4px 0 0;
-  color: var(--color-text);
-  font-size: 13px;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.result-dashboard.card {
+  min-height: 650px;
+  padding: 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 20px 48px rgba(15, 27, 61, 0.08);
 }
 
 .product-analysis-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 350px;
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 14px;
   align-items: start;
 }
 
-.compact-heading {
-  margin-bottom: 14px;
+.recommended-products {
+  min-width: 0;
 }
 
-.compact-heading h2 {
-  font-size: 24px;
+.section-heading.compact-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  min-height: 38px;
+  margin: 0 0 12px;
 }
 
-.compact-heading > span {
-  color: var(--color-primary);
+.section-heading.compact-heading h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 22px;
+  line-height: 1.2;
   font-weight: 950;
+  letter-spacing: -0.045em;
 }
 
-.product-card-grid {
+.section-heading.compact-heading p {
+  display: none;
+}
+
+.section-heading.compact-heading > span {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.product-card-grid,
+.recommendation-row-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: 1fr;
   gap: 14px;
 }
 
-.recommend-product-card {
+.recommend-product-card,
+.recommend-product-card:nth-child(3),
+.recommendation-row-card {
+  display: block;
   min-width: 0;
+  min-height: 0;
+  padding: 16px 18px;
   overflow: hidden;
-  padding: 18px;
+  border-radius: 20px;
+  background: #fff;
   cursor: pointer;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .recommend-product-card:hover,
 .recommend-product-card.selected {
-  border-color: rgba(0, 30, 190, 0.35);
-  box-shadow: 0 18px 38px rgba(0, 30, 190, 0.12);
-  transform: translateY(-2px);
+  border-color: rgba(0, 30, 190, 0.32);
+  box-shadow: 0 16px 34px rgba(0, 30, 190, 0.1);
+  transform: translateY(-1px);
 }
 
-.recommend-product-card.selected .rank-badge::after {
-  content: ' 선택됨';
-}
-
-.product-card-top {
+.recommend-row-top {
   display: flex;
   justify-content: space-between;
-  gap: 10px;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.recommend-row-actions {
+  display: flex;
   align-items: center;
-  margin-bottom: 14px;
+  gap: 8px;
+  flex: 0 0 auto;
 }
 
 .rank-badge {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
+  min-height: 26px;
+  padding: 0 9px;
   border-radius: 999px;
   background: var(--color-primary-soft);
   color: var(--color-primary);
+  font-size: 11px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.recommend-product-card.selected .rank-badge::after {
+  content: '';
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 0 10px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 950;
+  white-space: nowrap;
+}
+
+.badge.mint {
+  background: #dcfce7;
+  color: #059669;
+}
+
+.badge.purple {
+  background: #f1e6ff;
+  color: #7c3aed;
 }
 
 .heart-button {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 34px;
+  height: 34px;
   border: 1px solid var(--color-border);
   border-radius: 999px;
   background: #fff;
   color: #98a4bc;
-  font-size: 20px;
+  font-size: 18px;
+  cursor: pointer;
 }
 
 .heart-button.active {
@@ -1404,97 +1398,125 @@ watch(
   color: var(--color-danger);
 }
 
+.recommend-row-body {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
+
+.product-title-block {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.product-title-block h3,
 .recommend-product-card h3 {
-  min-height: 52px;
-  max-width: 100%;
-  margin: 12px 0 4px;
+  display: block;
+  min-height: 0;
+  margin: 0 0 4px;
   color: var(--color-text);
   font-size: 18px;
-  line-height: 1.35;
+  line-height: 1.28;
   font-weight: 950;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.045em;
+  writing-mode: horizontal-tb;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-orientation: mixed;
+}
+
+.product-title-block .bank-line,
+.bank-line {
+  display: block;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.35;
+  writing-mode: horizontal-tb;
+  white-space: normal;
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
 
-.bank-line {
-  max-width: 100%;
-  margin: 0 0 14px;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+.recommend-reason {
+  display: none;
 }
 
 .product-rate-row {
+  grid-column: 1 / span 2;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-bottom: 12px;
+  margin: 0;
+  min-width: 0;
 }
 
-.product-rate-row div {
+.product-rate-row > div {
   min-width: 0;
-  overflow: hidden;
-  padding: 12px;
+  padding: 12px 10px;
   border-radius: 14px;
   background: var(--color-surface-soft);
 }
 
 .product-rate-row small {
   display: block;
+  margin-bottom: 4px;
   color: var(--color-text-light);
   font-size: 11px;
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .product-rate-row strong {
   display: block;
-  max-width: 100%;
   color: var(--color-primary);
-  font-size: 21px;
+  font-size: 18px;
+  line-height: 1.15;
   font-weight: 950;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .product-mini-info {
+  grid-column: 3 / span 2;
   display: grid;
-  gap: 8px;
-  margin: 0 0 12px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0;
+  min-width: 0;
 }
 
 .product-mini-info div {
   display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--color-border);
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-surface-soft);
 }
 
 .product-mini-info dt {
+  flex: 0 0 auto;
   color: var(--color-text-light);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
+  white-space: nowrap;
 }
 
 .product-mini-info dd {
   min-width: 0;
   margin: 0;
   color: var(--color-text);
-  font-size: 12px;
-  font-weight: 900;
-  text-align: right;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
-}
-
-.recommend-reason {
-  min-height: 58px;
-  margin: 0 0 14px;
-  color: var(--color-text-muted);
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 14px;
+  font-weight: 950;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .detail-button {
@@ -1509,27 +1531,32 @@ watch(
   color: var(--color-primary);
   font-size: 14px;
   font-weight: 950;
+  text-decoration: none;
 }
 
 .detail-button.full {
   width: 100%;
+  margin-top: 12px;
 }
 
 .score-detail-card {
-  padding: 22px;
+  width: 100%;
+  padding: 18px;
+  border-radius: 20px;
+  background: #fff;
 }
 
 .score-detail-card h2 {
   margin: 0 0 8px;
   color: var(--color-text);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 950;
 }
 
 .selected-score-product {
-  margin: 0 0 16px;
+  margin: 0 0 10px;
   color: var(--color-text-muted);
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.45;
   font-weight: 800;
   word-break: keep-all;
@@ -1538,26 +1565,30 @@ watch(
 
 .score-detail-row {
   display: grid;
-  grid-template-columns: 1fr 130px auto;
-  gap: 12px;
-  align-items: center;
-  padding: 12px 0;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  padding: 10px 0;
   border-bottom: 1px solid var(--color-border);
 }
 
+.score-detail-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .score-detail-label strong {
-  display: block;
   color: var(--color-text);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 950;
 }
 
 .score-detail-label span {
-  display: block;
-  margin-top: 2px;
+  max-width: 150px;
   color: var(--color-text-muted);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.4;
+  text-align: right;
 }
 
 .score-bar-wrap {
@@ -1575,6 +1606,7 @@ watch(
 }
 
 .score-detail-row em {
+  justify-self: end;
   color: var(--color-accent);
   font-size: 12px;
   font-style: normal;
@@ -1586,7 +1618,8 @@ watch(
   justify-content: space-between;
   align-items: end;
   gap: 12px;
-  margin-top: 20px;
+  padding-top: 12px;
+  margin-top: 8px;
 }
 
 .total-score-row strong {
@@ -1597,55 +1630,37 @@ watch(
 
 .total-score-row span {
   color: var(--color-primary);
-  font-size: 34px;
+  font-size: 31px;
   font-weight: 950;
   letter-spacing: -0.05em;
 }
 
 .total-score-row small {
   color: var(--color-text-muted);
-  font-size: 16px;
+  font-size: 15px;
 }
 
-@media (max-width: 1180px) {
-  .recommend-hero,
+@media (max-width: 1260px) {
   .recommend-workspace,
   .product-analysis-grid {
-    grid-template-columns: 1fr;
-  }
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 14px;
+  align-items: start;
+}
 
-  .hero-visual {
-    display: none;
-  }
-
-  .condition-card {
+  .condition-card,
+  .score-detail-card {
     position: static;
-  }
-
-  .summary-card,
-  .bank-result-card {
-    grid-template-columns: 1fr;
-  }
-
-  .bank-info-column {
-    padding-left: 0;
-    border-left: 0;
-    border-top: 1px solid var(--color-border);
-    padding-top: 18px;
   }
 }
 
-@media (max-width: 820px) {
-  .product-card-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .summary-card {
-    padding: 18px;
-  }
-
-  .score-detail-row {
-    grid-template-columns: 1fr;
-  }
+@media (max-width: 900px) {
+  .recommend-row-body {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
+}
 }
 </style>

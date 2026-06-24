@@ -4,9 +4,6 @@
       <div class="test-header">
         <p class="label">주거래은행 추천 테스트</p>
         <h2>나에게 맞는 은행은?</h2>
-        <p class="desc">
-          공식 자료 기반 은행 태그와 현재 위치 접근성을 함께 반영합니다.
-        </p>
       </div>
 
       <div class="progress-wrap">
@@ -95,6 +92,7 @@ const locationScoreCache = ref(null)
 const nearestBankInfo = ref({})
 
 const selectedTagCount = ref({})
+const historyStack = ref([])
 
 const scores = ref({
   KB: 0,
@@ -149,7 +147,27 @@ const resultReasons = computed(() => {
   return reasons
 })
 
+const createSnapshot = () => ({
+  currentIndex: currentIndex.value,
+  resultCode: resultCode.value,
+  result: result.value,
+  selectedTagCount: { ...selectedTagCount.value },
+  nearestBankInfo: { ...nearestBankInfo.value },
+  scores: { ...scores.value },
+})
+
+const restoreSnapshot = (snapshot) => {
+  currentIndex.value = snapshot.currentIndex
+  resultCode.value = snapshot.resultCode
+  result.value = snapshot.result
+  selectedTagCount.value = { ...snapshot.selectedTagCount }
+  nearestBankInfo.value = { ...snapshot.nearestBankInfo }
+  scores.value = { ...snapshot.scores }
+}
+
 const selectOption = async (option) => {
+  historyStack.value.push(createSnapshot())
+
   if (option.location) {
     await applyLocationScores()
   }
@@ -196,6 +214,7 @@ const resetTest = () => {
   selectedTagCount.value = {}
   nearestBankInfo.value = {}
   locationScoreCache.value = null
+  historyStack.value = []
 
   scores.value = {
     KB: 0,
@@ -205,6 +224,21 @@ const resetTest = () => {
     NH: 0,
   }
 }
+
+const goPreviousQuestion = () => {
+  if (historyStack.value.length === 0) {
+    resetTest()
+    return
+  }
+
+  const snapshot = historyStack.value.pop()
+  restoreSnapshot(snapshot)
+}
+
+defineExpose({
+  resetTest,
+  goPreviousQuestion,
+})
 
 const applyLocationScores = async () => {
   try {
