@@ -4,7 +4,7 @@
       <p class="eyebrow">Product Recommendation</p>
       <h1>예적금 추천</h1>
       <p>
-        사용자의 저축 방식, 희망 기간, 주거래은행, 우대조건 선호도를 바탕으로
+        상품 유형, 희망 기간, 주거래은행, 우대조건 선호도를 바탕으로
         적합한 예금·적금 상품을 추천합니다.
       </p>
     </section>
@@ -14,20 +14,11 @@
         <h2>추천 조건</h2>
 
         <div class="form-group">
-          <label for="saving-style">저축 방식</label>
-          <select id="saving-style" v-model="form.saving_style">
-            <option value="unknown">아직 잘 모르겠어요</option>
-            <option value="lump">목돈을 한 번에 넣고 싶어요</option>
-            <option value="monthly">매달 조금씩 모으고 싶어요</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label for="product-type">추천 상품 유형</label>
+          <label for="product-type">상품 유형</label>
           <select id="product-type" v-model="form.product_type">
-            <option value="auto">저축 방식에 맞춰 자동 추천</option>
-            <option value="deposit">예금만 추천</option>
-            <option value="saving">적금만 추천</option>
+            <option value="auto">전체 상품 추천</option>
+            <option value="deposit">예금 - 목돈을 한 번에 맡기기</option>
+            <option value="saving">적금 - 매달 조금씩 모으기</option>
           </select>
         </div>
 
@@ -255,7 +246,6 @@ const favoriteProductIds = ref(new Set())
 const favoriteLoadingProductId = ref(null)
 
 const defaultForm = {
-  saving_style: 'unknown',
   product_type: 'auto',
   preferred_term: '12',
   main_bank: '없음',
@@ -265,6 +255,28 @@ const defaultForm = {
 }
 
 const form = reactive({ ...defaultForm })
+
+const getSavingStyleByProductType = () => {
+  if (form.product_type === 'deposit') {
+    return 'lump'
+  }
+
+  if (form.product_type === 'saving') {
+    return 'monthly'
+  }
+
+  return 'unknown'
+}
+
+const getPersistedForm = () => ({
+  product_type: form.product_type,
+  preferred_term: form.preferred_term,
+  main_bank: form.main_bank,
+  bank_filter: form.bank_filter,
+  condition_preference: form.condition_preference,
+  join_preference: form.join_preference,
+})
+
 
 const storageKey = computed(() => {
   if (!currentUserId.value) {
@@ -276,6 +288,7 @@ const storageKey = computed(() => {
 
 const handleReset = () => {
   Object.assign(form, { ...defaultForm })
+  delete form.saving_style
 
   recommendations.value = []
   hasSearched.value = false
@@ -314,8 +327,15 @@ const restoreRecommendationState = () => {
     if (parsedState.form) {
       Object.assign(form, {
         ...defaultForm,
-        ...parsedState.form,
+        product_type: parsedState.form.product_type || defaultForm.product_type,
+        preferred_term: parsedState.form.preferred_term || defaultForm.preferred_term,
+        main_bank: parsedState.form.main_bank || defaultForm.main_bank,
+        bank_filter: parsedState.form.bank_filter || defaultForm.bank_filter,
+        condition_preference:
+          parsedState.form.condition_preference || defaultForm.condition_preference,
+        join_preference: parsedState.form.join_preference || defaultForm.join_preference,
       })
+      delete form.saving_style
     }
 
     if (Array.isArray(parsedState.recommendations)) {
@@ -340,7 +360,7 @@ const saveRecommendationState = () => {
     storageKey.value,
     JSON.stringify({
       userId: currentUserId.value,
-      form: { ...form },
+      form: getPersistedForm(),
       recommendations: recommendations.value,
       hasSearched: hasSearched.value,
     })
@@ -416,7 +436,7 @@ const handleRecommend = async () => {
 
   try {
     const response = await recommendProducts({
-      saving_style: form.saving_style,
+      saving_style: getSavingStyleByProductType(),
       product_type: form.product_type,
       preferred_term: form.preferred_term,
       main_bank: form.main_bank,
