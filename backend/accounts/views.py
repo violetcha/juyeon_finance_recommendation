@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, logout
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
@@ -19,7 +20,10 @@ def signup(request):
         return Response(
             {
                 'message': '회원가입이 완료되었습니다.',
-                'user': UserSerializer(user).data
+                'user': UserSerializer(
+                    user,
+                    context={'request': request}
+                ).data
             },
             status=status.HTTP_201_CREATED
         )
@@ -54,7 +58,10 @@ def login_user(request):
     return Response({
         'message': '로그인되었습니다.',
         'token': token.key,
-        'user': UserSerializer(user).data
+        'user': UserSerializer(
+            user,
+            context={'request': request}
+        ).data
     })
 
 
@@ -70,12 +77,16 @@ def logout_user(request):
 def profile(request):
     UserProfile.objects.get_or_create(user=request.user)
 
-    serializer = UserSerializer(request.user)
+    serializer = UserSerializer(
+        request.user,
+        context={'request': request}
+    )
     return Response(serializer.data)
 
 
 @api_view(['PATCH'])
 @permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
 def update_profile(request):
     UserProfile.objects.get_or_create(user=request.user)
 
@@ -90,12 +101,16 @@ def update_profile(request):
         return Response(
             {
                 'message': '회원정보가 수정되었습니다.',
-                'user': UserSerializer(user).data
+                'user': UserSerializer(
+                    user,
+                    context={'request': request}
+                ).data
             },
             status=status.HTTP_200_OK
         )
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

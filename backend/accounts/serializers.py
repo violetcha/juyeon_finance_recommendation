@@ -66,9 +66,13 @@ class SignupSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    profile_image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = UserProfile
         fields = (
+            'profile_image',
+            'profile_image_url',
             'age',
             'monthly_income_range',
             'monthly_saving_amount',
@@ -78,9 +82,20 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'personal_info_agree',
         )
 
+    def get_profile_image_url(self, obj):
+        if not obj.profile_image:
+            return ''
+
+        request = self.context.get('request')
+
+        if request:
+            return request.build_absolute_uri(obj.profile_image.url)
+
+        return obj.profile_image.url
+
 
 class UserSerializer(serializers.ModelSerializer):
-    profile = UserProfileSerializer(read_only=True)
+    profile = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -91,8 +106,17 @@ class UserSerializer(serializers.ModelSerializer):
             'profile',
         )
 
+    def get_profile(self, obj):
+        profile, created = UserProfile.objects.get_or_create(user=obj)
+        return UserProfileSerializer(
+            profile,
+            context=self.context
+        ).data
+
 
 class UserUpdateSerializer(serializers.ModelSerializer):
+    profile_image = serializers.ImageField(required=False, allow_null=True)
+
     age = serializers.IntegerField(required=False, allow_null=True)
     monthly_income_range = serializers.CharField(required=False, allow_blank=True)
     monthly_saving_amount = serializers.CharField(required=False, allow_blank=True)
@@ -105,6 +129,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = (
             'email',
+            'profile_image',
             'age',
             'monthly_income_range',
             'monthly_saving_amount',
@@ -124,6 +149,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         profile, created = UserProfile.objects.get_or_create(user=instance)
 
         profile_fields = [
+            'profile_image',
             'age',
             'monthly_income_range',
             'monthly_saving_amount',
@@ -140,4 +166,3 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         profile.save()
 
         return instance
-    

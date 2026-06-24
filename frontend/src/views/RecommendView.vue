@@ -201,7 +201,11 @@
             <div class="card-actions">
               <RouterLink
                 class="detail-link"
-                :to="`/products/${item.product_id}`"
+                :to="{
+                  name: 'product-detail',
+                  params: { id: item.product_id },
+                  query: { type: item.product_type }
+                }"
               >
                 상세보기
               </RouterLink>
@@ -244,6 +248,14 @@ const defaultForm = {
 
 const form = reactive({ ...defaultForm })
 
+const storageKey = computed(() => {
+  if (!currentUserId.value) {
+    return null
+  }
+
+  return `productRecommendationState:user:${currentUserId.value}`
+})
+
 const handleReset = () => {
   Object.assign(form, { ...defaultForm })
 
@@ -255,14 +267,6 @@ const handleReset = () => {
     localStorage.removeItem(storageKey.value)
   }
 }
-
-const storageKey = computed(() => {
-  if (!currentUserId.value) {
-    return null
-  }
-
-  return `productRecommendationState:user:${currentUserId.value}`
-})
 
 const loadCurrentUser = async () => {
   try {
@@ -346,6 +350,9 @@ const handleRecommend = async () => {
   saveRecommendationState()
 
   try {
+    // 추천 API 내부에서 상품 DB를 조회함
+    // 백엔드 목록 API가 DB가 비어 있으면 자동 저장하는 구조이므로
+    // 프론트에서는 /save/ API를 직접 호출하지 않음
     const response = await recommendProducts({
       saving_style: form.saving_style,
       product_type: form.product_type,
@@ -728,7 +735,5 @@ const handleFavoriteClick = () => {
   .detail-info {
     grid-template-columns: 1fr;
   }
-
-
 }
 </style>
