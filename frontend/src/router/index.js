@@ -7,7 +7,6 @@ import RecommendView from '@/views/RecommendView.vue'
 import BankTestView from '@/views/BankTestView.vue'
 import BankTestResultView from '@/views/BankTestResultView.vue'
 import ExchangeView from '@/views/ExchangeView.vue'
-import MapView from '@/views/MapView.vue'
 import CommunityView from '@/views/CommunityView.vue'
 import PostDetailView from '@/views/PostDetailView.vue'
 import MyPageView from '@/views/MyPageView.vue'
@@ -56,7 +55,12 @@ const router = createRouter({
     {
       path: '/map',
       name: 'map',
-      component: MapView,
+      component: MainBankView,
+    },
+    {
+      path: '/main-bank',
+      name: 'main-bank',
+      component: MainBankView,
     },
     {
       path: '/community',
@@ -84,16 +88,10 @@ const router = createRouter({
       component: SignupView,
     },
     {
-      path: '/main-bank',
-      name: 'main-bank',
-      component: MainBankView,
-    },
-    {
       path: '/spot-assets',
       name: 'SpotAsset',
       component: () => import('@/views/SpotAssetView.vue'),
     },
-
   ],
 })
 

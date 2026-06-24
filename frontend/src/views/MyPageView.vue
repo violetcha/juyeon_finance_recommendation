@@ -15,11 +15,17 @@
 
     <template v-else>
       <div class="mypage-top-layout">
-        <!-- 왼쪽: 프로필 -->
         <section class="profile-section">
           <div class="profile-card">
             <div class="profile-image">
-              {{ profileInitial }}
+              <img
+                v-if="profileImagePreview || profileImageUrl"
+                :src="profileImagePreview || profileImageUrl"
+                alt="프로필 이미지"
+              />
+              <span v-else>
+                {{ profileInitial }}
+              </span>
             </div>
 
             <div class="profile-title">
@@ -63,12 +69,42 @@
                 <strong>{{ profileForm.personal_info_agree ? '동의' : '미동의' }}</strong>
               </div>
 
+              <p v-if="profileMessage" class="form-message success">
+                {{ profileMessage }}
+              </p>
+
               <button type="button" class="primary-button full" @click="startEditProfile">
                 프로필 수정
               </button>
             </div>
 
             <form v-else class="profile-edit-form" @submit.prevent="handleUpdateProfile">
+              <div class="image-edit-box">
+                <div class="profile-image small">
+                  <img
+                    v-if="profileImagePreview || profileImageUrl"
+                    :src="profileImagePreview || profileImageUrl"
+                    alt="프로필 이미지 미리보기"
+                  />
+                  <span v-else>
+                    {{ profileInitial }}
+                  </span>
+                </div>
+
+                <label class="file-label">
+                  프로필 사진
+                  <input
+                    type="file"
+                    accept="image/*"
+                    @change="handleProfileImageChange"
+                  />
+                </label>
+
+                <p class="help-text">
+                  JPG, PNG 등 이미지 파일을 선택할 수 있습니다.
+                </p>
+              </div>
+
               <label>
                 이메일
                 <input v-model="profileForm.email" type="email" />
@@ -158,19 +194,15 @@
                 </select>
               </label>
 
-              <label class="checkbox-label">
-                <input v-model="profileForm.personal_info_agree" type="checkbox" />
-                개인정보 활용에 동의합니다.
-              </label>
-
               <p v-if="profileMessage" class="form-message">
                 {{ profileMessage }}
               </p>
 
               <div class="form-actions">
-                <button type="submit" class="primary-button">
-                  저장
+                <button type="submit" class="primary-button" :disabled="profileSaving">
+                  {{ profileSaving ? '저장 중...' : '저장' }}
                 </button>
+
                 <button type="button" class="secondary-button" @click="cancelEditProfile">
                   취소
                 </button>
@@ -179,7 +211,6 @@
           </div>
         </section>
 
-        <!-- 오른쪽: 관심상품 -->
         <section class="favorites-section">
           <div class="section-title-row">
             <div>
@@ -286,7 +317,6 @@
         </section>
       </div>
 
-      <!-- 하단: 저장한 유튜브 영상 -->
       <section class="videos-section">
         <div class="section-title-row">
           <div>
@@ -343,7 +373,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { getProfile, getProfileOptions, updateProfile } from '@/api/accounts'
 import { getFavoriteProducts, toggleFavoriteProduct } from '@/api/favorites'
 import { getSavedVideos, deleteSavedVideo } from '@/api/videos'
@@ -365,7 +395,7 @@ const profileForm = ref({
   lump_sum_amount: '',
   main_bank: '',
   address: '',
-  personal_info_agree: false,
+  personal_info_agree: true,
 })
 
 const originalProfileForm = ref(null)
@@ -380,6 +410,10 @@ const profileOptions = ref({
 
 const isEditingProfile = ref(false)
 const profileMessage = ref('')
+const profileSaving = ref(false)
+const profileImageUrl = ref('')
+const profileImageFile = ref(null)
+const profileImagePreview = ref('')
 
 const favoriteProducts = ref([])
 const savedVideos = ref([])
@@ -508,10 +542,12 @@ const setProfileForm = (profileData) => {
     lump_sum_amount: profile.lump_sum_amount || '',
     main_bank: profile.main_bank || '',
     address: profile.address || '',
-    personal_info_agree: profile.personal_info_agree || false,
+    personal_info_agree: profile.personal_info_agree !== false,
   }
 
+  profileImageUrl.value = profile.profile_image_url || ''
   originalProfileForm.value = { ...profileForm.value }
+  clearProfileImageSelection()
 }
 
 const fetchProfileOptions = async () => {
@@ -572,57 +608,109 @@ const cancelEditProfile = () => {
 
   profileMessage.value = ''
   isEditingProfile.value = false
+  clearProfileImageSelection()
+}
+
+const clearProfileImageSelection = () => {
+  profileImageFile.value = null
+
+  if (profileImagePreview.value) {
+    URL.revokeObjectURL(profileImagePreview.value)
+  }
+
+  profileImagePreview.value = ''
+}
+
+const handleProfileImageChange = (event) => {
+  const file = event.target.files?.[0]
+
+  clearProfileImageSelection()
+
+  if (!file) {
+    return
+  }
+
+  if (!file.type.startsWith('image/')) {
+    profileMessage.value = '이미지 파일만 업로드할 수 있습니다.'
+    event.target.value = ''
+    return
+  }
+
+  profileImageFile.value = file
+  profileImagePreview.value = URL.createObjectURL(file)
+}
+
+const buildProfileFormData = () => {
+  const formData = new FormData()
+
+  formData.append('email', profileForm.value.email || '')
+  formData.append('age', profileForm.value.age || '')
+  formData.append('monthly_income_range', profileForm.value.monthly_income_range || '')
+  formData.append('monthly_saving_amount', profileForm.value.monthly_saving_amount || '')
+  formData.append('lump_sum_amount', profileForm.value.lump_sum_amount || '')
+  formData.append('main_bank', profileForm.value.main_bank || '')
+  formData.append('address', profileForm.value.address || '')
+  formData.append('personal_info_agree', 'true')
+
+  if (profileImageFile.value) {
+    formData.append('profile_image', profileImageFile.value)
+  }
+
+  return formData
 }
 
 const handleUpdateProfile = async () => {
   profileMessage.value = ''
+  profileSaving.value = true
 
   try {
-    const response = await updateProfile(profileForm.value)
+    const formData = buildProfileFormData()
+    const response = await updateProfile(formData)
+
     setProfileForm(response.data.user)
 
     profileMessage.value = '프로필이 수정되었습니다.'
     isEditingProfile.value = false
   } catch (error) {
     console.error(error)
-    profileMessage.value = '프로필 수정에 실패했습니다.'
+
+    profileMessage.value =
+      error.response?.data?.message ||
+      '프로필 수정에 실패했습니다.'
+  } finally {
+    profileSaving.value = false
   }
 }
 
 const handleRemoveFavorite = async (favorite) => {
   const productId = getProductId(favorite)
 
-  if (!window.confirm('관심상품에서 삭제하시겠습니까?')) {
-    return
-  }
-
   try {
     await toggleFavoriteProduct(productId)
+
     favoriteProducts.value = favoriteProducts.value.filter((item) => {
       return getProductId(item) !== productId
     })
   } catch (error) {
     console.error(error)
-    window.alert('관심상품 삭제에 실패했습니다.')
   }
 }
 
 const handleDeleteVideo = async (videoId) => {
-  if (!window.confirm('저장한 영상을 삭제하시겠습니까?')) {
-    return
-  }
-
   try {
     await deleteSavedVideo(videoId)
     savedVideos.value = savedVideos.value.filter((video) => video.video_id !== videoId)
   } catch (error) {
     console.error(error)
-    window.alert('저장한 영상 삭제에 실패했습니다.')
   }
 }
 
 onMounted(() => {
   fetchMyPageData()
+})
+
+onBeforeUnmount(() => {
+  clearProfileImageSelection()
 })
 </script>
 
@@ -694,6 +782,26 @@ onMounted(() => {
   justify-content: center;
   font-size: 32px;
   font-weight: 800;
+  overflow: hidden;
+}
+
+.profile-image.small {
+  width: 72px;
+  height: 72px;
+  margin: 0;
+  font-size: 26px;
+}
+
+.profile-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-image span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .profile-title {
@@ -743,7 +851,17 @@ onMounted(() => {
   gap: 12px;
 }
 
-.profile-edit-form label {
+.image-edit-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #eee;
+  background-color: #fafafa;
+}
+
+.profile-edit-form label,
+.file-label {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -761,21 +879,25 @@ onMounted(() => {
   font-size: 14px;
 }
 
-.checkbox-label {
-  flex-direction: row !important;
-  align-items: center;
-  font-weight: 500 !important;
+.file-label input {
+  height: auto;
+  padding: 8px;
 }
 
-.checkbox-label input {
-  width: auto;
-  height: auto;
+.help-text {
+  margin: 0;
+  color: #777;
+  font-size: 12px;
 }
 
 .form-message {
   margin: 0;
-  color: #333;
+  color: #c0392b;
   font-size: 14px;
+}
+
+.form-message.success {
+  color: #16a34a;
 }
 
 .form-actions {
@@ -797,6 +919,11 @@ onMounted(() => {
   border: 1px solid #222;
   background-color: #222;
   color: #fff;
+}
+
+.primary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .primary-button.full {

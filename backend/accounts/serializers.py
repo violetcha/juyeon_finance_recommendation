@@ -5,8 +5,37 @@ from .models import UserProfile
 
 
 class SignupSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True)
-    password_confirm = serializers.CharField(write_only=True)
+    username = serializers.CharField(
+        error_messages={
+            'required': '아이디를 입력해주세요.',
+            'blank': '아이디를 입력해주세요.',
+        },
+        validators=[]
+    )
+
+    email = serializers.EmailField(
+        required=False,
+        allow_blank=True,
+        error_messages={
+            'invalid': '올바른 이메일 형식으로 입력해주세요.',
+        }
+    )
+
+    password = serializers.CharField(
+        write_only=True,
+        error_messages={
+            'required': '비밀번호를 입력해주세요.',
+            'blank': '비밀번호를 입력해주세요.',
+        }
+    )
+
+    password_confirm = serializers.CharField(
+        write_only=True,
+        error_messages={
+            'required': '비밀번호 확인을 입력해주세요.',
+            'blank': '비밀번호 확인을 입력해주세요.',
+        }
+    )
 
     age = serializers.IntegerField(required=False, allow_null=True)
     monthly_income_range = serializers.CharField(required=False, allow_blank=True)
@@ -33,9 +62,40 @@ class SignupSerializer(serializers.ModelSerializer):
             'personal_info_agree',
         )
 
+    def validate_username(self, value):
+        if not value:
+            raise serializers.ValidationError('아이디를 입력해주세요.')
+
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError('이미 존재하는 아이디입니다.')
+
+        return value
+
+    def validate_email(self, value):
+        if value and User.objects.filter(email=value).exists():
+            raise serializers.ValidationError('이미 사용 중인 이메일입니다.')
+
+        return value
+
     def validate(self, data):
-        if data['password'] != data['password_confirm']:
-            raise serializers.ValidationError('비밀번호가 일치하지 않습니다.')
+        password = data.get('password')
+        password_confirm = data.get('password_confirm')
+
+        if not password:
+            raise serializers.ValidationError({
+                'message': '비밀번호를 입력해주세요.'
+            })
+
+        if password != password_confirm:
+            raise serializers.ValidationError({
+                'password_confirm': '비밀번호가 일치하지 않습니다.'
+            })
+
+        if data.get('personal_info_agree') is not True:
+            raise serializers.ValidationError({
+                'personal_info_agree': '개인정보 활용 동의가 필요합니다.'
+            })
+
         return data
 
     def create(self, validated_data):
@@ -48,7 +108,7 @@ class SignupSerializer(serializers.ModelSerializer):
             'lump_sum_amount': validated_data.pop('lump_sum_amount', ''),
             'main_bank': validated_data.pop('main_bank', ''),
             'address': validated_data.pop('address', ''),
-            'personal_info_agree': validated_data.pop('personal_info_agree', False),
+            'personal_info_agree': True,
         }
 
         user = User.objects.create_user(
@@ -108,6 +168,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_profile(self, obj):
         profile, created = UserProfile.objects.get_or_create(user=obj)
+
         return UserProfileSerializer(
             profile,
             context=self.context
@@ -117,6 +178,13 @@ class UserSerializer(serializers.ModelSerializer):
 class UserUpdateSerializer(serializers.ModelSerializer):
     profile_image = serializers.ImageField(required=False, allow_null=True)
 
+    email = serializers.EmailField(
+        required=False,
+        allow_blank=True,
+        error_messages={
+            'invalid': '올바른 이메일 형식으로 입력해주세요.',
+        }
+    )
     age = serializers.IntegerField(required=False, allow_null=True)
     monthly_income_range = serializers.CharField(required=False, allow_blank=True)
     monthly_saving_amount = serializers.CharField(required=False, allow_blank=True)
@@ -139,6 +207,21 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'personal_info_agree',
         )
 
+    def validate_email(self, value):
+        request = self.context.get('request')
+        current_user = request.user if request else None
+
+        if value and User.objects.exclude(id=current_user.id).filter(email=value).exists():
+            raise serializers.ValidationError('이미 사용 중인 이메일입니다.')
+
+        return value
+
+    def validate_personal_info_agree(self, value):
+        if value is False:
+            raise serializers.ValidationError('개인정보 활용 동의는 해제할 수 없습니다.')
+
+        return value
+
     def update(self, instance, validated_data):
         email = validated_data.pop('email', None)
 
@@ -156,12 +239,14 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'lump_sum_amount',
             'main_bank',
             'address',
-            'personal_info_agree',
         ]
 
         for field in profile_fields:
             if field in validated_data:
                 setattr(profile, field, validated_data[field])
+
+        if 'personal_info_agree' in validated_data:
+            profile.personal_info_agree = True
 
         profile.save()
 

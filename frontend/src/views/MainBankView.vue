@@ -5,7 +5,6 @@
     <section class="page-header">
       <p class="eyebrow">Main Bank Finder</p>
       <h1>내 주변 주거래은행 찾기</h1>
-
     </section>
 
     <section class="bank-map-section">
@@ -90,6 +89,14 @@
             <p class="search-base">
               검색 기준: {{ currentSearchLabel }} / 검색 은행: {{ selectedBankKeyword }}
             </p>
+
+            <p v-if="mapError" class="map-error">
+              {{ mapError }}
+            </p>
+
+            <p v-if="mapMessage" class="map-message">
+              {{ mapMessage }}
+            </p>
           </div>
         </div>
 
@@ -150,7 +157,7 @@
       <p v-else-if="videoError" class="error">{{ videoError }}</p>
 
       <div v-else class="video-grid">
-        <article v-for="video in videos" :key="video.id" class="video-card">
+        <article v-for="video in videos" :key="getVideoId(video)" class="video-card">
           <button class="thumbnail-button" type="button" @click="selectVideo(video)">
             <img :src="video.thumbnail" :alt="video.title" />
           </button>
@@ -161,8 +168,17 @@
 
             <div class="video-buttons">
               <button type="button" @click="selectVideo(video)">재생</button>
-              <button type="button" class="save-button" @click="handleSaveVideo(video)">
-                저장
+
+              <button
+                type="button"
+                class="save-button"
+                :class="{ saved: isSavedVideo(video) }"
+                :disabled="savingVideoId === getVideoId(video)"
+                @click="handleToggleSaveVideo(video)"
+              >
+                <span v-if="savingVideoId === getVideoId(video)">처리 중...</span>
+                <span v-else-if="isSavedVideo(video)">저장됨</span>
+                <span v-else>저장</span>
               </button>
             </div>
           </div>
@@ -187,7 +203,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import api from '@/api/api'
-import { searchVideos, saveVideo } from '@/api/videos'
+import { searchVideos, saveVideo, getSavedVideos, deleteSavedVideo } from '@/api/videos'
 
 const mapContainer = ref(null)
 const map = ref(null)
@@ -201,6 +217,8 @@ const routeError = ref('')
 const routeBorderLine = ref(null)
 const startRouteMarker = ref(null)
 const endRouteMarker = ref(null)
+const mapError = ref('')
+const mapMessage = ref('')
 
 const BANK_SEARCH_RADIUS = 1500
 const MAX_BANK_RESULTS = 15
@@ -565,6 +583,8 @@ const videos = ref([])
 const selectedVideo = ref(null)
 const videoLoading = ref(false)
 const videoError = ref('')
+const savedVideoIds = ref(new Set())
+const savingVideoId = ref(null)
 
 const loadKakaoMapScript = () => {
   return new Promise((resolve, reject) => {
@@ -598,6 +618,9 @@ const loadKakaoMapScript = () => {
 }
 
 const initMap = async () => {
+  mapError.value = ''
+  mapMessage.value = ''
+
   try {
     await loadKakaoMapScript()
 
@@ -611,7 +634,7 @@ const initMap = async () => {
     window.kakao.maps.event.addListener(map.value, 'click', closeMapOverlays)
   } catch (error) {
     console.error(error)
-    alert(error.message || '카카오 지도를 불러오지 못했습니다.')
+    mapError.value = error.message || '카카오 지도를 불러오지 못했습니다.'
   }
 }
 
@@ -666,8 +689,16 @@ const geocodeRegion = (keyword) => {
 }
 
 const searchBySelectedRegion = async () => {
+  mapError.value = ''
+  mapMessage.value = ''
+
   if (!selectedSido.value || !selectedGugun.value) {
-    alert('광역시/도와 시/군/구를 선택해주세요. 동은 전체로 두어도 됩니다.')
+    mapError.value = '광역시/도와 시/군/구를 선택해주세요. 동은 전체로 두어도 됩니다.'
+    return
+  }
+
+  if (!map.value || !window.kakao?.maps) {
+    mapError.value = '지도가 아직 준비되지 않았습니다.'
     return
   }
 
@@ -689,13 +720,16 @@ const searchBySelectedRegion = async () => {
     await searchNearbyBanks()
   } catch (error) {
     console.error(error)
-    alert(error.message || '지역 검색 중 오류가 발생했습니다.')
+    mapError.value = error.message || '지역 검색 중 오류가 발생했습니다.'
   }
 }
 
 const moveToUserLocation = () => {
+  mapError.value = ''
+  mapMessage.value = ''
+
   if (!navigator.geolocation) {
-    alert('브라우저에서 위치 기능을 지원하지 않습니다.')
+    mapError.value = '브라우저에서 위치 기능을 지원하지 않습니다.'
     return
   }
 
@@ -718,7 +752,7 @@ const moveToUserLocation = () => {
       await searchNearbyBanks()
     },
     () => {
-      alert('위치 권한을 허용하지 않아 현재 위치를 사용할 수 없습니다. 지역 선택 검색을 이용해주세요.')
+      mapError.value = '위치 권한을 허용하지 않아 현재 위치를 사용할 수 없습니다. 지역 선택 검색을 이용해주세요.'
     }
   )
 }
@@ -957,6 +991,8 @@ const getSearchKeyword = () => {
 const searchNearbyBanks = async () => {
   if (!map.value) return
 
+  mapError.value = ''
+  mapMessage.value = ''
   clearMarkers()
 
   const keyword = getSearchKeyword()
@@ -975,7 +1011,7 @@ const searchNearbyBanks = async () => {
       .slice(0, MAX_BANK_RESULTS)
 
     if (places.length === 0) {
-      alert(`${currentSearchLabel.value} 주변의 ${keyword} 검색 결과가 없습니다.`)
+      mapMessage.value = `${currentSearchLabel.value} 주변의 ${keyword} 검색 결과가 없습니다.`
       return
     }
 
@@ -1028,11 +1064,11 @@ const searchNearbyBanks = async () => {
     if (markers.value.length > 0) {
       map.value.setBounds(bounds)
     } else {
-      alert('은행 데이터는 받았지만 좌표가 없어 지도에 표시하지 못했습니다.')
+      mapMessage.value = '은행 데이터는 받았지만 좌표가 없어 지도에 표시하지 못했습니다.'
     }
   } catch (error) {
     console.error('은행 검색 실패:', error)
-    alert('은행 검색 중 오류가 발생했습니다. 백엔드 maps API를 확인해주세요.')
+    mapError.value = '은행 검색 중 오류가 발생했습니다. 백엔드 maps API를 확인해주세요.'
   }
 }
 
@@ -1133,7 +1169,6 @@ const drawDrivingRoute = async (place, destLat, destLng) => {
 
     const endPosition = new window.kakao.maps.LatLng(destLat, destLng)
 
-    // 흰색 외곽선
     routeBorderLine.value = new window.kakao.maps.Polyline({
       path,
       strokeWeight: 11,
@@ -1143,7 +1178,6 @@ const drawDrivingRoute = async (place, destLat, destLng) => {
       zIndex: 25,
     })
 
-    // 파란색 실제 경로선
     routeLine.value = new window.kakao.maps.Polyline({
       path,
       strokeWeight: 6,
@@ -1192,6 +1226,59 @@ const openKakaoDirection = () => {
   window.open(url, '_blank')
 }
 
+
+const selectVideo = (video) => {
+  selectedVideo.value = video
+}
+
+const getVideoId = (video) => {
+  if (!video) {
+    return ''
+  }
+
+  if (typeof video.id === 'string') {
+    return video.id
+  }
+
+  if (video.id?.videoId) {
+    return video.id.videoId
+  }
+
+  if (video.video_id) {
+    return video.video_id
+  }
+
+  return ''
+}
+
+const isSavedVideo = (video) => {
+  const videoId = getVideoId(video)
+  return savedVideoIds.value.has(videoId)
+}
+
+const loadSavedVideos = async () => {
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    savedVideoIds.value = new Set()
+    return
+  }
+
+  try {
+    const response = await getSavedVideos()
+    const savedVideos = response.data || []
+
+    savedVideoIds.value = new Set(
+      savedVideos
+        .map((video) => video.video_id || video.id)
+        .filter((videoId) => !!videoId)
+    )
+  } catch (error) {
+    console.error('저장 영상 목록 조회 실패:', error)
+    savedVideoIds.value = new Set()
+  }
+}
+
 const loadVideos = async (keyword, maxResults = 3) => {
   videoLoading.value = true
   videoError.value = ''
@@ -1209,30 +1296,61 @@ const loadVideos = async (keyword, maxResults = 3) => {
 }
 
 const handleVideoSearch = () => {
+  videoError.value = ''
+
   if (!videoKeyword.value) {
-    alert('검색어를 입력해주세요.')
+    videoError.value = '검색어를 입력해주세요.'
     return
   }
 
   loadVideos(videoKeyword.value, 9)
 }
 
-const selectVideo = (video) => {
-  selectedVideo.value = video
-}
+const handleToggleSaveVideo = async (video) => {
+  const token = localStorage.getItem('token')
+  const videoId = getVideoId(video)
 
-const handleSaveVideo = async (video) => {
+  videoError.value = ''
+
+  if (!token) {
+    videoError.value = '로그인 후 저장할 수 있습니다.'
+    return
+  }
+
+  if (!videoId) {
+    videoError.value = '영상 정보를 확인할 수 없습니다.'
+    return
+  }
+
+  savingVideoId.value = videoId
+
   try {
-    await saveVideo(video)
-    alert('마이페이지에 영상을 저장했습니다.')
+    const nextSavedVideoIds = new Set(savedVideoIds.value)
+
+    if (nextSavedVideoIds.has(videoId)) {
+      await deleteSavedVideo(videoId)
+      nextSavedVideoIds.delete(videoId)
+    } else {
+      await saveVideo({
+        ...video,
+        id: videoId,
+        video_id: videoId,
+      })
+      nextSavedVideoIds.add(videoId)
+    }
+
+    savedVideoIds.value = nextSavedVideoIds
   } catch (error) {
     console.error(error)
 
     if (error.response?.status === 401) {
-      alert('로그인 후 저장할 수 있습니다.')
-    } else {
-      alert('영상 저장 중 오류가 발생했습니다.')
+      videoError.value = '로그인 후 저장할 수 있습니다.'
+      return
     }
+
+    videoError.value = '영상 저장 상태를 변경하지 못했습니다.'
+  } finally {
+    savingVideoId.value = null
   }
 }
 
@@ -1240,7 +1358,9 @@ onMounted(async () => {
   await initMap()
   await searchBySelectedRegion()
   await loadVideos('주거래은행 선택 기준', 3)
+  await loadSavedVideos()
 })
+
 </script>
 
 <style scoped>
@@ -1400,10 +1520,41 @@ onMounted(async () => {
   background: #111827;
 }
 
+.video-buttons .save-button.saved {
+  background: #6b7280;
+  cursor: pointer;
+}
+
+.video-buttons .save-button:disabled {
+  opacity: 0.75;
+  cursor: wait;
+}
+
 .search-base {
   margin: 0;
   color: #6b7280;
   font-size: 13px;
+}
+
+.map-error,
+.map-message {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.map-error {
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: #dc2626;
+}
+
+.map-message {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
 }
 
 .map {
@@ -1555,6 +1706,7 @@ onMounted(async () => {
 .error {
   color: #dc2626;
 }
+
 
 @media (max-width: 1100px) {
   .filter-row {

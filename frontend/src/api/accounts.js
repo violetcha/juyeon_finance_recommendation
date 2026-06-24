@@ -17,6 +17,14 @@ export const getProfile = () => {
 
 // 프로필 수정
 export const updateProfile = (profileData) => {
+  if (profileData instanceof FormData) {
+    return api.patch('/accounts/profile/update/', profileData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })
+  }
+
   return api.patch('/accounts/profile/update/', profileData)
 }
 

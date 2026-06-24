@@ -92,13 +92,19 @@
 
     <section v-else class="list-section">
       <div class="list-header">
-        <h2>
-          상품 목록
-          <span>총 {{ displayedProducts.length }}개</span>
-        </h2>
+        <div>
+          <h2>
+            상품 목록
+            <span>총 {{ displayedProducts.length }}개</span>
+          </h2>
 
-        <p class="sort-guide">
-          기간별 금리 제목을 클릭하면 해당 기간 기준으로 정렬됩니다.
+          <p class="sort-guide">
+            기간별 금리 제목을 클릭하면 해당 기간 기준으로 정렬됩니다.
+          </p>
+        </div>
+
+        <p v-if="favoriteMessage" class="favorite-message">
+          {{ favoriteMessage }}
         </p>
       </div>
 
@@ -182,9 +188,15 @@
                   type="button"
                   class="favorite-btn"
                   :class="{ active: isFavorite(product.id) }"
+                  :disabled="favoriteLoadingProductId === product.id"
                   @click="handleToggleFavorite(product.id)"
                 >
-                  {{ isFavorite(product.id) ? '삭제' : '등록' }}
+                  <span v-if="favoriteLoadingProductId === product.id">
+                    처리 중
+                  </span>
+                  <span v-else>
+                    {{ isFavorite(product.id) ? '삭제' : '등록' }}
+                  </span>
                 </button>
               </td>
             </tr>
@@ -214,6 +226,8 @@ const sortTerm = ref('12')
 const sortOrder = ref('desc')
 const loading = ref(false)
 const errorMessage = ref('')
+const favoriteMessage = ref('')
+const favoriteLoadingProductId = ref(null)
 
 const terms = ['6', '12', '24', '36']
 
@@ -370,6 +384,7 @@ const changeProductType = async (type) => {
   selectedTerm.value = 'all'
   selectedJoinWay.value = 'all'
   minRate.value = ''
+  favoriteMessage.value = ''
 
   await fetchProducts()
 }
@@ -381,6 +396,7 @@ const resetFilters = () => {
   minRate.value = ''
   sortTerm.value = '12'
   sortOrder.value = 'desc'
+  favoriteMessage.value = ''
 }
 
 const fetchProducts = async () => {
@@ -396,8 +412,6 @@ const fetchProducts = async () => {
       response = await getSavingProducts()
     }
 
-    console.log('상품 목록 응답:', response.data)
-
     products.value = Array.isArray(response.data) ? response.data : []
   } catch (error) {
     console.error(error)
@@ -405,6 +419,19 @@ const fetchProducts = async () => {
   } finally {
     loading.value = false
   }
+}
+
+const extractFavoriteProductId = (favorite) => {
+  if (favorite.product_id) {
+    return favorite.product_id
+  }
+
+  if (typeof favorite.product === 'number') {
+    return favorite.product
+  }
+
+  const product = favorite.product || favorite
+  return product.id || null
 }
 
 const fetchFavorites = async () => {
@@ -418,12 +445,9 @@ const fetchFavorites = async () => {
   try {
     const response = await getFavorites()
 
-    console.log('관심상품 목록 응답:', response.data)
-
-    favoriteProductIds.value = response.data.map((favorite) => {
-      const product = favorite.product || favorite
-      return product.id
-    })
+    favoriteProductIds.value = response.data
+      .map((favorite) => extractFavoriteProductId(favorite))
+      .filter((productId) => productId !== null)
   } catch (error) {
     console.error(error)
     favoriteProductIds.value = []
@@ -433,38 +457,44 @@ const fetchFavorites = async () => {
 const handleToggleFavorite = async (productId) => {
   const token = getStoredToken()
 
+  favoriteMessage.value = ''
+  errorMessage.value = ''
+
   if (!token) {
-    alert('로그인이 필요한 기능입니다.')
+    errorMessage.value = '로그인 후 관심상품을 등록할 수 있습니다.'
     return
   }
 
+  favoriteLoadingProductId.value = productId
+
   try {
     const response = await toggleFavoriteProduct(productId)
-
-    console.log('관심상품 토글 응답:', response.data)
-
     const isNowFavorite = response.data.is_favorite
 
     if (isNowFavorite) {
       if (!favoriteProductIds.value.includes(productId)) {
         favoriteProductIds.value.push(productId)
       }
-      alert('관심상품에 등록되었습니다.')
+
+      favoriteMessage.value = '관심상품에 등록되었습니다.'
     } else {
       favoriteProductIds.value = favoriteProductIds.value.filter((id) => {
         return id !== productId
       })
-      alert('관심상품에서 삭제되었습니다.')
+
+      favoriteMessage.value = '관심상품에서 삭제되었습니다.'
     }
   } catch (error) {
     console.error(error)
 
     if (error.response?.status === 401 || error.response?.status === 403) {
-      alert('로그인이 필요한 기능입니다.')
+      errorMessage.value = '로그인 후 관심상품을 등록할 수 있습니다.'
       return
     }
 
-    alert('관심상품 처리에 실패했습니다.')
+    errorMessage.value = '관심상품 처리에 실패했습니다.'
+  } finally {
+    favoriteLoadingProductId.value = null
   }
 }
 
@@ -601,6 +631,7 @@ onMounted(async () => {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+  gap: 14px;
   margin-bottom: 10px;
 }
 
@@ -615,9 +646,20 @@ onMounted(async () => {
 }
 
 .sort-guide {
-  margin: 0;
+  margin: 6px 0 0;
   font-size: 13px;
   color: #777;
+}
+
+.favorite-message {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid #bbf7d0;
+  background-color: #f0fdf4;
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .table-wrap {
@@ -704,6 +746,7 @@ th:first-child {
 }
 
 .favorite-btn {
+  min-width: 68px;
   padding: 7px 10px;
   border: 1px solid #bbb;
   background-color: #fff;
@@ -718,6 +761,11 @@ th:first-child {
   border-color: #333;
 }
 
+.favorite-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 @media (max-width: 1000px) {
   .filter-grid {
     grid-template-columns: 1fr 1fr;
@@ -727,6 +775,10 @@ th:first-child {
     flex-direction: column;
     align-items: flex-start;
     gap: 6px;
+  }
+
+  .favorite-message {
+    white-space: normal;
   }
 }
 
