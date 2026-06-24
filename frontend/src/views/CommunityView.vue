@@ -155,7 +155,10 @@
       </form>
     </section>
 
-    <section v-else-if="viewMode === 'detail' && selectedPost" class="post-detail-card">
+    <section
+      v-else-if="viewMode === 'detail' && selectedPost"
+      class="post-detail-card"
+    >
       <div class="detail-header">
         <div>
           <span class="category-badge">
@@ -188,11 +191,21 @@
             좋아요 {{ selectedPost.like_count || 0 }}
           </button>
 
-          <button type="button" class="ghost-button" @click="startEditPost">
+          <button
+            v-if="selectedPost.is_author"
+            type="button"
+            class="ghost-button"
+            @click="startEditPost"
+          >
             수정
           </button>
 
-          <button type="button" class="danger-button" @click="handleDeletePost">
+          <button
+            v-if="selectedPost.is_author"
+            type="button"
+            class="danger-button"
+            @click="handleDeletePost"
+          >
             삭제
           </button>
         </div>
@@ -239,7 +252,36 @@
               </div>
             </div>
 
-            <p>{{ comment.content }}</p>
+            <div
+              v-if="editingCommentId === comment.id"
+              class="comment-edit-box"
+            >
+              <textarea
+                v-model.trim="editingCommentContent"
+                rows="3"
+                placeholder="댓글을 수정하세요"
+              ></textarea>
+
+              <div class="comment-edit-actions">
+                <button
+                  type="button"
+                  class="comment-save-button"
+                  @click="submitEditComment(comment.id)"
+                >
+                  저장
+                </button>
+
+                <button
+                  type="button"
+                  class="comment-cancel-button"
+                  @click="cancelEditComment"
+                >
+                  취소
+                </button>
+              </div>
+            </div>
+
+            <p v-else>{{ comment.content }}</p>
 
             <div class="comment-actions">
               <button
@@ -253,6 +295,16 @@
               </button>
 
               <button
+                v-if="comment.is_author && editingCommentId !== comment.id"
+                type="button"
+                class="comment-edit-button"
+                @click="startEditComment(comment)"
+              >
+                수정
+              </button>
+
+              <button
+                v-if="comment.is_author"
                 type="button"
                 class="comment-delete-button"
                 @click="handleDeleteComment(comment.id)"
@@ -278,6 +330,7 @@ import {
   deletePost,
   togglePostLike,
   createComment,
+  updateComment,
   deleteComment,
   toggleCommentLike,
 } from '@/api/community'
@@ -301,6 +354,8 @@ const sortType = ref('latest')
 
 const editingPostId = ref(null)
 const commentContent = ref('')
+const editingCommentId = ref(null)
+const editingCommentContent = ref('')
 
 const postForm = reactive({
   title: '',
@@ -391,11 +446,17 @@ const resetPostForm = () => {
   postForm.category = 'free'
 }
 
+const resetCommentEditState = () => {
+  editingCommentId.value = null
+  editingCommentContent.value = ''
+}
+
 const showList = async () => {
   viewMode.value = 'list'
   editingPostId.value = null
   selectedPost.value = null
   commentContent.value = ''
+  resetCommentEditState()
   resetPostForm()
   await fetchPosts()
 }
@@ -408,6 +469,7 @@ const loadPostDetail = async (postId) => {
     selectedPost.value = response.data
     viewMode.value = 'detail'
     editingPostId.value = null
+    resetCommentEditState()
     await fetchPosts()
   } catch (error) {
     console.error(error)
@@ -418,6 +480,7 @@ const loadPostDetail = async (postId) => {
 
     viewMode.value = 'list'
     selectedPost.value = null
+    resetCommentEditState()
     await fetchPosts()
   }
 }
@@ -498,6 +561,11 @@ const submitPost = async () => {
 const startEditPost = () => {
   if (!selectedPost.value) return
 
+  if (!selectedPost.value.is_author) {
+    alert('본인이 작성한 게시글만 수정할 수 있습니다.')
+    return
+  }
+
   editingPostId.value = selectedPost.value.id
   postForm.title = selectedPost.value.title
   postForm.content = selectedPost.value.content
@@ -507,6 +575,11 @@ const startEditPost = () => {
 
 const handleDeletePost = async () => {
   if (!selectedPost.value) return
+
+  if (!selectedPost.value.is_author) {
+    alert('본인이 작성한 게시글만 삭제할 수 있습니다.')
+    return
+  }
 
   const confirmed = window.confirm('게시글을 삭제할까요?')
 
@@ -582,8 +655,56 @@ const submitComment = async () => {
   }
 }
 
+const startEditComment = (comment) => {
+  if (!comment.is_author) {
+    alert('본인이 작성한 댓글만 수정할 수 있습니다.')
+    return
+  }
+
+  editingCommentId.value = comment.id
+  editingCommentContent.value = comment.content
+}
+
+const cancelEditComment = () => {
+  resetCommentEditState()
+}
+
+const submitEditComment = async (commentId) => {
+  if (!selectedPost.value) return
+
+  if (!editingCommentContent.value) {
+    alert('댓글 내용을 입력해주세요.')
+    return
+  }
+
+  try {
+    await updateComment(commentId, {
+      content: editingCommentContent.value,
+    })
+
+    resetCommentEditState()
+    await loadPostDetail(selectedPost.value.id)
+  } catch (error) {
+    console.error(error)
+
+    alert(
+      error.response?.data?.message ||
+      '댓글 수정에 실패했습니다. 본인이 작성한 댓글인지 확인해주세요.'
+    )
+  }
+}
+
 const handleDeleteComment = async (commentId) => {
   if (!selectedPost.value) return
+
+  const targetComment = selectedPost.value.comments?.find(
+    (comment) => comment.id === commentId
+  )
+
+  if (targetComment && !targetComment.is_author) {
+    alert('본인이 작성한 댓글만 삭제할 수 있습니다.')
+    return
+  }
 
   const confirmed = window.confirm('댓글을 삭제할까요?')
 
@@ -591,6 +712,7 @@ const handleDeleteComment = async (commentId) => {
 
   try {
     await deleteComment(commentId)
+    resetCommentEditState()
     await loadPostDetail(selectedPost.value.id)
   } catch (error) {
     console.error(error)
@@ -679,6 +801,7 @@ watch(
       editingPostId.value = null
       selectedPost.value = null
       commentContent.value = ''
+      resetCommentEditState()
       resetPostForm()
       return
     }
@@ -767,7 +890,8 @@ watch(
 .post-form input,
 .post-form select,
 .post-form textarea,
-.comment-form textarea {
+.comment-form textarea,
+.comment-edit-box textarea {
   width: 100%;
   box-sizing: border-box;
   border: 1px solid #d1d5db;
@@ -972,7 +1096,8 @@ watch(
 }
 
 .post-form textarea,
-.comment-form textarea {
+.comment-form textarea,
+.comment-edit-box textarea {
   resize: vertical;
   line-height: 1.6;
 }
@@ -1059,7 +1184,10 @@ watch(
 }
 
 .comment-like-button,
-.comment-delete-button {
+.comment-delete-button,
+.comment-edit-button,
+.comment-save-button,
+.comment-cancel-button {
   border: none;
   background: transparent;
   font-weight: 900;
@@ -1075,8 +1203,28 @@ watch(
   color: #be123c;
 }
 
+.comment-edit-button,
+.comment-save-button {
+  color: #2563eb;
+}
+
 .comment-delete-button {
   color: #dc2626;
+}
+
+.comment-cancel-button {
+  color: #6b7280;
+}
+
+.comment-edit-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.comment-edit-actions {
+  display: flex;
+  gap: 10px;
 }
 
 @media (max-width: 960px) {

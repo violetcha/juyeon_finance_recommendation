@@ -174,11 +174,11 @@ def comment_create(request, post_id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['DELETE'])
+@api_view(['PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
-def comment_delete(request, comment_id):
+def comment_update_delete(request, comment_id):
     try:
-        comment = Comment.objects.get(id=comment_id)
+        comment = Comment.objects.select_related('user', 'post').get(id=comment_id)
     except Comment.DoesNotExist:
         return Response(
             {'message': '댓글을 찾을 수 없습니다.'},
@@ -187,12 +187,33 @@ def comment_delete(request, comment_id):
 
     if comment.user != request.user:
         return Response(
-            {'message': '본인이 작성한 댓글만 삭제할 수 있습니다.'},
+            {'message': '본인이 작성한 댓글만 수정/삭제할 수 있습니다.'},
             status=status.HTTP_403_FORBIDDEN
         )
 
-    comment.delete()
-    return Response({'message': '댓글이 삭제되었습니다.'})
+    if request.method == 'PUT':
+        serializer = CommentSerializer(
+            comment,
+            data=request.data,
+            partial=True,
+            context={'request': request},
+        )
+
+        if serializer.is_valid():
+            updated_comment = serializer.save()
+
+            return Response(
+                CommentSerializer(
+                    updated_comment,
+                    context={'request': request},
+                ).data
+            )
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    if request.method == 'DELETE':
+        comment.delete()
+        return Response({'message': '댓글이 삭제되었습니다.'})
 
 
 @api_view(['POST'])
