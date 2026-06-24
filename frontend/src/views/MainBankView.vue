@@ -9,23 +9,7 @@
 
     <section class="bank-map-section">
       <aside class="bank-list">
-        <h2>5대 은행 요약</h2>
-
-        <button
-          v-for="bank in summaryBanks"
-          :key="bank.name"
-          class="bank-card"
-          :class="{ active: selectedSummaryBank?.name === bank.name }"
-          type="button"
-          @click="selectSummaryBank(bank)"
-        >
-          <div class="bank-card-header">
-            <span class="bank-icon">{{ bank.icon }}</span>
-            <strong>{{ bank.name }}</strong>
-          </div>
-          <p>{{ bank.description }}</p>
-          <small>{{ bank.keyword }}</small>
-        </button>
+        <BankFitTest class="bank-fit-test-panel" @recommend="handleRecommendBank" />
       </aside>
 
       <section class="map-area">
@@ -204,6 +188,7 @@
 import { computed, onMounted, ref } from 'vue'
 import api from '@/api/api'
 import { searchVideos, saveVideo, getSavedVideos, deleteSavedVideo } from '@/api/videos'
+import BankFitTest from '@/components/BankFitTest.vue'
 
 const mapContainer = ref(null)
 const map = ref(null)
@@ -294,6 +279,14 @@ const bankOptions = [
 ]
 
 const selectedBankKeyword = ref('국민은행')
+
+const bankCodeToKeywordMap = {
+  KB: '국민은행',
+  SHINHAN: '신한은행',
+  HANA: '하나은행',
+  WOORI: '우리은행',
+  NH: '농협은행',
+}
 
 const regionData = {
   서울특별시: {
@@ -761,6 +754,43 @@ const selectSummaryBank = async (bank) => {
   selectedSummaryBank.value = bank
   selectedBankKeyword.value = bank.keyword
   await searchNearbyBanks()
+}
+
+const handleRecommendBank = async (payload) => {
+  const bankCode = typeof payload === 'string' ? payload : payload?.bankCode
+  const recommendLocation = typeof payload === 'object' ? payload?.userPosition : null
+  const keyword = bankCodeToKeywordMap[bankCode]
+
+  if (!keyword) {
+    mapError.value = '추천 은행 정보를 확인할 수 없습니다.'
+    return
+  }
+
+  selectedBankKeyword.value = keyword
+  selectedSummaryBank.value = summaryBanks.find((bank) => bank.keyword === keyword) || null
+
+  mapError.value = ''
+  mapMessage.value = `${keyword} 추천 결과를 지도에 반영했습니다.`
+
+  if (recommendLocation?.lat && recommendLocation?.lng && map.value && window.kakao?.maps) {
+    userLocation.value = {
+      lat: recommendLocation.lat,
+      lng: recommendLocation.lng,
+    }
+
+    currentSearchLabel.value = '은행 성향 테스트 위치'
+
+    const center = new window.kakao.maps.LatLng(recommendLocation.lat, recommendLocation.lng)
+
+    map.value.setCenter(center)
+    map.value.setLevel(4)
+
+    setBaseMarker(center, '은행 성향 테스트 위치', 'red')
+  }
+
+  if (map.value) {
+    await searchNearbyBanks()
+  }
 }
 
 const escapeHtml = (value = '') => {
@@ -1406,6 +1436,10 @@ onMounted(async () => {
 
 .bank-list h2 {
   margin: 0 0 8px;
+}
+
+.bank-fit-test-panel {
+  margin-bottom: 20px;
 }
 
 .bank-card {
