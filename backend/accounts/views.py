@@ -9,6 +9,30 @@ from rest_framework.authtoken.models import Token
 from .serializers import SignupSerializer, UserSerializer, UserUpdateSerializer
 from .models import UserProfile
 
+def get_first_error_message(errors):
+    if isinstance(errors, dict):
+        if 'message' in errors:
+            message = errors['message']
+
+            if isinstance(message, list):
+                return message[0]
+
+            return message
+
+        for value in errors.values():
+            if isinstance(value, list) and len(value) > 0:
+                return value[0]
+
+            if isinstance(value, dict):
+                return get_first_error_message(value)
+
+            if isinstance(value, str):
+                return value
+
+    if isinstance(errors, list) and len(errors) > 0:
+        return errors[0]
+
+    return '입력값을 확인해주세요.'
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -28,8 +52,13 @@ def signup(request):
             status=status.HTTP_201_CREATED
         )
 
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    return Response(
+        {
+            'message': get_first_error_message(serializer.errors),
+            'errors': serializer.errors,
+        },
+        status=status.HTTP_400_BAD_REQUEST
+    )
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -93,7 +122,8 @@ def update_profile(request):
     serializer = UserUpdateSerializer(
         request.user,
         data=request.data,
-        partial=True
+        partial=True,
+        context={'request': request}
     )
 
     if serializer.is_valid():

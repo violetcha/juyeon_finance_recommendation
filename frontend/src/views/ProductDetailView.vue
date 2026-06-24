@@ -51,13 +51,25 @@
           </div>
         </div>
 
-        <button
-          class="favorite-button"
-          :class="{ active: isFavorite }"
-          @click="handleFavoriteClick"
-        >
-          {{ isFavorite ? '관심상품 삭제' : '관심상품 등록' }}
-        </button>
+        <div class="favorite-area">
+          <button
+            class="favorite-button"
+            :class="{ active: isFavorite }"
+            :disabled="favoriteLoading"
+            @click="handleFavoriteClick"
+          >
+            <span v-if="favoriteLoading">
+              처리 중...
+            </span>
+            <span v-else>
+              {{ isFavorite ? '관심상품 삭제' : '관심상품 등록' }}
+            </span>
+          </button>
+
+          <p v-if="favoriteMessage" class="favorite-message">
+            {{ favoriteMessage }}
+          </p>
+        </div>
       </section>
 
       <section class="detail-card">
@@ -149,7 +161,9 @@ const route = useRoute()
 const product = ref(null)
 const loading = ref(false)
 const errorMessage = ref('')
+const favoriteMessage = ref('')
 const isFavorite = ref(false)
+const favoriteLoading = ref(false)
 
 const productType = computed(() => {
   return route.query.type === 'saving' ? 'saving' : 'deposit'
@@ -241,6 +255,19 @@ const getProductMaxRate = (targetProduct) => {
   return `${Math.max(...rates).toFixed(2)}%`
 }
 
+const extractFavoriteProductId = (favorite) => {
+  if (favorite.product_id) {
+    return favorite.product_id
+  }
+
+  if (typeof favorite.product === 'number') {
+    return favorite.product
+  }
+
+  const favoriteProduct = favorite.product || favorite
+  return favoriteProduct.id || null
+}
+
 const checkFavoriteStatus = async () => {
   const token = localStorage.getItem('token')
 
@@ -251,12 +278,10 @@ const checkFavoriteStatus = async () => {
 
   try {
     const response = await getFavorites()
-
-    const favorites = response.data
+    const favorites = response.data || []
 
     isFavorite.value = favorites.some((favorite) => {
-      const favoriteProduct = favorite.product || favorite
-      return favoriteProduct.id === product.value.id
+      return extractFavoriteProductId(favorite) === product.value.id
     })
   } catch (error) {
     console.error(error)
@@ -271,15 +296,18 @@ const handleFavoriteClick = async () => {
 
   const token = localStorage.getItem('token')
 
+  errorMessage.value = ''
+  favoriteMessage.value = ''
+
   if (!token) {
-    alert('로그인이 필요한 기능입니다.')
+    errorMessage.value = '로그인 후 관심상품을 등록할 수 있습니다.'
     return
   }
 
+  favoriteLoading.value = true
+
   try {
     const response = await toggleFavoriteProduct(product.value.id)
-
-    console.log('관심상품 응답:', response.data)
 
     if (response.data.is_favorite !== undefined) {
       isFavorite.value = response.data.is_favorite
@@ -287,28 +315,27 @@ const handleFavoriteClick = async () => {
       isFavorite.value = !isFavorite.value
     }
 
-    if (isFavorite.value) {
-      alert('관심상품에 등록되었습니다.')
-    } else {
-      alert('관심상품에서 삭제되었습니다.')
-    }
+    favoriteMessage.value = isFavorite.value
+      ? '관심상품에 등록되었습니다.'
+      : '관심상품에서 삭제되었습니다.'
   } catch (error) {
     console.error('관심상품 처리 에러:', error)
-    console.error('상태코드:', error.response?.status)
-    console.error('에러 응답:', error.response?.data)
 
     if (error.response?.status === 401 || error.response?.status === 403) {
-      alert('로그인이 필요한 기능입니다.')
+      errorMessage.value = '로그인 후 관심상품을 등록할 수 있습니다.'
       return
     }
 
-    alert('관심상품 처리 중 오류가 발생했습니다.')
+    errorMessage.value = '관심상품 처리 중 오류가 발생했습니다.'
+  } finally {
+    favoriteLoading.value = false
   }
 }
 
 const fetchProductDetail = async () => {
   loading.value = true
   errorMessage.value = ''
+  favoriteMessage.value = ''
 
   try {
     const productId = route.params.id
@@ -319,8 +346,6 @@ const fetchProductDetail = async () => {
     } else {
       response = await getDepositProductDetail(productId)
     }
-
-    console.log('상품 상세 응답:', response.data)
 
     product.value = response.data
 
@@ -468,6 +493,13 @@ onMounted(() => {
   line-height: 1.5;
 }
 
+.favorite-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .favorite-button {
   width: 180px;
   height: 42px;
@@ -482,6 +514,21 @@ onMounted(() => {
   background-color: #333;
   color: #fff;
   border-color: #333;
+}
+
+.favorite-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.favorite-message {
+  margin: 0;
+  padding: 9px 12px;
+  border: 1px solid #bbf7d0;
+  background-color: #f0fdf4;
+  color: #15803d;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .detail-card h3 {

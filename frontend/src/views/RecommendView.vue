@@ -108,6 +108,10 @@
         <p v-if="errorMessage" class="error-message">
           {{ errorMessage }}
         </p>
+
+        <p v-if="successMessage" class="success-message">
+          {{ successMessage }}
+        </p>
       </form>
 
       <section class="result-section">
@@ -213,9 +217,19 @@
               <button
                 type="button"
                 class="favorite-button"
-                @click="handleFavoriteClick"
+                :class="{ active: isFavoriteProduct(item.product_id) }"
+                :disabled="favoriteLoadingProductId === item.product_id"
+                @click="handleFavoriteClick(item)"
               >
-                관심상품 등록
+                <span v-if="favoriteLoadingProductId === item.product_id">
+                  처리 중...
+                </span>
+                <span v-else-if="isFavoriteProduct(item.product_id)">
+                  관심상품 해제
+                </span>
+                <span v-else>
+                  관심상품 등록
+                </span>
               </button>
             </div>
           </article>
@@ -229,12 +243,16 @@
 import { reactive, ref, watch, onMounted, computed } from 'vue'
 import { recommendProducts } from '@/api/recommendations'
 import { getProfile } from '@/api/accounts'
+import { getFavoriteProducts, toggleFavoriteProduct } from '@/api/favorites'
 
 const loading = ref(false)
 const hasSearched = ref(false)
 const errorMessage = ref('')
+const successMessage = ref('')
 const recommendations = ref([])
 const currentUserId = ref(null)
+const favoriteProductIds = ref(new Set())
+const favoriteLoadingProductId = ref(null)
 
 const defaultForm = {
   saving_style: 'unknown',
@@ -262,6 +280,7 @@ const handleReset = () => {
   recommendations.value = []
   hasSearched.value = false
   errorMessage.value = ''
+  successMessage.value = ''
 
   if (storageKey.value) {
     localStorage.removeItem(storageKey.value)
@@ -328,31 +347,74 @@ const saveRecommendationState = () => {
   )
 }
 
-onMounted(async () => {
-  await loadCurrentUser()
-  restoreRecommendationState()
-})
+const extractFavoriteProductId = (favorite) => {
+  if (favorite.product_id) {
+    return favorite.product_id
+  }
 
-watch(
-  form,
-  () => {
-    saveRecommendationState()
-  },
-  { deep: true }
-)
+  if (typeof favorite.product === 'number') {
+    return favorite.product
+  }
+
+  if (favorite.product?.id) {
+    return favorite.product.id
+  }
+
+  if (favorite.product?.product_id) {
+    return favorite.product.product_id
+  }
+
+  return null
+}
+
+const loadFavoriteProducts = async () => {
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    favoriteProductIds.value = new Set()
+    return
+  }
+
+  try {
+    const response = await getFavoriteProducts()
+    const favorites = response.data || []
+
+    favoriteProductIds.value = new Set(
+      favorites
+        .map((favorite) => extractFavoriteProductId(favorite))
+        .filter((productId) => productId !== null)
+    )
+
+    applyFavoriteStateToRecommendations()
+  } catch (error) {
+    console.error('관심상품 목록 조회 실패:', error)
+    favoriteProductIds.value = new Set()
+  }
+}
+
+const applyFavoriteStateToRecommendations = () => {
+  recommendations.value = recommendations.value.map((item) => ({
+    ...item,
+    is_favorite: favoriteProductIds.value.has(item.product_id),
+  }))
+
+  saveRecommendationState()
+}
+
+const isFavoriteProduct = (productId) => {
+  return favoriteProductIds.value.has(productId)
+}
 
 const handleRecommend = async () => {
   loading.value = true
   hasSearched.value = true
   errorMessage.value = ''
+  successMessage.value = ''
   recommendations.value = []
 
   saveRecommendationState()
 
   try {
-    // 추천 API 내부에서 상품 DB를 조회함
-    // 백엔드 목록 API가 DB가 비어 있으면 자동 저장하는 구조이므로
-    // 프론트에서는 /save/ API를 직접 호출하지 않음
     const response = await recommendProducts({
       saving_style: form.saving_style,
       product_type: form.product_type,
@@ -364,6 +426,7 @@ const handleRecommend = async () => {
     })
 
     recommendations.value = response.data.recommendations || []
+    applyFavoriteStateToRecommendations()
 
     saveRecommendationState()
   } catch (error) {
@@ -376,6 +439,58 @@ const handleRecommend = async () => {
     saveRecommendationState()
   } finally {
     loading.value = false
+  }
+}
+
+const handleFavoriteClick = async (item) => {
+  const token = localStorage.getItem('token')
+
+  errorMessage.value = ''
+  successMessage.value = ''
+
+  if (!token) {
+    errorMessage.value = '로그인 후 관심상품을 등록할 수 있습니다.'
+    return
+  }
+
+  favoriteLoadingProductId.value = item.product_id
+
+  try {
+    const response = await toggleFavoriteProduct(item.product_id)
+    const isFavorite = response.data.is_favorite
+
+    const nextFavoriteIds = new Set(favoriteProductIds.value)
+
+    if (isFavorite) {
+      nextFavoriteIds.add(item.product_id)
+      successMessage.value = '관심상품에 등록되었습니다.'
+    } else {
+      nextFavoriteIds.delete(item.product_id)
+      successMessage.value = '관심상품에서 해제되었습니다.'
+    }
+
+    favoriteProductIds.value = nextFavoriteIds
+
+    recommendations.value = recommendations.value.map((recommendation) => {
+      if (recommendation.product_id !== item.product_id) {
+        return recommendation
+      }
+
+      return {
+        ...recommendation,
+        is_favorite: isFavorite,
+      }
+    })
+
+    saveRecommendationState()
+  } catch (error) {
+    console.error('관심상품 처리 실패:', error)
+
+    errorMessage.value =
+      error.response?.data?.message ||
+      '관심상품 처리 중 문제가 발생했습니다.'
+  } finally {
+    favoriteLoadingProductId.value = null
   }
 }
 
@@ -392,9 +507,19 @@ const formatRate = (value) => {
   })
 }
 
-const handleFavoriteClick = () => {
-  alert('관심상품 등록 기능은 다음 단계에서 마이페이지와 연결할 예정입니다.')
-}
+onMounted(async () => {
+  await loadCurrentUser()
+  restoreRecommendationState()
+  await loadFavoriteProducts()
+})
+
+watch(
+  form,
+  () => {
+    saveRecommendationState()
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>
@@ -501,6 +626,12 @@ const handleFavoriteClick = () => {
 .error-message {
   margin: 14px 0 0;
   color: #dc2626;
+  font-weight: 700;
+}
+
+.success-message {
+  margin: 14px 0 0;
+  color: #16a34a;
   font-weight: 700;
 }
 
@@ -704,6 +835,20 @@ const handleFavoriteClick = () => {
 
 .favorite-button:hover {
   background: #e5e7eb;
+}
+
+.favorite-button.active {
+  background: #111827;
+  color: #ffffff;
+}
+
+.favorite-button.active:hover {
+  background: #1f2937;
+}
+
+.favorite-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .reset-button {
