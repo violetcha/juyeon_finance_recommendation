@@ -362,73 +362,93 @@ const getDistanceMeter = (lat1, lng1, lat2, lng2) => {
 
 <style scoped>
 .bank-test {
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
-  padding: 24px;
-  background: white;
+  border: 1px solid #dbe4f0;
+  border-radius: 22px;
+  padding: 22px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(15, 27, 61, 0.06);
 }
 
 .label {
-  color: #2563eb;
-  font-weight: 700;
-  margin-bottom: 8px;
+  margin: 0 0 8px;
+  color: #1116b8;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
 }
 
 .test-header h2,
 .result-card h2 {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
+  color: #0f1b3d;
+  font-size: 24px;
+  line-height: 1.22;
+  font-weight: 950;
+  letter-spacing: -0.05em;
 }
 
 .desc,
 .summary {
-  color: #4b5563;
-  line-height: 1.6;
+  margin: 0;
+  color: #52627a;
+  font-size: 14px;
+  line-height: 1.65;
 }
 
 .progress-wrap {
-  margin: 20px 0;
+  margin: 22px 0 20px;
 }
 
 .progress-text {
-  font-size: 14px;
-  font-weight: 700;
-  color: #374151;
   margin-bottom: 8px;
+  color: #0f1b3d;
+  font-size: 14px;
+  font-weight: 900;
 }
 
 .progress-bar {
   width: 100%;
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 999px;
+  height: 7px;
   overflow: hidden;
+  border-radius: 999px;
+  background: #e6edf7;
 }
 
 .progress-fill {
   height: 100%;
-  background: #2563eb;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #1116b8, #2f7cff, #2dd4bf);
 }
 
 .question-card h3 {
-  margin-bottom: 16px;
+  margin: 0 0 14px;
+  color: #0f1b3d;
+  font-size: 17px;
+  line-height: 1.45;
+  font-weight: 950;
 }
 
 .option-btn {
   display: block;
   width: 100%;
-  padding: 14px 16px;
+  padding: 14px 15px;
   margin-bottom: 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 12px;
-  background: white;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  background: #fff;
+  color: #0f1b3d;
   text-align: left;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 14px;
+  font-weight: 760;
+  line-height: 1.45;
 }
 
 .option-btn:hover {
-  border-color: #2563eb;
-  background: #eff6ff;
+  border-color: #1116b8;
+  background: #f2f5ff;
+  color: #1116b8;
+  transform: translateY(-1px);
 }
 
 .option-btn:disabled {
@@ -437,70 +457,98 @@ const getDistanceMeter = (lat1, lng1, lat2, lng2) => {
 }
 
 .loading-text {
-  margin-top: 12px;
-  color: #2563eb;
+  margin: 12px 0 0;
+  color: #1116b8;
   font-size: 14px;
+  font-weight: 850;
 }
 
 .result-card h3 {
-  margin: 0 0 16px;
-  color: #374151;
+  margin: 0 0 14px;
+  color: #52627a;
+  font-size: 16px;
 }
 
 .reason-box,
 .near-box,
 .score-box {
-  margin-top: 20px;
-  padding: 16px;
-  border-radius: 12px;
-  background: #f9fafb;
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid #edf2f7;
+  border-radius: 16px;
+  background: #f8fbff;
 }
 
 .reason-box h4,
 .near-box h4,
 .score-box h4 {
   margin: 0 0 10px;
+  color: #0f1b3d;
+  font-size: 14px;
+  font-weight: 950;
 }
 
 .reason-box ul {
-  padding-left: 20px;
+  padding-left: 18px;
   margin: 0;
+  color: #52627a;
 }
 
 .reason-box li {
-  margin-bottom: 6px;
+  margin-bottom: 7px;
+  line-height: 1.5;
+}
+
+.near-box p {
+  margin: 0;
+  color: #52627a;
+  line-height: 1.55;
 }
 
 .score-row {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #e5e7eb;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1px solid #e6edf7;
+  color: #52627a;
+  font-size: 14px;
 }
 
 .score-row:last-child {
   border-bottom: none;
 }
 
+.score-row strong {
+  color: #1116b8;
+}
+
 .main-btn,
 .sub-btn {
   width: 100%;
-  padding: 14px;
-  border-radius: 10px;
-  margin-top: 14px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 13px;
+  margin-top: 12px;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 900;
 }
 
 .main-btn {
   border: none;
-  background: #2563eb;
+  background: #1116b8;
   color: white;
+  box-shadow: 0 14px 26px rgba(17, 22, 184, 0.18);
 }
 
 .sub-btn {
-  border: 1px solid #d1d5db;
+  border: 1px solid #dbe4f0;
   background: white;
-  color: #374151;
+  color: #0f1b3d;
+}
+
+.main-btn:hover,
+.sub-btn:hover {
+  transform: translateY(-1px);
 }
 </style>

@@ -2,9 +2,29 @@
 
 <template>
   <main class="main-bank-page">
-    <section class="page-header">
-      <p class="eyebrow">Main Bank Finder</p>
-      <h1>내 주변 주거래은행 찾기</h1>
+    <section class="map-guide-banner">
+      <div class="banner-icon">🗺️</div>
+      <div>
+        <strong>내 주변 주거래은행을 한눈에 비교해 보세요</strong>
+        <p>성향 테스트와 현재 위치, 지역 검색, 지도 접근성을 함께 확인할 수 있습니다.</p>
+      </div>
+    </section>
+
+    <section class="page-header map-heading">
+      <div>
+        <p class="eyebrow">MAIN BANK FINDER</p>
+        <h1>내 주변 주거래은행 찾기</h1>
+        <p>나에게 맞는 은행을 테스트하고, 선택한 지역 또는 현재 위치 기준으로 가까운 지점을 확인해보세요.</p>
+      </div>
+
+      <div class="page-actions">
+        <button type="button" class="ghost-action" @click="moveToUserLocation">
+          ◎ 내 위치 다시 찾기
+        </button>
+        <button type="button" class="ghost-action" @click="searchBySelectedRegion">
+          ⌕ 선택 지역 검색
+        </button>
+      </div>
     </section>
 
     <section class="bank-map-section">
@@ -1395,143 +1415,188 @@ onMounted(async () => {
 
 <style scoped>
 .main-bank-page {
-  max-width: 1200px;
+  width: min(var(--container-width, 1360px), calc(100% - 48px));
   margin: 0 auto;
-  padding: 40px 20px 80px;
+  padding: 22px 0 64px;
+}
+
+.map-guide-banner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  border: 1px solid #c7d7fe;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #eff6ff, #f8fbff);
+  color: #0f1b3d;
+}
+
+.banner-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 44px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(30, 64, 175, 0.08);
+  font-size: 26px;
+}
+
+.map-guide-banner strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.map-guide-banner p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .page-header {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+}
+
+.map-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-end;
 }
 
 .eyebrow {
   margin: 0 0 8px;
-  color: #2563eb;
-  font-weight: 700;
+  color: #1116b8;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
 }
 
 .page-header h1 {
-  margin: 0 0 12px;
-  font-size: 36px;
+  margin: 0 0 10px;
+  color: #0f1b3d;
+  font-size: clamp(32px, 3.4vw, 44px);
+  line-height: 1.15;
+  font-weight: 950;
+  letter-spacing: -0.06em;
 }
 
 .page-header p,
 .video-header p {
-  color: #6b7280;
-  line-height: 1.6;
+  margin: 0;
+  color: #64748b;
+  line-height: 1.65;
+}
+
+.page-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ghost-action {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #0f1b3d;
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(15, 27, 61, 0.04);
+}
+
+.ghost-action:hover {
+  border-color: #1116b8;
+  color: #1116b8;
 }
 
 .bank-map-section {
   display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 24px;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 18px;
   align-items: stretch;
 }
 
 .bank-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.bank-list h2 {
-  margin: 0 0 8px;
+  min-width: 0;
 }
 
 .bank-fit-test-panel {
-  margin-bottom: 20px;
-}
-
-.bank-card {
-  text-align: left;
-  border: 1px solid #e5e7eb;
-  background: white;
-  border-radius: 14px;
-  padding: 16px;
-  cursor: pointer;
-}
-
-.bank-card.active {
-  border-color: #2563eb;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
-}
-
-.bank-card-header {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 18px;
-}
-
-.bank-icon {
-  font-size: 22px;
-}
-
-.bank-card p {
-  margin: 0 0 10px;
-  color: #4b5563;
-  line-height: 1.5;
-}
-
-.bank-card small {
-  color: #2563eb;
-  font-weight: 700;
+  position: sticky;
+  top: calc(var(--header-height, 64px) + 18px);
 }
 
 .map-area {
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  min-width: 0;
+  border: 1px solid #dbe4f0;
+  border-radius: 22px;
   overflow: hidden;
-  background: white;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(15, 27, 61, 0.06);
 }
 
 .map-toolbar {
-  padding: 16px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 18px;
+  border-bottom: 1px solid #edf2f7;
+  background: #fff;
 }
 
 .search-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .filter-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(130px, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .filter-box {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
 .filter-box label {
-  font-size: 13px;
-  color: #6b7280;
-  font-weight: 700;
+  color: #52627a;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .filter-box select,
 .video-search input {
   width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: white;
-  color: #111827;
+  min-height: 44px;
+  border: 1px solid #d8e2ef;
+  border-radius: 13px;
+  padding: 0 13px;
+  background: #fff;
+  color: #0f1b3d;
+  font-weight: 750;
+  outline: none;
+}
+
+.filter-box select:focus,
+.video-search input:focus {
+  border-color: #1116b8;
+  box-shadow: 0 0 0 4px rgba(17, 22, 184, 0.08);
 }
 
 .bank-select-box select {
-  font-weight: 700;
+  font-weight: 900;
 }
 
 .button-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -1540,22 +1605,33 @@ onMounted(async () => {
 .selected-place button,
 .video-search button,
 .video-buttons button {
+  min-height: 42px;
   border: none;
-  border-radius: 8px;
-  padding: 10px 14px;
-  background: #2563eb;
+  border-radius: 12px;
+  padding: 0 16px;
+  background: #1116b8;
   color: white;
   cursor: pointer;
   white-space: nowrap;
+  font-weight: 900;
+  box-shadow: 0 12px 24px rgba(17, 22, 184, 0.16);
 }
 
 .location-button,
 .video-buttons .save-button {
-  background: #111827;
+  background: #0f1b3d;
+}
+
+.search-button:hover,
+.location-button:hover,
+.selected-place button:hover,
+.video-search button:hover,
+.video-buttons button:hover {
+  transform: translateY(-1px);
 }
 
 .video-buttons .save-button.saved {
-  background: #6b7280;
+  background: #64748b;
   cursor: pointer;
 }
 
@@ -1566,17 +1642,18 @@ onMounted(async () => {
 
 .search-base {
   margin: 0;
-  color: #6b7280;
+  color: #64748b;
   font-size: 13px;
+  font-weight: 750;
 }
 
 .map-error,
 .map-message {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 11px 13px;
+  border-radius: 12px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .map-error {
@@ -1588,42 +1665,50 @@ onMounted(async () => {
 .map-message {
   border: 1px solid #bfdbfe;
   background: #eff6ff;
-  color: #2563eb;
+  color: #1116b8;
 }
 
 .map {
   width: 100%;
   height: 520px;
+  background: #eef4fb;
 }
 
 .selected-place {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 18px;
   align-items: center;
-  padding: 16px;
-  border-top: 1px solid #e5e7eb;
+  padding: 18px;
+  border-top: 1px solid #edf2f7;
+  background: linear-gradient(180deg, #fff, #f8fbff);
 }
 
 .selected-label {
-  margin: 0 0 4px;
-  color: #2563eb;
-  font-size: 13px;
-  font-weight: 700;
+  margin: 0 0 5px;
+  color: #1116b8;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
 }
 
 .selected-place h3 {
   margin: 0 0 8px;
+  color: #0f1b3d;
+  font-size: 20px;
+  font-weight: 950;
 }
 
 .selected-place p {
   margin: 4px 0;
-  color: #4b5563;
+  color: #52627a;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .route-summary {
-  font-weight: 700;
-  color: #2563eb !important;
+  font-weight: 900;
+  color: #1116b8 !important;
 }
 
 .route-error {
@@ -1631,7 +1716,12 @@ onMounted(async () => {
 }
 
 .video-section {
-  margin-top: 56px;
+  margin-top: 46px;
+  padding: 26px;
+  border: 1px solid #dbe4f0;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(15, 27, 61, 0.05);
 }
 
 .video-header {
@@ -1640,12 +1730,16 @@ onMounted(async () => {
 
 .video-header h2 {
   margin: 0 0 10px;
+  color: #0f1b3d;
   font-size: 28px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
 }
 
 .video-search {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   margin-bottom: 24px;
 }
 
@@ -1660,10 +1754,11 @@ onMounted(async () => {
 }
 
 .video-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
   overflow: hidden;
-  background: white;
+  border: 1px solid #dbe4f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(15, 27, 61, 0.04);
 }
 
 .thumbnail-button {
@@ -1671,7 +1766,7 @@ onMounted(async () => {
   width: 100%;
   border: none;
   padding: 0;
-  background: transparent;
+  background: #f1f5f9;
   cursor: pointer;
 }
 
@@ -1683,19 +1778,21 @@ onMounted(async () => {
 }
 
 .video-info {
-  padding: 14px;
+  padding: 15px;
 }
 
 .video-info h3 {
   min-height: 44px;
   margin: 0 0 8px;
+  color: #0f1b3d;
   font-size: 16px;
   line-height: 1.4;
+  font-weight: 950;
 }
 
 .video-info p {
   margin: 0 0 12px;
-  color: #6b7280;
+  color: #64748b;
   font-size: 14px;
 }
 
@@ -1714,15 +1811,16 @@ onMounted(async () => {
 
 .player-section h3 {
   margin-bottom: 14px;
+  color: #0f1b3d;
 }
 
 .iframe-box {
   position: relative;
   width: 100%;
   padding-top: 56.25%;
-  border-radius: 16px;
+  border-radius: 18px;
   overflow: hidden;
-  background: #111827;
+  background: #0f1b3d;
 }
 
 .iframe-box iframe {
@@ -1734,23 +1832,40 @@ onMounted(async () => {
 }
 
 .message {
-  color: #6b7280;
+  color: #64748b;
 }
 
 .error {
   color: #dc2626;
 }
 
+@media (max-width: 1180px) {
+  .bank-map-section {
+    grid-template-columns: 1fr;
+  }
 
-@media (max-width: 1100px) {
+  .bank-fit-test-panel {
+    position: static;
+  }
+
   .filter-row {
     grid-template-columns: repeat(2, minmax(130px, 1fr));
   }
 }
 
-@media (max-width: 980px) {
-  .bank-map-section {
-    grid-template-columns: 1fr;
+@media (max-width: 860px) {
+  .main-bank-page {
+    width: min(100% - 28px, var(--container-width, 1360px));
+  }
+
+  .map-heading,
+  .selected-place {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-actions {
+    justify-content: flex-start;
   }
 
   .video-grid {
@@ -1764,22 +1879,13 @@ onMounted(async () => {
 
 @media (max-width: 640px) {
   .filter-row,
-  .video-grid {
+  .video-grid,
+  .video-search {
     grid-template-columns: 1fr;
-  }
-
-  .video-search,
-  .selected-place {
-    flex-direction: column;
-    align-items: stretch;
   }
 
   .video-search button {
     padding: 12px;
-  }
-
-  .page-header h1 {
-    font-size: 28px;
   }
 }
 </style>

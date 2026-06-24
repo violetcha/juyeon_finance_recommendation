@@ -29,6 +29,12 @@ class UserProfile(models.Model):
         ('over_3000', '3000만원 이상'),
     ]
 
+    GENDER_CHOICES = [
+        ('unknown', '선택 안 함'),
+        ('male', '남성'),
+        ('female', '여성'),
+    ]
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
@@ -44,6 +50,13 @@ class UserProfile(models.Model):
 
     age = models.PositiveIntegerField(
         null=True,
+        blank=True
+    )
+
+    gender = models.CharField(
+        max_length=20,
+        choices=GENDER_CHOICES,
+        default='unknown',
         blank=True
     )
 

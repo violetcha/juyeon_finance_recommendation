@@ -4,6 +4,19 @@ from rest_framework import serializers
 
 from .models import UserProfile
 
+
+ALLOWED_GENDER_VALUES = {'unknown', 'male', 'female', ''}
+
+
+def validate_gender_value(value):
+    if value in [None, '']:
+        return 'unknown'
+
+    if value not in ALLOWED_GENDER_VALUES:
+        raise serializers.ValidationError('성별 값을 확인해주세요.')
+
+    return value
+
 class SignupSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         error_messages={
@@ -38,6 +51,7 @@ class SignupSerializer(serializers.ModelSerializer):
     )
 
     age = serializers.IntegerField(required=False, allow_null=True)
+    gender = serializers.CharField(required=False, allow_blank=True)
     monthly_income_range = serializers.CharField(required=False, allow_blank=True)
     monthly_saving_amount = serializers.CharField(required=False, allow_blank=True)
     lump_sum_amount = serializers.CharField(required=False, allow_blank=True)
@@ -54,6 +68,7 @@ class SignupSerializer(serializers.ModelSerializer):
             'password_confirm',
             'email',
             'age',
+            'gender',
             'monthly_income_range',
             'monthly_saving_amount',
             'lump_sum_amount',
@@ -76,6 +91,9 @@ class SignupSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('이미 사용 중인 이메일입니다.')
 
         return value
+
+    def validate_gender(self, value):
+        return validate_gender_value(value)
 
     def validate(self, data):
         password = data.get('password')
@@ -103,6 +121,7 @@ class SignupSerializer(serializers.ModelSerializer):
 
         profile_data = {
             'age': validated_data.pop('age', None),
+            'gender': validated_data.pop('gender', 'unknown') or 'unknown',
             'monthly_income_range': validated_data.pop('monthly_income_range', ''),
             'monthly_saving_amount': validated_data.pop('monthly_saving_amount', ''),
             'lump_sum_amount': validated_data.pop('lump_sum_amount', ''),
@@ -134,6 +153,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'profile_image',
             'profile_image_url',
             'age',
+            'gender',
             'monthly_income_range',
             'monthly_saving_amount',
             'lump_sum_amount',
@@ -186,6 +206,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         }
     )
     age = serializers.IntegerField(required=False, allow_null=True)
+    gender = serializers.CharField(required=False, allow_blank=True)
     monthly_income_range = serializers.CharField(required=False, allow_blank=True)
     monthly_saving_amount = serializers.CharField(required=False, allow_blank=True)
     lump_sum_amount = serializers.CharField(required=False, allow_blank=True)
@@ -199,6 +220,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             'email',
             'profile_image',
             'age',
+            'gender',
             'monthly_income_range',
             'monthly_saving_amount',
             'lump_sum_amount',
@@ -215,6 +237,9 @@ class UserUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('이미 사용 중인 이메일입니다.')
 
         return value
+
+    def validate_gender(self, value):
+        return validate_gender_value(value)
 
     def validate_personal_info_agree(self, value):
         if value is False:
@@ -234,6 +259,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         profile_fields = [
             'profile_image',
             'age',
+            'gender',
             'monthly_income_range',
             'monthly_saving_amount',
             'lump_sum_amount',

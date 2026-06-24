@@ -1,8 +1,9 @@
 <template>
   <div class="mypage-view">
     <section class="page-header">
+      <span class="eyebrow">MY FINANCE DASHBOARD</span>
       <h1>마이페이지</h1>
-      <p>내 금융 프로필, 관심상품, 저장한 유튜브 영상을 확인할 수 있습니다.</p>
+      <p>회원님의 금융 생활, 관심상품, 저장한 금융 콘텐츠를 한눈에 관리하세요.</p>
     </section>
 
     <p v-if="pageLoading" class="status-message">
@@ -14,239 +15,278 @@
     </p>
 
     <template v-else>
-      <div class="mypage-top-layout">
-        <section class="profile-section">
-          <div class="profile-card">
-            <div class="profile-image">
+      <section class="profile-hero-card card">
+        <div class="profile-main-info">
+          <div class="profile-image large">
+            <img
+              v-if="profileImagePreview || profileImageUrl"
+              :src="profileImagePreview || profileImageUrl"
+              alt="프로필 이미지"
+            />
+            <span v-else>{{ profileInitial }}</span>
+          </div>
+
+          <div class="profile-title">
+            <div class="title-row">
+              <h2>{{ profileUser.username || '사용자' }}님</h2>
+              <span class="profile-badge">{{ profileBadgeText }}</span>
+            </div>
+            <p>{{ profileUser.email || '이메일 정보 없음' }}</p>
+            <small>마이페이지 금융 프로필은 맞춤 추천 결과에 반영됩니다.</small>
+          </div>
+        </div>
+
+        <button type="button" class="edit-profile-button" @click="startEditProfile">
+          ✎ 프로필 수정
+        </button>
+
+        <div class="profile-summary-grid">
+          <div class="summary-item">
+            <span class="summary-icon red">👤</span>
+            <div>
+              <small>나이</small>
+              <strong>{{ profileForm.age ? `${profileForm.age}세` : '미입력' }}</strong>
+            </div>
+          </div>
+
+          <div class="summary-item">
+            <span class="summary-icon blue">⚥</span>
+            <div>
+              <small>성별</small>
+              <strong>{{ genderLabel }}</strong>
+            </div>
+          </div>
+
+          <div class="summary-item">
+            <span class="summary-icon indigo">🏠</span>
+            <div>
+              <small>월 소득 구간</small>
+              <strong>{{ getOptionLabel('monthly_income_range', profileForm.monthly_income_range) }}</strong>
+            </div>
+          </div>
+
+          <div class="summary-item">
+            <span class="summary-icon purple">💼</span>
+            <div>
+              <small>월 저축 가능 금액</small>
+              <strong>{{ getOptionLabel('monthly_saving_amount', profileForm.monthly_saving_amount) }}</strong>
+            </div>
+          </div>
+
+          <div class="summary-item">
+            <span class="summary-icon mint">💰</span>
+            <div>
+              <small>현재 보유 목돈</small>
+              <strong>{{ getOptionLabel('lump_sum_amount', profileForm.lump_sum_amount) }}</strong>
+            </div>
+          </div>
+
+          <div class="summary-item">
+            <span class="summary-icon yellow">🏦</span>
+            <div>
+              <small>주거래은행</small>
+              <strong>{{ profileForm.main_bank || '미입력' }}</strong>
+            </div>
+          </div>
+
+          <div class="summary-item">
+            <span class="summary-icon teal">📍</span>
+            <div>
+              <small>거주 지역</small>
+              <strong>{{ profileForm.address || '미입력' }}</strong>
+            </div>
+          </div>
+
+          <div class="summary-item">
+            <span class="summary-icon green">✓</span>
+            <div>
+              <small>개인정보 동의</small>
+              <strong>{{ profileForm.personal_info_agree ? '동의 완료' : '미동의' }}</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section v-if="isEditingProfile" class="profile-edit-panel card">
+        <div class="section-title-row compact">
+          <div>
+            <h2>프로필 수정 / 계정 관리</h2>
+            <p>성별과 나이 정보는 가입대상 조건을 걸러내는 맞춤 추천에 사용됩니다.</p>
+          </div>
+          <button type="button" class="secondary-button" @click="cancelEditProfile">
+            닫기
+          </button>
+        </div>
+
+        <form class="profile-edit-form" @submit.prevent="handleUpdateProfile">
+          <div class="image-edit-box">
+            <div class="profile-image small">
               <img
                 v-if="profileImagePreview || profileImageUrl"
                 :src="profileImagePreview || profileImageUrl"
-                alt="프로필 이미지"
+                alt="프로필 이미지 미리보기"
               />
-              <span v-else>
-                {{ profileInitial }}
-              </span>
+              <span v-else>{{ profileInitial }}</span>
             </div>
 
-            <div class="profile-title">
-              <h2>{{ profileUser.username || '사용자' }}</h2>
-              <p>{{ profileUser.email || '이메일 정보 없음' }}</p>
-            </div>
+            <label class="file-label">
+              프로필 사진
+              <input
+                type="file"
+                accept="image/*"
+                @change="handleProfileImageChange"
+              />
+            </label>
 
-            <div v-if="!isEditingProfile" class="profile-info-list">
-              <div class="profile-info-row">
-                <span>나이</span>
-                <strong>{{ profileForm.age || '미입력' }}</strong>
-              </div>
-
-              <div class="profile-info-row">
-                <span>월 소득 구간</span>
-                <strong>{{ getOptionLabel('monthly_income_range', profileForm.monthly_income_range) }}</strong>
-              </div>
-
-              <div class="profile-info-row">
-                <span>월 저축 가능 금액</span>
-                <strong>{{ getOptionLabel('monthly_saving_amount', profileForm.monthly_saving_amount) }}</strong>
-              </div>
-
-              <div class="profile-info-row">
-                <span>현재 보유 목돈</span>
-                <strong>{{ getOptionLabel('lump_sum_amount', profileForm.lump_sum_amount) }}</strong>
-              </div>
-
-              <div class="profile-info-row">
-                <span>주거래은행</span>
-                <strong>{{ profileForm.main_bank || '미입력' }}</strong>
-              </div>
-
-              <div class="profile-info-row">
-                <span>거주 지역</span>
-                <strong>{{ profileForm.address || '미입력' }}</strong>
-              </div>
-
-              <div class="profile-info-row">
-                <span>개인정보 동의</span>
-                <strong>{{ profileForm.personal_info_agree ? '동의' : '미동의' }}</strong>
-              </div>
-
-              <p v-if="profileMessage" class="form-message success">
-                {{ profileMessage }}
-              </p>
-
-              <button type="button" class="primary-button full" @click="startEditProfile">
-                프로필 수정 / 계정 관리
-              </button>
-            </div>
-
-            <form v-else class="profile-edit-form" @submit.prevent="handleUpdateProfile">
-              <div class="image-edit-box">
-                <div class="profile-image small">
-                  <img
-                    v-if="profileImagePreview || profileImageUrl"
-                    :src="profileImagePreview || profileImageUrl"
-                    alt="프로필 이미지 미리보기"
-                  />
-                  <span v-else>
-                    {{ profileInitial }}
-                  </span>
-                </div>
-
-                <label class="file-label">
-                  프로필 사진
-                  <input
-                    type="file"
-                    accept="image/*"
-                    @change="handleProfileImageChange"
-                  />
-                </label>
-
-                <p class="help-text">
-                  JPG, PNG 등 이미지 파일을 선택할 수 있습니다.
-                </p>
-              </div>
-
-              <label>
-                이메일
-                <input v-model="profileForm.email" type="email" />
-              </label>
-
-              <label>
-                나이
-                <select v-model.number="profileForm.age">
-                  <option :value="null">나이를 선택하세요</option>
-                  <option
-                    v-for="option in profileOptions.age"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                월 소득 구간
-                <select v-model="profileForm.monthly_income_range">
-                  <option value="">월 소득 구간을 선택하세요</option>
-                  <option
-                    v-for="option in profileOptions.monthly_income_range"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                월 저축 가능 금액
-                <select v-model="profileForm.monthly_saving_amount">
-                  <option value="">월 저축 가능 금액을 선택하세요</option>
-                  <option
-                    v-for="option in profileOptions.monthly_saving_amount"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                현재 보유 목돈
-                <select v-model="profileForm.lump_sum_amount">
-                  <option value="">현재 보유 목돈을 선택하세요</option>
-                  <option
-                    v-for="option in profileOptions.lump_sum_amount"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                주거래은행
-                <select v-model="profileForm.main_bank">
-                  <option value="">주거래은행을 선택하세요</option>
-                  <option
-                    v-for="option in profileOptions.main_bank"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-
-              <label>
-                거주 지역
-                <select v-model="profileForm.address">
-                  <option value="">거주 지역을 선택하세요</option>
-                  <option
-                    v-for="option in profileOptions.address"
-                    :key="option.value"
-                    :value="option.value"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
-
-              <p v-if="profileMessage" class="form-message">
-                {{ profileMessage }}
-              </p>
-
-              <div class="form-actions">
-                <button type="submit" class="primary-button" :disabled="profileSaving">
-                  {{ profileSaving ? '저장 중...' : '저장' }}
-                </button>
-
-                <button type="button" class="secondary-button" @click="cancelEditProfile">
-                  취소
-                </button>
-              </div>
-            </form>
+            <p class="help-text">JPG, PNG 등 이미지 파일을 선택할 수 있습니다.</p>
           </div>
 
-          <div v-if="isEditingProfile" class="account-manage-card">
-            <h2>비밀번호 변경</h2>
-            <p class="account-manage-description">
-              보안을 위해 현재 비밀번호 확인 후 새 비밀번호로 변경합니다.
-            </p>
+          <div class="edit-form-grid">
+            <label>
+              이메일
+              <input v-model="profileForm.email" type="email" />
+            </label>
+
+            <label>
+              나이
+              <select v-model.number="profileForm.age">
+                <option :value="null">나이를 선택하세요</option>
+                <option
+                  v-for="option in profileOptions.age"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+
+            <label>
+              성별
+              <select v-model="profileForm.gender">
+                <option
+                  v-for="option in profileOptions.gender"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+
+            <label>
+              월 소득 구간
+              <select v-model="profileForm.monthly_income_range">
+                <option value="">월 소득 구간을 선택하세요</option>
+                <option
+                  v-for="option in profileOptions.monthly_income_range"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+
+            <label>
+              월 저축 가능 금액
+              <select v-model="profileForm.monthly_saving_amount">
+                <option value="">월 저축 가능 금액을 선택하세요</option>
+                <option
+                  v-for="option in profileOptions.monthly_saving_amount"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+
+            <label>
+              현재 보유 목돈
+              <select v-model="profileForm.lump_sum_amount">
+                <option value="">현재 보유 목돈을 선택하세요</option>
+                <option
+                  v-for="option in profileOptions.lump_sum_amount"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+
+            <label>
+              주거래은행
+              <select v-model="profileForm.main_bank">
+                <option value="">주거래은행을 선택하세요</option>
+                <option
+                  v-for="option in profileOptions.main_bank"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+
+            <label>
+              거주 지역
+              <select v-model="profileForm.address">
+                <option value="">거주 지역을 선택하세요</option>
+                <option
+                  v-for="option in profileOptions.address"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </option>
+              </select>
+            </label>
+          </div>
+
+          <p v-if="profileMessage" class="form-message success">
+            {{ profileMessage }}
+          </p>
+
+          <div class="form-actions">
+            <button type="submit" class="primary-button" :disabled="profileSaving">
+              {{ profileSaving ? '저장 중...' : '프로필 저장' }}
+            </button>
+
+            <button type="button" class="secondary-button" @click="cancelEditProfile">
+              취소
+            </button>
+          </div>
+        </form>
+
+        <div class="account-management-grid">
+          <div class="account-manage-card">
+            <div class="account-card-title">
+              <span>🔒</span>
+              <div>
+                <h2>비밀번호 변경</h2>
+                <p>보안을 위해 현재 비밀번호 확인 후 새 비밀번호로 변경합니다.</p>
+              </div>
+            </div>
 
             <form class="account-manage-form" @submit.prevent="handleChangePassword">
               <label>
                 현재 비밀번호
-                <input
-                  v-model="passwordForm.current_password"
-                  type="password"
-                  autocomplete="current-password"
-                >
+                <input v-model="passwordForm.current_password" type="password" autocomplete="current-password">
               </label>
 
               <label>
                 새 비밀번호
-                <input
-                  v-model="passwordForm.new_password"
-                  type="password"
-                  autocomplete="new-password"
-                >
+                <input v-model="passwordForm.new_password" type="password" autocomplete="new-password">
               </label>
 
               <label>
                 새 비밀번호 확인
-                <input
-                  v-model="passwordForm.new_password_confirm"
-                  type="password"
-                  autocomplete="new-password"
-                >
+                <input v-model="passwordForm.new_password_confirm" type="password" autocomplete="new-password">
               </label>
 
-              <p v-if="passwordMessage" class="form-message">
-                {{ passwordMessage }}
-              </p>
+              <p v-if="passwordMessage" class="form-message">{{ passwordMessage }}</p>
 
               <button type="submit" class="primary-button full" :disabled="passwordSaving">
                 {{ passwordSaving ? '변경 중...' : '비밀번호 변경' }}
@@ -254,39 +294,39 @@
             </form>
           </div>
 
-          <div v-if="isEditingProfile" class="account-manage-card danger">
-            <h2>회원탈퇴</h2>
-            <p class="danger-description">
-              탈퇴하면 계정이 비활성화되어 다시 로그인할 수 없습니다.
-            </p>
+          <div class="account-manage-card danger">
+            <div class="account-card-title">
+              <span>👤</span>
+              <div>
+                <h2>회원탈퇴</h2>
+                <p>탈퇴하면 계정이 비활성화되어 다시 로그인할 수 없습니다.</p>
+              </div>
+            </div>
 
             <form class="account-manage-form" @submit.prevent="handleWithdraw">
               <label>
                 비밀번호 확인
-                <input
-                  v-model="withdrawPassword"
-                  type="password"
-                  autocomplete="current-password"
-                >
+                <input v-model="withdrawPassword" type="password" autocomplete="current-password">
               </label>
 
-              <p v-if="withdrawMessage" class="form-message">
-                {{ withdrawMessage }}
-              </p>
+              <p v-if="withdrawMessage" class="form-message">{{ withdrawMessage }}</p>
 
               <button type="submit" class="delete-button full" :disabled="withdrawSaving">
                 {{ withdrawSaving ? '탈퇴 처리 중...' : '회원탈퇴' }}
               </button>
             </form>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section class="favorites-section">
+      <div class="content-grid">
+        <section class="favorites-section card">
           <div class="section-title-row">
             <div>
-              <h2>관심상품 목록</h2>
+              <h2>관심상품</h2>
               <p>저장한 예금과 적금 상품입니다.</p>
             </div>
+            <span class="count-pill">{{ favoriteProducts.length }}</span>
           </div>
 
           <p v-if="favoriteProducts.length === 0" class="empty-message">
@@ -300,7 +340,7 @@
                 <span>{{ depositFavorites.length }}개</span>
               </div>
 
-              <p v-if="depositFavorites.length === 0" class="empty-message">
+              <p v-if="depositFavorites.length === 0" class="empty-message compact">
                 등록된 관심 정기예금이 없습니다.
               </p>
 
@@ -309,30 +349,18 @@
                 :key="favorite.id"
                 class="favorite-card"
               >
-                <div>
-                  <span class="product-type-badge">정기예금</span>
+                <span class="favorite-icon deposit">💼</span>
+                <div class="favorite-info">
+                  <span class="product-type-badge">예금</span>
                   <h4>{{ getProductName(favorite) }}</h4>
-                  <p>은행명: {{ getBankName(favorite) }}</p>
-                  <p>최고 금리: {{ formatRate(getMaxInterestRate(favorite)) }}</p>
+                  <p>{{ getBankName(favorite) }} · 최고 금리 {{ formatRate(getMaxInterestRate(favorite)) }}</p>
                 </div>
 
                 <div class="card-actions">
-                  <RouterLink
-                    class="detail-link"
-                    :to="{
-                      name: 'product-detail',
-                      params: { id: getProductId(favorite) },
-                      query: { type: getProductType(favorite) }
-                    }"
-                  >
+                  <RouterLink class="detail-link" :to="{ name: 'product-detail', params: { id: getProductId(favorite) }, query: { type: getProductType(favorite) } }">
                     상세 보기
                   </RouterLink>
-
-                  <button
-                    type="button"
-                    class="delete-button"
-                    @click="handleRemoveFavorite(favorite)"
-                  >
+                  <button type="button" class="delete-button icon" @click="handleRemoveFavorite(favorite)">
                     삭제
                   </button>
                 </div>
@@ -345,7 +373,7 @@
                 <span>{{ savingFavorites.length }}개</span>
               </div>
 
-              <p v-if="savingFavorites.length === 0" class="empty-message">
+              <p v-if="savingFavorites.length === 0" class="empty-message compact">
                 등록된 관심 적금이 없습니다.
               </p>
 
@@ -354,30 +382,18 @@
                 :key="favorite.id"
                 class="favorite-card"
               >
-                <div>
+                <span class="favorite-icon saving">🐷</span>
+                <div class="favorite-info">
                   <span class="product-type-badge saving">적금</span>
                   <h4>{{ getProductName(favorite) }}</h4>
-                  <p>은행명: {{ getBankName(favorite) }}</p>
-                  <p>최고 금리: {{ formatRate(getMaxInterestRate(favorite)) }}</p>
+                  <p>{{ getBankName(favorite) }} · 최고 금리 {{ formatRate(getMaxInterestRate(favorite)) }}</p>
                 </div>
 
                 <div class="card-actions">
-                  <RouterLink
-                    class="detail-link"
-                    :to="{
-                      name: 'product-detail',
-                      params: { id: getProductId(favorite) },
-                      query: { type: getProductType(favorite) }
-                    }"
-                  >
+                  <RouterLink class="detail-link" :to="{ name: 'product-detail', params: { id: getProductId(favorite) }, query: { type: getProductType(favorite) } }">
                     상세 보기
                   </RouterLink>
-
-                  <button
-                    type="button"
-                    class="delete-button"
-                    @click="handleRemoveFavorite(favorite)"
-                  >
+                  <button type="button" class="delete-button icon" @click="handleRemoveFavorite(favorite)">
                     삭제
                   </button>
                 </div>
@@ -385,58 +401,79 @@
             </section>
           </template>
         </section>
+
+        <section class="videos-section card">
+          <div class="section-title-row">
+            <div>
+              <h2>저장한 유튜브 영상</h2>
+              <p>추천 정보와 금융 지식을 다시 볼 수 있습니다.</p>
+            </div>
+            <span class="count-pill">{{ savedVideos.length }}</span>
+          </div>
+
+          <p v-if="savedVideos.length === 0" class="empty-message">
+            저장한 유튜브 영상이 없습니다.
+          </p>
+
+          <div v-else class="video-grid">
+            <article v-for="video in savedVideos" :key="video.id" class="video-card">
+              <a
+                class="video-thumb-wrap"
+                :href="`https://www.youtube.com/watch?v=${video.video_id}`"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  v-if="video.thumbnail_url"
+                  :src="video.thumbnail_url"
+                  :alt="video.title"
+                  class="video-thumbnail"
+                />
+                <span class="play-button">▶</span>
+              </a>
+
+              <div class="video-content">
+                <h3>{{ video.title }}</h3>
+                <p>{{ video.channel_title || '채널 정보 없음' }}</p>
+
+                <div class="card-actions">
+                  <a
+                    class="detail-link"
+                    :href="`https://www.youtube.com/watch?v=${video.video_id}`"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    유튜브 보기
+                  </a>
+
+                  <button type="button" class="delete-button icon" @click="handleDeleteVideo(video.video_id)">
+                    삭제
+                  </button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
       </div>
 
-      <section class="videos-section">
-        <div class="section-title-row">
+      <section v-if="!isEditingProfile" class="account-shortcuts">
+        <button type="button" class="account-shortcut-card" @click="startEditProfile">
+          <span>🔒</span>
           <div>
-            <h2>저장한 유튜브 영상</h2>
-            <p>추천 정보와 금융 지식을 다시 볼 수 있습니다.</p>
+            <strong>비밀번호 변경</strong>
+            <p>안전한 계정 관리를 위해 비밀번호를 주기적으로 변경해주세요.</p>
           </div>
-        </div>
+          <em>›</em>
+        </button>
 
-        <p v-if="savedVideos.length === 0" class="empty-message">
-          저장한 유튜브 영상이 없습니다.
-        </p>
-
-        <div v-else class="video-grid">
-          <article
-            v-for="video in savedVideos"
-            :key="video.id"
-            class="video-card"
-          >
-            <img
-              v-if="video.thumbnail_url"
-              :src="video.thumbnail_url"
-              :alt="video.title"
-              class="video-thumbnail"
-            />
-
-            <div class="video-content">
-              <h3>{{ video.title }}</h3>
-              <p>{{ video.channel_title || '채널 정보 없음' }}</p>
-
-              <div class="card-actions">
-                <a
-                  class="detail-link"
-                  :href="`https://www.youtube.com/watch?v=${video.video_id}`"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  유튜브 보기
-                </a>
-
-                <button
-                  type="button"
-                  class="delete-button"
-                  @click="handleDeleteVideo(video.video_id)"
-                >
-                  삭제
-                </button>
-              </div>
-            </div>
-          </article>
-        </div>
+        <button type="button" class="account-shortcut-card danger" @click="startEditProfile">
+          <span>👤</span>
+          <div>
+            <strong>회원탈퇴</strong>
+            <p>더 이상 서비스를 이용하지 않는다면 계정을 비활성화할 수 있습니다.</p>
+          </div>
+          <em>›</em>
+        </button>
       </section>
     </template>
   </div>
@@ -445,6 +482,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import {
   getProfile,
   getProfileOptions,
@@ -456,6 +494,7 @@ import { getFavoriteProducts, toggleFavoriteProduct } from '@/api/favorites'
 import { getSavedVideos, deleteSavedVideo } from '@/api/videos'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const pageLoading = ref(false)
 const pageErrorMessage = ref('')
 
@@ -468,6 +507,7 @@ const profileUser = ref({
 const profileForm = ref({
   email: '',
   age: null,
+  gender: 'unknown',
   monthly_income_range: '',
   monthly_saving_amount: '',
   lump_sum_amount: '',
@@ -479,6 +519,11 @@ const profileForm = ref({
 const originalProfileForm = ref(null)
 const profileOptions = ref({
   age: [],
+  gender: [
+    { value: 'unknown', label: '선택 안 함' },
+    { value: 'male', label: '남성' },
+    { value: 'female', label: '여성' },
+  ],
   monthly_income_range: [],
   monthly_saving_amount: [],
   lump_sum_amount: [],
@@ -515,6 +560,19 @@ const profileInitial = computed(() => {
   }
 
   return profileUser.value.username.slice(0, 1).toUpperCase()
+})
+
+
+const profileBadgeText = computed(() => {
+  if (!profileForm.value.age) {
+    return '금융 프로필 준비 중'
+  }
+
+  return `${profileForm.value.age}세 맞춤 프로필`
+})
+
+const genderLabel = computed(() => {
+  return getOptionLabel('gender', profileForm.value.gender)
 })
 
 const getProduct = (favorite) => {
@@ -628,6 +686,7 @@ const setProfileForm = (profileData) => {
   profileForm.value = {
     email: profileData.email || '',
     age: profile.age,
+    gender: profile.gender || 'unknown',
     monthly_income_range: profile.monthly_income_range || '',
     monthly_saving_amount: profile.monthly_saving_amount || '',
     lump_sum_amount: profile.lump_sum_amount || '',
@@ -643,7 +702,14 @@ const setProfileForm = (profileData) => {
 
 const fetchProfileOptions = async () => {
   const response = await getProfileOptions()
-  profileOptions.value = response.data
+  profileOptions.value = {
+    ...response.data,
+    gender: response.data.gender || [
+      { value: 'unknown', label: '선택 안 함' },
+      { value: 'male', label: '남성' },
+      { value: 'female', label: '여성' },
+    ],
+  }
 }
 
 const fetchProfile = async () => {
@@ -736,6 +802,7 @@ const buildProfileFormData = () => {
 
   formData.append('email', profileForm.value.email || '')
   formData.append('age', profileForm.value.age || '')
+  formData.append('gender', profileForm.value.gender || 'unknown')
   formData.append('monthly_income_range', profileForm.value.monthly_income_range || '')
   formData.append('monthly_saving_amount', profileForm.value.monthly_saving_amount || '')
   formData.append('lump_sum_amount', profileForm.value.lump_sum_amount || '')
@@ -815,8 +882,7 @@ const handleChangePassword = async () => {
 
     alert(response.data.message)
 
-    localStorage.removeItem('token')
-    window.dispatchEvent(new Event('login-success'))
+    authStore.logoutUser()
 
     clearPasswordForm()
     router.push({ name: 'login' })
@@ -855,8 +921,7 @@ const handleWithdraw = async () => {
 
     alert(response.data.message)
 
-    localStorage.removeItem('token')
-    window.dispatchEvent(new Event('login-success'))
+    authStore.logoutUser()
 
     router.push({ name: 'home' })
   } catch (error) {
@@ -904,86 +969,103 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .mypage-view {
+  width: min(var(--container-width, 1320px), calc(100% - 48px));
   min-height: 100vh;
-  padding: 28px;
-  background-color: #f6f7f9;
+  margin: 0 auto;
+  padding: 34px 0 54px;
+  background: transparent;
 }
 
 .page-header {
-  padding-bottom: 18px;
-  margin-bottom: 18px;
-  border-bottom: 1px solid #ddd;
+  margin-bottom: 22px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  margin-bottom: 10px;
+  color: var(--color-primary, #1116b8);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
 }
 
 .page-header h1 {
   margin: 0;
-  font-size: 26px;
-  color: #111;
+  color: var(--color-text, #07142f);
+  font-size: clamp(34px, 4vw, 48px);
+  line-height: 1.12;
+  font-weight: 950;
+  letter-spacing: -0.06em;
 }
 
 .page-header p {
-  margin: 8px 0 0;
-  color: #666;
+  margin: 10px 0 0;
+  color: var(--color-text-muted, #667085);
+  font-size: 16px;
+}
+
+.card,
+.profile-hero-card,
+.profile-edit-panel,
+.favorites-section,
+.videos-section {
+  border: 1px solid var(--color-border, #e0e6f2);
+  border-radius: var(--radius-lg, 24px);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow-soft, 0 10px 30px rgba(15, 27, 61, 0.07));
 }
 
 .status-message {
-  padding: 18px;
-  background-color: #fafafa;
-  border: 1px solid #eee;
-  color: #555;
+  padding: 22px;
+  border: 1px solid var(--color-border, #e0e6f2);
+  border-radius: var(--radius-md, 18px);
+  background: #fff;
+  color: var(--color-text-muted, #667085);
+  font-weight: 800;
 }
 
 .status-message.error {
-  color: #c0392b;
+  border-color: #fecaca;
+  background: #fff5f5;
+  color: #dc2626;
 }
 
-.mypage-top-layout {
-  display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 20px;
-  align-items: flex-start;
+.profile-hero-card {
+  position: relative;
+  padding: 28px;
+  margin-bottom: 22px;
 }
 
-.profile-section {
+.profile-main-info {
   display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.profile-card,
-.favorites-section,
-.videos-section {
-  padding: 22px;
-  background-color: #fff;
-  border: 1px solid #ddd;
-}
-
-.profile-card {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
+  gap: 28px;
+  align-items: center;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--color-border, #e0e6f2);
 }
 
 .profile-image {
-  width: 88px;
-  height: 88px;
-  margin: 0 auto 14px;
-  border-radius: 50%;
-  background-color: #222;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  font-weight: 800;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
   overflow: hidden;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #eaf0ff, #dffaf5);
+  color: var(--color-primary, #1116b8);
+  font-weight: 950;
+}
+
+.profile-image.large {
+  width: 116px;
+  height: 116px;
+  font-size: 44px;
+  box-shadow: 0 18px 38px rgba(17, 22, 184, 0.12);
 }
 
 .profile-image.small {
   width: 72px;
   height: 72px;
-  margin: 0;
-  font-size: 26px;
+  font-size: 28px;
 }
 
 .profile-image img {
@@ -992,102 +1074,222 @@ onBeforeUnmount(() => {
   object-fit: cover;
 }
 
-.profile-image span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.profile-title {
+  min-width: 0;
 }
 
-.profile-title {
-  text-align: center;
-  margin-bottom: 18px;
+.title-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 .profile-title h2 {
   margin: 0;
-  font-size: 22px;
+  color: var(--color-text, #07142f);
+  font-size: 34px;
+  font-weight: 950;
+  letter-spacing: -0.05em;
+}
+
+.profile-badge,
+.count-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--color-primary-soft, #eef1ff);
+  color: var(--color-primary, #1116b8);
+  font-size: 12px;
+  font-weight: 950;
 }
 
 .profile-title p {
-  margin: 6px 0 0;
-  color: #666;
-  font-size: 14px;
+  margin: 8px 0 0;
+  color: var(--color-text-muted, #667085);
+  font-size: 15px;
 }
 
-.profile-info-list {
+.profile-title small {
+  display: block;
+  margin-top: 8px;
+  color: var(--color-text-light, #8a94a6);
+  font-size: 13px;
+}
+
+.edit-profile-button {
+  position: absolute;
+  right: 28px;
+  top: 28px;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--color-border-strong, #c8d2e4);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--color-text, #07142f);
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.profile-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  padding-top: 22px;
+}
+
+.summary-item {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
 }
 
-.profile-info-row {
+.summary-icon {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 15px;
+  font-size: 18px;
+}
+
+.summary-icon.red { background: #fff1f2; color: #e11d48; }
+.summary-icon.blue { background: #eaf0ff; color: #3151db; }
+.summary-icon.indigo { background: #eef2ff; color: #4f46e5; }
+.summary-icon.purple { background: #f3e8ff; color: #7c3aed; }
+.summary-icon.mint { background: #dffaf5; color: #0f9f8b; }
+.summary-icon.yellow { background: #fff7e5; color: #d97706; }
+.summary-icon.teal { background: #e0f7fa; color: #0891b2; }
+.summary-icon.green { background: #ecfdf3; color: #16a34a; }
+
+.summary-item small {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--color-text-light, #8a94a6);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.summary-item strong {
+  display: block;
+  overflow: hidden;
+  color: var(--color-text, #07142f);
+  font-size: 15px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-edit-panel {
+  padding: 24px;
+  margin-bottom: 22px;
+}
+
+.section-title-row {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid #eee;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 18px;
 }
 
-.profile-info-row span {
-  color: #666;
-  font-size: 14px;
+.section-title-row.compact {
+  align-items: center;
 }
 
-.profile-info-row strong {
-  color: #111;
+.section-title-row h2 {
+  margin: 0;
+  color: var(--color-text, #07142f);
+  font-size: 22px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.section-title-row p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted, #667085);
   font-size: 14px;
-  text-align: right;
 }
 
 .profile-edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 230px 1fr;
+  gap: 20px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--color-border, #e0e6f2);
 }
 
 .image-edit-box {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px;
-  border: 1px solid #eee;
-  background-color: #fafafa;
+  gap: 10px;
+  padding: 18px;
+  border: 1px solid var(--color-border, #e0e6f2);
+  border-radius: var(--radius-md, 18px);
+  background: var(--color-surface-soft, #f7f9fc);
+}
+
+.edit-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .profile-edit-form label,
-.file-label {
+.file-label,
+.account-manage-form label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  color: #333;
+  gap: 7px;
+  color: var(--color-text, #07142f);
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 900;
 }
 
 .profile-edit-form input,
-.profile-edit-form select {
-  height: 40px;
-  padding: 0 10px;
-  border: 1px solid #ccc;
+.profile-edit-form select,
+.account-manage-form input {
+  width: 100%;
+  height: 44px;
+  padding: 0 13px;
+  border: 1px solid var(--color-border-strong, #c8d2e4);
+  border-radius: 13px;
   background-color: #fff;
+  color: var(--color-text, #07142f);
   font-size: 14px;
+  box-sizing: border-box;
+}
+
+.profile-edit-form input:focus,
+.profile-edit-form select:focus,
+.account-manage-form input:focus {
+  outline: none;
+  border-color: var(--color-primary, #1116b8);
+  box-shadow: 0 0 0 4px rgba(17, 22, 184, 0.08);
 }
 
 .file-label input {
   height: auto;
-  padding: 8px;
+  padding: 9px;
 }
 
 .help-text {
   margin: 0;
-  color: #777;
+  color: var(--color-text-light, #8a94a6);
   font-size: 12px;
+  line-height: 1.5;
 }
 
 .form-message {
+  grid-column: 1 / -1;
   margin: 0;
-  color: #c0392b;
+  color: #dc2626;
   font-size: 14px;
+  font-weight: 800;
 }
 
 .form-message.success {
@@ -1095,7 +1297,9 @@ onBeforeUnmount(() => {
 }
 
 .form-actions {
+  grid-column: 2;
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -1103,63 +1307,132 @@ onBeforeUnmount(() => {
 .secondary-button,
 .delete-button,
 .detail-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border-radius: 13px;
   cursor: pointer;
-  font-weight: 800;
+  font-size: 14px;
+  font-weight: 950;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .primary-button {
-  padding: 10px 13px;
-  border: 1px solid #222;
-  background-color: #222;
+  border: 1px solid var(--color-primary, #1116b8);
+  background: var(--color-primary, #1116b8);
   color: #fff;
 }
 
-.primary-button:disabled {
+.secondary-button {
+  border: 1px solid var(--color-border-strong, #c8d2e4);
+  background: #fff;
+  color: var(--color-text, #07142f);
+}
+
+.primary-button.full,
+.delete-button.full {
+  width: 100%;
+}
+
+.primary-button:disabled,
+.delete-button:disabled,
+.secondary-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.primary-button.full {
-  width: 100%;
-  margin-top: 14px;
+.account-management-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
 }
 
-.secondary-button {
-  padding: 10px 13px;
-  border: 1px solid #aaa;
-  background-color: #fff;
-  color: #333;
+.account-manage-card {
+  padding: 20px;
+  border: 1px solid var(--color-border, #e0e6f2);
+  border-radius: var(--radius-md, 18px);
+  background: #fff;
 }
 
-.section-title-row {
+.account-manage-card.danger {
+  border-color: #fecaca;
+  background: #fffafa;
+}
+
+.account-card-title {
   display: flex;
-  justify-content: space-between;
   gap: 12px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
-.section-title-row h2 {
+.account-card-title > span {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 15px;
+  background: var(--color-primary-soft, #eef1ff);
+}
+
+.account-card-title h2 {
   margin: 0;
-  font-size: 20px;
+  color: var(--color-text, #07142f);
+  font-size: 18px;
+  font-weight: 950;
 }
 
-.section-title-row p {
-  margin: 6px 0 0;
-  color: #666;
-  font-size: 14px;
+.account-card-title p,
+.danger-description {
+  margin: 4px 0 0;
+  color: var(--color-text-muted, #667085);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.account-manage-form {
+  display: grid;
+  gap: 12px;
+}
+
+.delete-button {
+  border: 1px solid #dc2626;
+  background: #fff;
+  color: #dc2626;
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 18px;
+}
+
+.favorites-section,
+.videos-section {
+  padding: 22px;
 }
 
 .empty-message {
-  padding: 14px;
+  padding: 18px;
   margin: 0;
-  background-color: #fafafa;
-  border: 1px solid #eee;
-  color: #777;
+  border: 1px dashed var(--color-border-strong, #c8d2e4);
+  border-radius: var(--radius-md, 18px);
+  background: var(--color-surface-soft, #f7f9fc);
+  color: var(--color-text-muted, #667085);
+  text-align: center;
+  font-weight: 800;
+}
+
+.empty-message.compact {
+  padding: 12px;
+  font-size: 13px;
 }
 
 .favorite-group {
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 .favorite-group:first-of-type {
@@ -1175,50 +1448,77 @@ onBeforeUnmount(() => {
 
 .group-header h3 {
   margin: 0;
-  font-size: 18px;
+  color: var(--color-text, #07142f);
+  font-size: 17px;
+  font-weight: 950;
 }
 
 .group-header span {
-  color: #777;
-  font-size: 14px;
+  color: var(--color-text-light, #8a94a6);
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .favorite-card {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 14px;
-  padding: 16px;
-  margin-bottom: 12px;
-  border: 1px solid #ddd;
-  background-color: #fff;
+  align-items: center;
+  padding: 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--color-border, #e0e6f2);
+  border-radius: var(--radius-md, 18px);
+  background: #fff;
 }
 
+.favorite-icon {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  font-size: 23px;
+}
+
+.favorite-icon.deposit { background: #dffaf5; }
+.favorite-icon.saving { background: #eef1ff; }
+
 .product-type-badge {
-  display: inline-block;
-  padding: 4px 9px;
-  margin-bottom: 8px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 8px;
+  margin-bottom: 6px;
   border-radius: 999px;
-  background-color: #333;
-  color: #fff;
+  background: #dffaf5;
+  color: #0f9f8b;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 950;
 }
 
 .product-type-badge.saving {
-  background-color: #555;
+  background: #f3e8ff;
+  color: #7c3aed;
 }
 
-.favorite-card h4 {
-  margin: 0 0 8px;
-  font-size: 17px;
-  color: #111;
+.favorite-info {
+  min-width: 0;
 }
 
-.favorite-card p {
-  margin: 4px 0;
-  color: #555;
-  font-size: 14px;
+.favorite-info h4 {
+  overflow: hidden;
+  margin: 0 0 4px;
+  color: var(--color-text, #07142f);
+  font-size: 16px;
+  font-weight: 950;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favorite-info p {
+  margin: 0;
+  color: var(--color-text-muted, #667085);
+  font-size: 13px;
 }
 
 .card-actions {
@@ -1228,49 +1528,54 @@ onBeforeUnmount(() => {
 }
 
 .detail-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 9px 12px;
-  border: 1px solid #333;
-  color: #222;
-  background-color: #fff;
+  border: 1px solid var(--color-primary, #1116b8);
+  background: #fff;
+  color: var(--color-primary, #1116b8);
 }
 
-.delete-button {
-  padding: 9px 12px;
-  border: 1px solid #c0392b;
-  background-color: #fff;
-  color: #c0392b;
-}
-
-.delete-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.videos-section {
-  margin-top: 20px;
+.delete-button.icon {
+  min-height: 38px;
+  padding: 0 12px;
 }
 
 .video-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .video-card {
-  border: 1px solid #ddd;
-  background-color: #fff;
   overflow: hidden;
+  border: 1px solid var(--color-border, #e0e6f2);
+  border-radius: var(--radius-md, 18px);
+  background: #fff;
+}
+
+.video-thumb-wrap {
+  position: relative;
+  display: block;
+  background: var(--color-surface-soft, #f7f9fc);
 }
 
 .video-thumbnail {
   width: 100%;
-  height: 160px;
+  height: 136px;
   object-fit: cover;
   display: block;
-  background-color: #eee;
+}
+
+.play-button {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: rgba(7, 20, 47, 0.72);
+  color: #fff;
+  transform: translate(-50%, -50%);
 }
 
 .video-content {
@@ -1278,106 +1583,135 @@ onBeforeUnmount(() => {
 }
 
 .video-content h3 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-height: 42px;
   margin: 0 0 8px;
-  font-size: 16px;
-  line-height: 1.35;
+  color: var(--color-text, #07142f);
+  font-size: 15px;
+  line-height: 1.4;
+  font-weight: 950;
 }
 
 .video-content p {
   margin: 0 0 14px;
-  color: #666;
-  font-size: 14px;
-}
-
-.account-manage-card {
-  padding: 18px;
-  border: 1px solid #ddd;
-  background-color: #fff;
-}
-
-.account-manage-card h2 {
-  margin: 0 0 8px;
-  font-size: 18px;
-  color: #111;
-}
-
-.account-manage-card.danger {
-  border-color: #f0caca;
-  background-color: #fffafa;
-}
-
-.account-manage-description {
-  margin: 0 0 14px;
-  color: #666;
+  color: var(--color-text-muted, #667085);
   font-size: 13px;
-  line-height: 1.5;
 }
 
-.account-manage-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.account-shortcuts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
 }
 
-.account-manage-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: #333;
-  font-size: 14px;
-  font-weight: 700;
+.account-shortcut-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px;
+  align-items: center;
+  padding: 20px;
+  border: 1px solid var(--color-border, #e0e6f2);
+  border-radius: var(--radius-lg, 24px);
+  background: #fff;
+  box-shadow: var(--shadow-soft, 0 10px 30px rgba(15, 27, 61, 0.07));
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.account-manage-form input {
-  height: 40px;
-  padding: 0 10px;
-  border: 1px solid #ccc;
-  background-color: #fff;
-  font-size: 14px;
+.account-shortcut-card > span {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  background: var(--color-primary-soft, #eef1ff);
+  font-size: 24px;
 }
 
-.danger-description {
-  margin: 0 0 14px;
-  color: #c0392b;
+.account-shortcut-card.danger > span {
+  background: #fff1f2;
+}
+
+.account-shortcut-card strong {
+  color: var(--color-text, #07142f);
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.account-shortcut-card p {
+  margin: 5px 0 0;
+  color: var(--color-text-muted, #667085);
   font-size: 13px;
-  line-height: 1.5;
 }
 
-.delete-button.full {
-  width: 100%;
+.account-shortcut-card em {
+  color: var(--color-primary, #1116b8);
+  font-size: 28px;
+  font-style: normal;
 }
 
-@media (max-width: 960px) {
-  .mypage-top-layout {
+@media (max-width: 1080px) {
+  .profile-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .content-grid,
+  .account-management-grid,
+  .account-shortcuts,
+  .profile-edit-form {
     grid-template-columns: 1fr;
   }
 
-  .video-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .form-actions {
+    grid-column: 1;
   }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 720px) {
   .mypage-view {
-    padding: 18px;
+    width: min(100% - 28px, var(--container-width, 1320px));
+    padding-top: 24px;
   }
 
-  .favorite-card {
+  .profile-hero-card {
+    padding: 22px;
+  }
+
+  .profile-main-info {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .card-actions {
+  .edit-profile-button {
+    position: static;
     width: 100%;
+    margin-top: 18px;
   }
 
-  .detail-link,
-  .delete-button {
-    flex: 1;
-  }
-
+  .profile-summary-grid,
+  .edit-form-grid,
   .video-grid {
     grid-template-columns: 1fr;
+  }
+
+  .favorite-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .favorite-card .card-actions {
+    grid-column: 1 / -1;
+  }
+
+  .section-title-row,
+  .form-actions,
+  .card-actions {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>

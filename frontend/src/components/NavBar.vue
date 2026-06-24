@@ -1,38 +1,57 @@
 <template>
   <header class="navbar">
     <div class="nav-inner">
-      <RouterLink to="/" class="logo">
-        <span class="logo-icon">💰</span>
-        <span>FinBank</span>
+      <RouterLink :to="{ name: 'home' }" class="logo" aria-label="첫금융 홈">
+        첫금융
       </RouterLink>
 
-      <nav class="nav-menu">
-        <RouterLink to="/products">상품조회</RouterLink>
-        <RouterLink to="/recommend">예적금 추천</RouterLink>
-        <RouterLink to="/main-bank">주거래은행 찾기</RouterLink>
-        <RouterLink to="/exchange">환율 계산기</RouterLink>
-        <RouterLink to="/spot-assets">금·은 시세</RouterLink>
-        <RouterLink to="/community">커뮤니티</RouterLink>
-        
+      <button
+        type="button"
+        class="mobile-toggle"
+        :aria-expanded="isMenuOpen"
+        aria-label="메뉴 열기"
+        @click="isMenuOpen = !isMenuOpen"
+      >
+        ☰
+      </button>
+
+      <nav class="nav-menu" :class="{ open: isMenuOpen }" aria-label="주요 메뉴">
+        <RouterLink :to="{ name: 'products' }" @click="closeMenu">
+          예적금
+        </RouterLink>
+        <RouterLink :to="{ name: 'recommend' }" @click="closeMenu">
+          맞춤추천
+        </RouterLink>
+        <RouterLink :to="{ name: 'main-bank' }" @click="closeMenu">
+          주거래은행
+        </RouterLink>
+        <RouterLink :to="{ name: 'exchange' }" @click="closeMenu">
+          환율
+        </RouterLink>
+        <RouterLink :to="{ name: 'community' }" @click="closeMenu">
+          커뮤니티
+        </RouterLink>
+        <RouterLink :to="{ name: 'mypage' }" @click="closeMenu">
+          마이페이지
+        </RouterLink>
       </nav>
 
-      <div class="nav-actions">
-        <template v-if="isLoggedIn">
-          <RouterLink to="/mypage" class="mypage-btn">
-            마이페이지
-          </RouterLink>
+      <div class="nav-actions" :class="{ open: isMenuOpen }">
+        <button type="button" class="search-btn" aria-label="검색">
+          🔎
+        </button>
 
-          <button type="button" class="logout-btn" @click="handleLogout">
+        <template v-if="isLoggedIn">
+          <button type="button" class="login-btn" @click="handleLogout">
             로그아웃
           </button>
         </template>
 
         <template v-else>
-          <RouterLink to="/login" class="login-btn">
+          <RouterLink :to="{ name: 'login' }" class="login-btn" @click="closeMenu">
             로그인
           </RouterLink>
-
-          <RouterLink to="/signup" class="signup-btn">
+          <RouterLink :to="{ name: 'signup' }" class="signup-btn" @click="closeMenu">
             회원가입
           </RouterLink>
         </template>
@@ -42,148 +61,210 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 
 const router = useRouter()
-
+const isMenuOpen = ref(false)
 const isLoggedIn = ref(!!localStorage.getItem('token'))
 
+const closeMenu = () => {
+  isMenuOpen.value = false
+}
+
 const checkLoginStatus = () => {
-  const token = localStorage.getItem('token')
-  isLoggedIn.value = !!token
+  isLoggedIn.value = !!localStorage.getItem('token')
 }
 
 const handleLogout = () => {
   localStorage.removeItem('token')
   isLoggedIn.value = false
-
+  closeMenu()
   alert('로그아웃되었습니다.')
-
   router.push({ name: 'home' })
 }
 
 onMounted(() => {
   checkLoginStatus()
-
   window.addEventListener('storage', checkLoginStatus)
   window.addEventListener('login-success', checkLoginStatus)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('storage', checkLoginStatus)
+  window.removeEventListener('login-success', checkLoginStatus)
 })
 </script>
 
 <style scoped>
 .navbar {
-  width: 100%;
-  border-bottom: 1px solid #d9d9d9;
-  background-color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: var(--header-height);
+  border-bottom: 1px solid rgba(229, 234, 243, 0.9);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(18px);
 }
 
 .nav-inner {
+  width: min(var(--container-width), calc(100% - 48px));
+  height: 100%;
+  margin: 0 auto;
   display: flex;
   align-items: center;
-  min-height: 64px;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 0 28px;
-  gap: 32px;
+  gap: 26px;
 }
 
 .logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   flex-shrink: 0;
-  padding: 8px 12px;
-  border: 1px solid #bfbfbf;
-  color: #222;
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.logo-icon {
-  font-size: 18px;
+  color: var(--color-primary);
+  font-size: 30px;
+  font-weight: 1000;
+  letter-spacing: -0.08em;
 }
 
 .nav-menu {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: clamp(14px, 2.2vw, 34px);
-  flex: 1;
-  min-width: 0;
+  justify-content: center;
+  gap: clamp(18px, 3vw, 42px);
 }
 
 .nav-menu a {
-  color: #222;
-  font-size: 14px;
+  position: relative;
+  padding: 21px 0;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 850;
   white-space: nowrap;
-  text-decoration: none;
+}
+
+.nav-menu a::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 0;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  transform: translateX(-50%);
+  transition: width 0.18s ease;
 }
 
 .nav-menu a.router-link-active {
-  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.nav-menu a.router-link-active::after,
+.nav-menu a:hover::after {
+  width: 100%;
 }
 
 .nav-actions {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
 }
 
+.search-btn,
 .login-btn,
-.signup-btn,
-.mypage-btn,
-.logout-btn {
-  padding: 9px 16px;
-  border: 1px solid #bfbfbf;
-  color: #222;
-  font-size: 14px;
+.signup-btn {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-weight: 900;
   white-space: nowrap;
-  text-decoration: none;
-  background-color: #fff;
-  cursor: pointer;
 }
 
-.mypage-btn {
-  background-color: #333;
-  color: white;
-  border-color: #333;
+.search-btn {
+  width: 42px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 18px;
 }
 
-.logout-btn {
-  background-color: #fff;
-  color: #222;
+.login-btn {
+  padding: 0 18px;
+  border: 1px solid var(--color-border-strong);
+  background: #fff;
+  color: var(--color-text);
 }
 
-@media (max-width: 900px) {
+.signup-btn {
+  padding: 0 18px;
+  border: 1px solid var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(17, 22, 184, 0.18);
+}
+
+.mobile-toggle {
+  display: none;
+  margin-left: auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--color-text);
+  font-size: 19px;
+}
+
+@media (max-width: 980px) {
+  .navbar {
+    height: auto;
+    min-height: var(--header-height);
+  }
+
   .nav-inner {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 16px 20px;
-    gap: 14px;
+    position: relative;
+    min-height: var(--header-height);
+    flex-wrap: wrap;
+    width: min(100% - 28px, var(--container-width));
+    gap: 0;
+  }
+
+  .mobile-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .nav-menu,
+  .nav-actions {
+    display: none;
+    width: 100%;
+  }
+
+  .nav-menu.open,
+  .nav-actions.open {
+    display: flex;
   }
 
   .nav-menu {
-    flex-wrap: wrap;
-    gap: 12px 20px;
-  }
-
-  .nav-actions {
-    width: 100%;
-  }
-}
-
-@media (max-width: 520px) {
-  .nav-actions {
     flex-direction: column;
     align-items: stretch;
+    gap: 0;
+    padding: 10px 0;
   }
 
-  .login-btn,
-  .signup-btn,
-  .mypage-btn,
-  .logout-btn {
-    text-align: center;
+  .nav-menu a {
+    padding: 12px 0;
+  }
+
+  .nav-menu a::after {
+    display: none;
+  }
+
+  .nav-actions {
+    padding: 0 0 16px;
   }
 }
 </style>

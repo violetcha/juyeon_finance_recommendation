@@ -1,25 +1,6 @@
 from rest_framework import serializers
+
 from .models import Bank, FinancialProduct, ProductOption
-
-
-class BankSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Bank
-        fields = ('id', 'name', 'code')
-
-
-class ProductOptionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductOption
-        fields = (
-            'id',
-            'intr_rate_type',
-            'intr_rate_type_nm',
-            'rsrv_type',
-            'rsrv_type_nm',
-            'intr_rate',
-            'intr_rate2',
-        )
 
 
 class BankSerializer(serializers.ModelSerializer):
@@ -61,7 +42,16 @@ class FinancialProductListSerializer(serializers.ModelSerializer):
             'fin_prdt_cd',
             'name',
             'join_way',
+            'mtrt_int',
+            'spcl_cnd',
+            'join_deny',
             'join_member',
+            'etc_note',
+            'max_limit',
+            'dcls_month',
+            'dcls_strt_day',
+            'dcls_end_day',
+            'fin_co_subm_day',
             'max_interest_rate',
             'options',
         ]
