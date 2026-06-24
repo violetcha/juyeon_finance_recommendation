@@ -13,6 +13,8 @@ import MyPageView from '@/views/MyPageView.vue'
 import LoginView from '@/views/LoginView.vue'
 import SignupView from '@/views/SignupView.vue'
 import MainBankView from '@/views/MainBankView.vue'
+import FindUsernameView from '@/views/FindUsernameView.vue'
+import ResetPasswordView from '@/views/ResetPasswordView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -91,6 +93,17 @@ const router = createRouter({
       path: '/spot-assets',
       name: 'SpotAsset',
       component: () => import('@/views/SpotAssetView.vue'),
+    },
+
+    {
+      path: '/find-username',
+      name: 'find-username',
+      component: FindUsernameView,
+    },
+    {
+      path: '/reset-password',
+      name: 'reset-password',
+      component: ResetPasswordView,
     },
   ],
 })
