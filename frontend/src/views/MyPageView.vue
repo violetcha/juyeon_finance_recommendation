@@ -74,7 +74,7 @@
               </p>
 
               <button type="button" class="primary-button full" @click="startEditProfile">
-                프로필 수정
+                프로필 수정 / 계정 관리
               </button>
             </div>
 
@@ -207,6 +207,76 @@
                   취소
                 </button>
               </div>
+            </form>
+          </div>
+
+          <div v-if="isEditingProfile" class="account-manage-card">
+            <h2>비밀번호 변경</h2>
+            <p class="account-manage-description">
+              보안을 위해 현재 비밀번호 확인 후 새 비밀번호로 변경합니다.
+            </p>
+
+            <form class="account-manage-form" @submit.prevent="handleChangePassword">
+              <label>
+                현재 비밀번호
+                <input
+                  v-model="passwordForm.current_password"
+                  type="password"
+                  autocomplete="current-password"
+                >
+              </label>
+
+              <label>
+                새 비밀번호
+                <input
+                  v-model="passwordForm.new_password"
+                  type="password"
+                  autocomplete="new-password"
+                >
+              </label>
+
+              <label>
+                새 비밀번호 확인
+                <input
+                  v-model="passwordForm.new_password_confirm"
+                  type="password"
+                  autocomplete="new-password"
+                >
+              </label>
+
+              <p v-if="passwordMessage" class="form-message">
+                {{ passwordMessage }}
+              </p>
+
+              <button type="submit" class="primary-button full" :disabled="passwordSaving">
+                {{ passwordSaving ? '변경 중...' : '비밀번호 변경' }}
+              </button>
+            </form>
+          </div>
+
+          <div v-if="isEditingProfile" class="account-manage-card danger">
+            <h2>회원탈퇴</h2>
+            <p class="danger-description">
+              탈퇴하면 계정이 비활성화되어 다시 로그인할 수 없습니다.
+            </p>
+
+            <form class="account-manage-form" @submit.prevent="handleWithdraw">
+              <label>
+                비밀번호 확인
+                <input
+                  v-model="withdrawPassword"
+                  type="password"
+                  autocomplete="current-password"
+                >
+              </label>
+
+              <p v-if="withdrawMessage" class="form-message">
+                {{ withdrawMessage }}
+              </p>
+
+              <button type="submit" class="delete-button full" :disabled="withdrawSaving">
+                {{ withdrawSaving ? '탈퇴 처리 중...' : '회원탈퇴' }}
+              </button>
             </form>
           </div>
         </section>
@@ -374,10 +444,18 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { getProfile, getProfileOptions, updateProfile } from '@/api/accounts'
+import { useRouter } from 'vue-router'
+import {
+  getProfile,
+  getProfileOptions,
+  updateProfile,
+  changePassword,
+  withdraw,
+} from '@/api/accounts'
 import { getFavoriteProducts, toggleFavoriteProduct } from '@/api/favorites'
 import { getSavedVideos, deleteSavedVideo } from '@/api/videos'
 
+const router = useRouter()
 const pageLoading = ref(false)
 const pageErrorMessage = ref('')
 
@@ -414,6 +492,19 @@ const profileSaving = ref(false)
 const profileImageUrl = ref('')
 const profileImageFile = ref(null)
 const profileImagePreview = ref('')
+
+const passwordForm = ref({
+  current_password: '',
+  new_password: '',
+  new_password_confirm: '',
+})
+
+const passwordMessage = ref('')
+const passwordSaving = ref(false)
+
+const withdrawPassword = ref('')
+const withdrawMessage = ref('')
+const withdrawSaving = ref(false)
 
 const favoriteProducts = ref([])
 const savedVideos = ref([])
@@ -469,7 +560,7 @@ const getProductName = (favorite) => {
 
 const getBankName = (favorite) => {
   const product = getProduct(favorite)
-  return product.bank?.name || '은행명 없음'
+  return product.bank?.name || product.bank_name || product.kor_co_nm || '은행명 없음'
 }
 
 const getMaxInterestRate = (favorite) => {
@@ -682,6 +773,103 @@ const handleUpdateProfile = async () => {
   }
 }
 
+const clearPasswordForm = () => {
+  passwordForm.value = {
+    current_password: '',
+    new_password: '',
+    new_password_confirm: '',
+  }
+}
+
+const handleChangePassword = async () => {
+  passwordMessage.value = ''
+
+  if (!passwordForm.value.current_password) {
+    passwordMessage.value = '현재 비밀번호를 입력해주세요.'
+    return
+  }
+
+  if (!passwordForm.value.new_password) {
+    passwordMessage.value = '새 비밀번호를 입력해주세요.'
+    return
+  }
+
+  if (!passwordForm.value.new_password_confirm) {
+    passwordMessage.value = '새 비밀번호 확인을 입력해주세요.'
+    return
+  }
+
+  if (passwordForm.value.new_password !== passwordForm.value.new_password_confirm) {
+    passwordMessage.value = '새 비밀번호가 일치하지 않습니다.'
+    return
+  }
+
+  passwordSaving.value = true
+
+  try {
+    const response = await changePassword({
+      current_password: passwordForm.value.current_password,
+      new_password: passwordForm.value.new_password,
+      new_password_confirm: passwordForm.value.new_password_confirm,
+    })
+
+    alert(response.data.message)
+
+    localStorage.removeItem('token')
+    window.dispatchEvent(new Event('login-success'))
+
+    clearPasswordForm()
+    router.push({ name: 'login' })
+  } catch (error) {
+    console.error(error)
+    passwordMessage.value =
+      error.response?.data?.message ||
+      '비밀번호 변경에 실패했습니다.'
+  } finally {
+    passwordSaving.value = false
+  }
+}
+
+const handleWithdraw = async () => {
+  withdrawMessage.value = ''
+
+  if (!withdrawPassword.value) {
+    withdrawMessage.value = '비밀번호를 입력해주세요.'
+    return
+  }
+
+  const confirmed = window.confirm(
+    '정말 회원탈퇴하시겠습니까? 탈퇴 후 같은 계정으로 로그인할 수 없습니다.'
+  )
+
+  if (!confirmed) {
+    return
+  }
+
+  withdrawSaving.value = true
+
+  try {
+    const response = await withdraw({
+      password: withdrawPassword.value,
+    })
+
+    alert(response.data.message)
+
+    localStorage.removeItem('token')
+    window.dispatchEvent(new Event('login-success'))
+
+    router.push({ name: 'home' })
+  } catch (error) {
+    console.error(error)
+    withdrawMessage.value =
+      error.response?.data?.message ||
+      '회원탈퇴에 실패했습니다.'
+  } finally {
+    withdrawSaving.value = false
+    withdrawPassword.value = ''
+  }
+}
+
 const handleRemoveFavorite = async (favorite) => {
   const productId = getProductId(favorite)
 
@@ -756,7 +944,13 @@ onBeforeUnmount(() => {
   align-items: flex-start;
 }
 
-.profile-section,
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.profile-card,
 .favorites-section,
 .videos-section {
   padding: 22px;
@@ -1050,6 +1244,11 @@ onBeforeUnmount(() => {
   color: #c0392b;
 }
 
+.delete-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .videos-section {
   margin-top: 20px;
 }
@@ -1088,6 +1287,64 @@ onBeforeUnmount(() => {
   margin: 0 0 14px;
   color: #666;
   font-size: 14px;
+}
+
+.account-manage-card {
+  padding: 18px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+}
+
+.account-manage-card h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: #111;
+}
+
+.account-manage-card.danger {
+  border-color: #f0caca;
+  background-color: #fffafa;
+}
+
+.account-manage-description {
+  margin: 0 0 14px;
+  color: #666;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.account-manage-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.account-manage-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #333;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.account-manage-form input {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid #ccc;
+  background-color: #fff;
+  font-size: 14px;
+}
+
+.danger-description {
+  margin: 0 0 14px;
+  color: #c0392b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.delete-button.full {
+  width: 100%;
 }
 
 @media (max-width: 960px) {

@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate, logout
+from django.contrib.auth.models import User
 from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -6,7 +7,15 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
 
-from .serializers import SignupSerializer, UserSerializer, UserUpdateSerializer
+from .serializers import (
+    SignupSerializer,
+    UserSerializer,
+    UserUpdateSerializer,
+    FindUsernameSerializer,
+    ResetPasswordSerializer,
+    ChangePasswordSerializer,
+    WithdrawSerializer,
+)
 from .models import UserProfile
 
 def get_first_error_message(errors):
@@ -141,6 +150,128 @@ def update_profile(request):
 
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+def mask_username(username):
+    if len(username) <= 2:
+        return username[0] + '*'
+
+    if len(username) <= 4:
+        return username[0] + '*' * (len(username) - 1)
+
+    return username[:4] + '*' * (len(username) - 6) + username[-2:]
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def find_username(request):
+    serializer = FindUsernameSerializer(data=request.data)
+
+    if not serializer.is_valid():
+        return Response(
+            {
+                'message': get_first_error_message(serializer.errors),
+                'errors': serializer.errors,
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    email = serializer.validated_data['email']
+
+    users = User.objects.filter(
+        email__iexact=email,
+        is_active=True
+    ).order_by('id')
+
+    usernames = [
+        {
+            'username': mask_username(user.username),
+            'created_at': user.date_joined.strftime('%Y-%m-%d'),
+        }
+        for user in users
+    ]
+
+    return Response({
+        'message': '아이디 찾기가 완료되었습니다.',
+        'usernames': usernames,
+    })
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
+    serializer = ResetPasswordSerializer(data=request.data)
+
+    if serializer.is_valid():
+        user = serializer.save()
+
+        Token.objects.filter(user=user).delete()
+
+        return Response({
+            'message': '비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해주세요.'
+        })
+
+    return Response(
+        {
+            'message': get_first_error_message(serializer.errors),
+            'errors': serializer.errors,
+        },
+        status=status.HTTP_400_BAD_REQUEST
+    )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    serializer = ChangePasswordSerializer(
+        data=request.data,
+        context={'request': request}
+    )
+
+    if serializer.is_valid():
+        user = serializer.save()
+
+        Token.objects.filter(user=user).delete()
+        logout(request)
+
+        return Response({
+            'message': '비밀번호가 변경되었습니다. 다시 로그인해주세요.'
+        })
+
+    return Response(
+        {
+            'message': get_first_error_message(serializer.errors),
+            'errors': serializer.errors,
+        },
+        status=status.HTTP_400_BAD_REQUEST
+    )
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def withdraw(request):
+    serializer = WithdrawSerializer(
+        data=request.data,
+        context={'request': request}
+    )
+
+    if not serializer.is_valid():
+        return Response(
+            {
+                'message': get_first_error_message(serializer.errors),
+                'errors': serializer.errors,
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    user = request.user
+    user.is_active = False
+    user.save()
+
+    Token.objects.filter(user=user).delete()
+    logout(request)
+
+    return Response({
+        'message': '회원탈퇴가 완료되었습니다.'
+    })
 
 @api_view(['GET'])
 @permission_classes([AllowAny])

@@ -41,6 +41,16 @@
       </RouterLink>
     </p>
 
+    <p class="account-help-links">
+      <RouterLink :to="{ name: 'find-username' }">
+        아이디 찾기
+      </RouterLink>
+      <span>|</span>
+      <RouterLink :to="{ name: 'reset-password' }">
+        비밀번호 재설정
+      </RouterLink>
+    </p>
+
     <p v-if="errorMessage" class="error-message">
       {{ errorMessage }}
     </p>
@@ -203,5 +213,20 @@ onMounted(() => {
   background-color: #f0fdf4;
   border: 1px solid #bbf7d0;
   color: #15803d;
+}
+
+.account-help-links {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: #777;
+  font-size: 14px;
+}
+
+.account-help-links a {
+  color: #2563eb;
+  font-weight: 700;
+  text-decoration: none;
 }
 </style>

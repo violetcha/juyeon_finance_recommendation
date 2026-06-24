@@ -1,8 +1,8 @@
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
 from .models import UserProfile
-
 
 class SignupSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
@@ -251,3 +251,151 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         profile.save()
 
         return instance
+    
+class FindUsernameSerializer(serializers.Serializer):
+    email = serializers.EmailField(
+        error_messages={
+            'required': '이메일을 입력해주세요.',
+            'blank': '이메일을 입력해주세요.',
+            'invalid': '올바른 이메일 형식으로 입력해주세요.',
+        }
+    )
+
+    def validate_email(self, value):
+        if not User.objects.filter(email__iexact=value, is_active=True).exists():
+            raise serializers.ValidationError('해당 이메일로 가입된 계정이 없습니다.')
+
+        return value
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    username = serializers.CharField(
+        error_messages={
+            'required': '아이디를 입력해주세요.',
+            'blank': '아이디를 입력해주세요.',
+        }
+    )
+    email = serializers.EmailField(
+        error_messages={
+            'required': '이메일을 입력해주세요.',
+            'blank': '이메일을 입력해주세요.',
+            'invalid': '올바른 이메일 형식으로 입력해주세요.',
+        }
+    )
+    new_password = serializers.CharField(
+        write_only=True,
+        error_messages={
+            'required': '새 비밀번호를 입력해주세요.',
+            'blank': '새 비밀번호를 입력해주세요.',
+        }
+    )
+    new_password_confirm = serializers.CharField(
+        write_only=True,
+        error_messages={
+            'required': '새 비밀번호 확인을 입력해주세요.',
+            'blank': '새 비밀번호 확인을 입력해주세요.',
+        }
+    )
+
+    def validate(self, data):
+        username = data.get('username')
+        email = data.get('email')
+        new_password = data.get('new_password')
+        new_password_confirm = data.get('new_password_confirm')
+
+        try:
+            user = User.objects.get(
+                username=username,
+                email__iexact=email,
+                is_active=True
+            )
+        except User.DoesNotExist:
+            raise serializers.ValidationError({
+                'message': '아이디와 이메일이 일치하는 계정을 찾을 수 없습니다.'
+            })
+
+        if new_password != new_password_confirm:
+            raise serializers.ValidationError({
+                'new_password_confirm': '새 비밀번호가 일치하지 않습니다.'
+            })
+
+        validate_password(new_password, user)
+
+        data['user'] = user
+        return data
+
+    def save(self):
+        user = self.validated_data['user']
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+        return user
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    current_password = serializers.CharField(
+        write_only=True,
+        error_messages={
+            'required': '현재 비밀번호를 입력해주세요.',
+            'blank': '현재 비밀번호를 입력해주세요.',
+        }
+    )
+    new_password = serializers.CharField(
+        write_only=True,
+        error_messages={
+            'required': '새 비밀번호를 입력해주세요.',
+            'blank': '새 비밀번호를 입력해주세요.',
+        }
+    )
+    new_password_confirm = serializers.CharField(
+        write_only=True,
+        error_messages={
+            'required': '새 비밀번호 확인을 입력해주세요.',
+            'blank': '새 비밀번호 확인을 입력해주세요.',
+        }
+    )
+
+    def validate(self, data):
+        request = self.context.get('request')
+        user = request.user
+
+        if not user.check_password(data.get('current_password')):
+            raise serializers.ValidationError({
+                'current_password': '현재 비밀번호가 올바르지 않습니다.'
+            })
+
+        if data.get('new_password') != data.get('new_password_confirm'):
+            raise serializers.ValidationError({
+                'new_password_confirm': '새 비밀번호가 일치하지 않습니다.'
+            })
+
+        validate_password(data.get('new_password'), user)
+
+        return data
+
+    def save(self):
+        request = self.context.get('request')
+        user = request.user
+
+        user.set_password(self.validated_data['new_password'])
+        user.save()
+
+        return user
+
+
+class WithdrawSerializer(serializers.Serializer):
+    password = serializers.CharField(
+        write_only=True,
+        error_messages={
+            'required': '비밀번호를 입력해주세요.',
+            'blank': '비밀번호를 입력해주세요.',
+        }
+    )
+
+    def validate_password(self, value):
+        request = self.context.get('request')
+        user = request.user
+
+        if not user.check_password(value):
+            raise serializers.ValidationError('비밀번호가 올바르지 않습니다.')
+
+        return value
