@@ -30,6 +30,10 @@ export const createComment = (postId, payload) => {
   return api.post(`${COMMUNITY_BASE_URL}${postId}/comments/`, payload)
 }
 
+export const updateComment = (commentId, payload) => {
+  return api.put(`${COMMUNITY_BASE_URL}comments/${commentId}/`, payload)
+}
+
 export const deleteComment = (commentId) => {
   return api.delete(`${COMMUNITY_BASE_URL}comments/${commentId}/`)
 }
