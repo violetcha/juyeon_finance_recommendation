@@ -193,14 +193,13 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import * as productApi from '@/api/products'
 import { getPosts } from '@/api/community'
 import { getExchangeRates } from '@/api/exchanges'
 import BankLogo from '@/components/BankLogo.vue'
 import { getBankDisplayName } from '@/constants/bankLogoMap'
 
-const router = useRouter()
 
 const productLoading = ref(false)
 const productError = ref('')
@@ -439,14 +438,16 @@ const getRelativeTime = (value) => {
 }
 
 const getPostLink = (post) => {
-  if (router.hasRoute('post-detail')) {
-    return {
-      name: 'post-detail',
-      params: { id: post.id },
-    }
+  if (!post?.id) {
+    return { name: 'community' }
   }
 
-  return { name: 'community' }
+  return {
+    path: '/community',
+    query: {
+      post: post.id,
+    },
+  }
 }
 
 const fetchPreviewProducts = async () => {

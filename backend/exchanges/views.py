@@ -1,5 +1,8 @@
 import requests
 from datetime import datetime, timedelta
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 from django.conf import settings
 from rest_framework.decorators import api_view
@@ -85,6 +88,7 @@ def get_exchange_rates_from_api(search_date=None, fallback_days=7):
                 EXCHANGE_API_URL,
                 params=params,
                 timeout=8,
+                verify=False
             )
         except requests.RequestException:
             continue

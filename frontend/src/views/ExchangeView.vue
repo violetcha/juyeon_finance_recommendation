@@ -1,11 +1,24 @@
 <template>
   <main class="exchange-page">
-    <section class="exchange-hero">
+    <section class="page-hero-row">
       <h1>환율 계산 · 시세 확인</h1>
 
-      <div class="hero-actions">
-        <a href="#exchange-chart" class="hero-link primary">환율 그래프 보기</a>
-        <a href="#asset-section" class="hero-link">금·은 시세 보기</a>
+      <div class="page-hero-actions">
+        <button
+          type="button"
+          :class="activeView === 'exchange' ? 'hero-primary-button' : 'hero-outline-button'"
+          @click="scrollToExchangeChart"
+        >
+          환율 그래프 보기
+        </button>
+
+        <button
+          type="button"
+          :class="activeView === 'asset' ? 'hero-primary-button' : 'hero-outline-button'"
+          @click="scrollToAssetSection"
+        >
+          금·은 시세 보기
+        </button>
       </div>
     </section>
 
@@ -24,7 +37,7 @@
             id="selected-date"
             v-model="selectedDate"
             type="date"
-            @change="fetchRates"
+            @change="handleSelectedDateChange"
           >
         </div>
 
@@ -156,7 +169,7 @@
         </div>
 
         <div class="chart-controls">
-          <select v-model="chartCurrency">
+          <select v-model="chartCurrency" :disabled="chartCurrencyOptions.length === 0">
             <option
               v-for="currency in chartCurrencyOptions"
               :key="currency.code"
@@ -175,7 +188,7 @@
           <input v-model="startDate" type="date">
           <input v-model="endDate" type="date">
 
-          <button type="button" class="primary-button small" @click="fetchHistory">
+          <button type="button" class="primary-button small" :disabled="!chartCurrency || historyLoading" @click="fetchHistory">
             그래프 조회
           </button>
         </div>
@@ -587,10 +600,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import api from '@/api/api'
 
 const today = new Date()
+const activeView = ref('exchange')
 
 const toDateInputValue = (date) => {
   const year = date.getFullYear()
@@ -823,6 +837,40 @@ const buildRateMap = (rateItems) => {
   }, {})
 }
 
+
+const hasValidRates = () => {
+  return rates.value.length > 0
+}
+
+const resolveDefaultCurrency = () => {
+  if (rates.value.some((item) => item.code === 'USD')) {
+    return 'USD'
+  }
+
+  return rates.value[0]?.code || ''
+}
+
+const syncSelectedCurrencies = () => {
+  if (!hasValidRates()) {
+    chartCurrency.value = ''
+    return
+  }
+
+  const defaultCurrency = resolveDefaultCurrency()
+
+  if (!rates.value.some((item) => item.code === fromCurrency.value) && fromCurrency.value !== 'KRW') {
+    fromCurrency.value = defaultCurrency
+  }
+
+  if (!rates.value.some((item) => item.code === toCurrency.value) && toCurrency.value !== 'KRW') {
+    toCurrency.value = 'KRW'
+  }
+
+  if (!rates.value.some((item) => item.code === chartCurrency.value)) {
+    chartCurrency.value = defaultCurrency
+  }
+}
+
 const fetchPreviousRates = async (dateString) => {
   previousRateMap.value = {}
 
@@ -845,6 +893,30 @@ const fetchPreviousRates = async (dateString) => {
   }
 }
 
+
+const scrollToSection = async (sectionId, nextView) => {
+  activeView.value = nextView
+
+  await nextTick()
+
+  const target = document.getElementById(sectionId)
+
+  if (target) {
+    target.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
+}
+
+const scrollToExchangeChart = () => {
+  scrollToSection('exchange-chart', 'exchange')
+}
+
+const scrollToAssetSection = () => {
+  scrollToSection('asset-section', 'asset')
+}
+
 const fetchRates = async () => {
   loading.value = true
   errorMessage.value = ''
@@ -858,42 +930,56 @@ const fetchRates = async () => {
 
     baseDate.value = response.data.date || ''
 
-    rates.value = (response.data.rates || [])
+    const normalizedRates = (response.data.rates || [])
       .map(normalizeRate)
       .filter((item) => item.code && item.ratePerUnit > 0)
 
-    if (rates.value.length === 0) {
+    if (normalizedRates.length === 0) {
+      rates.value = []
+      historyRows.value = []
       errorMessage.value = '환율 데이터가 비어 있습니다.'
-      return
+      return false
     }
 
-    if (!rates.value.some((item) => item.code === fromCurrency.value) && fromCurrency.value !== 'KRW') {
-      fromCurrency.value = rates.value.some((item) => item.code === 'USD') ? 'USD' : rates.value[0].code
-    }
-
-    if (!rates.value.some((item) => item.code === toCurrency.value) && toCurrency.value !== 'KRW') {
-      toCurrency.value = rates.value.some((item) => item.code === 'USD') ? 'USD' : rates.value[0].code
-    }
-
-    if (!rates.value.some((item) => item.code === chartCurrency.value)) {
-      chartCurrency.value = rates.value.some((item) => item.code === 'USD') ? 'USD' : rates.value[0].code
-    }
+    rates.value = normalizedRates
+    syncSelectedCurrencies()
 
     await fetchPreviousRates(baseDate.value || selectedDate.value)
+
+    return true
   } catch (error) {
     console.error(error)
+
+    rates.value = []
+    previousRateMap.value = {}
+    historyRows.value = []
 
     errorMessage.value =
       error.response?.data?.message ||
       '환율 정보를 불러오지 못했습니다. 백엔드 exchanges API를 확인해주세요.'
+
+    return false
   } finally {
     loading.value = false
   }
 }
 
 const fetchHistory = async () => {
-  historyLoading.value = true
   historyError.value = ''
+
+  if (!chartCurrency.value) {
+    historyRows.value = []
+    historyError.value = '통화 목록을 먼저 불러와야 그래프를 조회할 수 있습니다.'
+    return false
+  }
+
+  if (startDate.value > endDate.value) {
+    historyRows.value = []
+    historyError.value = '시작일은 종료일보다 늦을 수 없습니다.'
+    return false
+  }
+
+  historyLoading.value = true
 
   try {
     const response = await api.get('/exchanges/history/', {
@@ -908,8 +994,10 @@ const fetchHistory = async () => {
 
     if (historyRows.value.length === 0) {
       historyError.value = '그래프를 그릴 환율 데이터가 없습니다.'
-      return
+      return false
     }
+
+    return true
   } catch (error) {
     console.error(error)
     historyRows.value = []
@@ -917,6 +1005,8 @@ const fetchHistory = async () => {
     historyError.value =
       error.response?.data?.message ||
       '기간별 환율 데이터를 불러오지 못했습니다. 기간은 최대 31일까지만 선택해주세요.'
+
+    return false
   } finally {
     historyLoading.value = false
   }
@@ -962,6 +1052,20 @@ const fetchAssetPrices = async () => {
   }
 }
 
+
+
+const handleSelectedDateChange = async () => {
+  const loaded = await fetchRates()
+
+  if (!loaded) {
+    return
+  }
+
+  endDate.value = baseDate.value || selectedDate.value
+  startDate.value = getDateBefore(7, new Date(endDate.value))
+
+  await fetchHistory()
+}
 
 const buildChartData = (items, formatter, reducePoints = false) => {
   const validItems = items
@@ -1088,6 +1192,10 @@ const swapCurrencies = () => {
 }
 
 const selectRateFromTable = (rate) => {
+  if (!rate?.code) {
+    return
+  }
+
   chartCurrency.value = rate.code
   toCurrency.value = rate.code
   setExchangePreset(7)
@@ -1099,6 +1207,16 @@ const selectRateFromDrawer = (rate) => {
 }
 
 const setExchangePreset = async (days) => {
+  if (!hasValidRates()) {
+    const loaded = await fetchRates()
+
+    if (!loaded) {
+      return
+    }
+  }
+
+  syncSelectedCurrencies()
+
   endDate.value = baseDate.value || selectedDate.value || toDateInputValue(today)
   startDate.value = getDateBefore(days, new Date(endDate.value))
   await fetchHistory()
@@ -1259,8 +1377,14 @@ const getRateText = (code) => {
 }
 
 onMounted(async () => {
-  await fetchRates()
-  await fetchHistory()
+  const loaded = await fetchRates()
+
+  if (loaded) {
+    endDate.value = baseDate.value || selectedDate.value || toDateInputValue(today)
+    startDate.value = getDateBefore(7, new Date(endDate.value))
+    await fetchHistory()
+  }
+
   await fetchAssetPrices()
 })
 
@@ -2598,5 +2722,103 @@ onMounted(async () => {
     transform: none !important;
   }
 }
+
+
+/* === 주연: 페이지 상단 영역 재조정 - 제목 축소 / 버튼 남색 === */
+.page-hero-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  min-height: 0 !important;
+  margin: 0 0 24px !important;
+  padding-top: 0 !important;
+}
+
+.page-hero-row h1 {
+  margin: 0 !important;
+  color: #07142f !important;
+  font-size: clamp(34px, 3.7vw, 48px) !important;
+  line-height: 1.08 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.072em !important;
+}
+
+.page-hero-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+}
+
+.hero-primary-button,
+.hero-outline-button {
+  min-height: 42px !important;
+  padding: 0 18px !important;
+  border-radius: 14px !important;
+  font-size: 14px !important;
+  font-weight: 950 !important;
+  cursor: pointer !important;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease !important;
+}
+
+.hero-primary-button {
+  border: 1px solid #0b1f4d !important;
+  background: #0b1f4d !important;
+  color: #fff !important;
+  box-shadow: 0 12px 22px rgba(11, 31, 77, 0.18) !important;
+}
+
+.hero-outline-button {
+  border: 1px solid #c9d3e6 !important;
+  background: #fff !important;
+  color: #0b1f4d !important;
+  box-shadow: 0 10px 18px rgba(15, 27, 61, 0.04) !important;
+}
+
+.hero-primary-button:hover {
+  background: #071735 !important;
+  border-color: #071735 !important;
+}
+
+.hero-outline-button:hover {
+  border-color: #0b1f4d !important;
+  background: #f8fbff !important;
+  color: #0b1f4d !important;
+}
+
+@media (max-width: 760px) {
+  .page-hero-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    margin-bottom: 22px !important;
+  }
+
+  .page-hero-row h1 {
+    font-size: 34px !important;
+  }
+
+  .page-hero-actions {
+    width: 100% !important;
+  }
+
+  .hero-primary-button,
+  .hero-outline-button {
+    flex: 1 !important;
+  }
+}
+
+.exchange-page {
+  padding-top: 30px !important;
+}
+
+.exchange-page .page-hero-row {
+  margin-bottom: 24px !important;
+}
+
 
 </style>

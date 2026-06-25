@@ -1,10 +1,7 @@
 <template>
   <main class="community-page">
-    <section class="community-hero">
-      <div>
-        
-        <h1>금융 커뮤니티</h1>
-      </div>
+    <section class="page-hero-row">
+      <h1>금융 커뮤니티</h1>
     </section>
 
     <p v-if="errorMessage" class="error-message global">
@@ -89,7 +86,13 @@
 
               <div class="post-author">
                 <span class="author-avatar" :class="getCategoryTone(post.category)">
-                  {{ getAuthorInitial(post.username) }}
+                  <img
+                    v-if="getUserProfileImage(post)"
+                    :src="getUserProfileImage(post)"
+                    :alt="post.username || '작성자'"
+                    class="author-avatar-img"
+                  >
+                  <span v-else>{{ getAuthorInitial(post.username) }}</span>
                 </span>
                 <strong>{{ post.username || '익명' }}</strong>
               </div>
@@ -245,7 +248,21 @@
           <h2>{{ selectedPost.title }}</h2>
 
           <div class="detail-meta">
-            <span>{{ selectedPost.username || '익명' }}</span>
+            <span class="detail-author">
+              <span class="author-avatar detail-author-avatar" :class="getCategoryTone(selectedPost.category)">
+                <img
+                  v-if="getUserProfileImage(selectedPost)"
+                  :src="getUserProfileImage(selectedPost)"
+                  :alt="selectedPost.username || '작성자'"
+                  class="author-avatar-img"
+                >
+                <span v-else>{{ getAuthorInitial(selectedPost.username) }}</span>
+              </span>
+
+              <strong>{{ selectedPost.username || '익명' }}</strong>
+            </span>
+
+            <span class="detail-meta-divider"></span>
             <span>{{ formatDateTime(selectedPost.created_at) }}</span>
             <span>조회 {{ selectedPost.view_count || 0 }}</span>
             <span>댓글 {{ selectedPost.comments?.length || 0 }}</span>
@@ -323,9 +340,29 @@
             class="comment-item"
           >
             <div class="comment-top">
-              <div>
+              <div class="comment-author">
+                <span class="author-avatar comment-author-avatar">
+                  <img
+                    v-if="getUserProfileImage(comment)"
+                    :src="getUserProfileImage(comment)"
+                    :alt="comment.username || '댓글 작성자'"
+                    class="author-avatar-img"
+                  >
+                  <span v-else>{{ getAuthorInitial(comment.username) }}</span>
+                </span>
+
                 <strong>{{ comment.username || '익명' }}</strong>
-                <span>{{ formatDateTime(comment.created_at) }}</span>
+                <span class="comment-date">{{ formatDateTime(comment.created_at) }}</span>
+
+                <button
+                  type="button"
+                  class="comment-like-button inline"
+                  :class="{ liked: comment.is_liked }"
+                  @click="handleToggleCommentLike(comment.id)"
+                >
+                  {{ comment.is_liked ? '❤️' : '🤍' }}
+                  {{ comment.like_count || 0 }}
+                </button>
               </div>
             </div>
 
@@ -360,19 +397,12 @@
 
             <p v-else>{{ comment.content }}</p>
 
-            <div class="comment-actions">
+            <div
+              v-if="comment.is_author"
+              class="comment-actions"
+            >
               <button
-                type="button"
-                class="comment-like-button"
-                :class="{ liked: comment.is_liked }"
-                @click="handleToggleCommentLike(comment.id)"
-              >
-                {{ comment.is_liked ? '❤️' : '🤍' }}
-                {{ comment.like_count || 0 }}
-              </button>
-
-              <button
-                v-if="comment.is_author && editingCommentId !== comment.id"
+                v-if="editingCommentId !== comment.id"
                 type="button"
                 class="comment-edit-button"
                 @click="startEditComment(comment)"
@@ -381,7 +411,6 @@
               </button>
 
               <button
-                v-if="comment.is_author"
                 type="button"
                 class="comment-delete-button"
                 @click="handleDeleteComment(comment.id)"
@@ -949,6 +978,27 @@ const getCategoryTone = (category) => {
   return tones[category] || 'gray'
 }
 
+
+const getUserProfileImage = (item) => {
+  const image =
+    item?.user_profile_image ||
+    item?.profile_image ||
+    item?.author_profile_image
+
+  if (!image) {
+    return ''
+  }
+
+  if (String(image).startsWith('http')) {
+    return image
+  }
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+  const normalizedPath = String(image).startsWith('/') ? image : `/${image}`
+
+  return `${apiBaseUrl}${normalizedPath}`
+}
+
 const getAuthorInitial = (name) => {
   if (!name) {
     return '익'
@@ -1321,11 +1371,19 @@ watch(
   place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: 14px;
+  overflow: hidden;
+  border-radius: 50%;
   color: #fff;
   font-size: 13px;
   font-weight: 950;
   flex-shrink: 0;
+}
+
+.author-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .post-author strong {
@@ -1601,6 +1659,33 @@ watch(
   color: var(--color-text-muted);
   font-size: 13px;
   font-weight: 800;
+}
+
+
+.detail-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.detail-author-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+
+.comment-author {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+}
+
+.comment-author-avatar {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, #60a5fa, #2454d6);
+  font-size: 12px;
 }
 
 .detail-actions {
@@ -2125,5 +2210,256 @@ watch(
     padding-bottom: 18px !important;
   }
 }
+
+/* === 주연: 게시글 상세/댓글 작성자 프로필 정렬 보정 === */
+.detail-meta {
+  align-items: center !important;
+  column-gap: 14px !important;
+  row-gap: 8px !important;
+}
+
+.detail-author {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: var(--color-text) !important;
+}
+
+.detail-author strong {
+  color: var(--color-text) !important;
+  font-size: 13px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+}
+
+.detail-author-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  font-size: 11px !important;
+}
+
+.detail-meta-divider {
+  width: 1px !important;
+  height: 14px !important;
+  background: var(--color-border-strong) !important;
+}
+
+.comment-top {
+  align-items: center !important;
+  margin-bottom: 12px !important;
+}
+
+.comment-author {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+}
+
+.comment-author-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #60a5fa, #2454d6);
+  font-size: 12px !important;
+}
+
+.comment-author strong {
+  color: var(--color-text) !important;
+  font-size: 14px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+}
+
+.comment-date {
+  margin-left: 8px !important;
+  color: var(--color-text-light) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+.comment-item p {
+  padding-left: 46px;
+}
+
+@media (max-width: 640px) {
+  .detail-meta {
+    column-gap: 10px !important;
+  }
+
+  .detail-meta-divider {
+    display: none !important;
+  }
+
+  .comment-item p {
+    padding-left: 0;
+  }
+
+  .comment-author {
+    flex-wrap: wrap;
+  }
+}
+
+/* === 주연: 댓글 좋아요 위치/댓글 카드 여백 보정 === */
+.comment-item {
+  padding: 18px 18px 18px !important;
+}
+
+.comment-top {
+  align-items: center !important;
+  margin-bottom: 14px !important;
+}
+
+.comment-author {
+  width: 100% !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.comment-date {
+  margin-left: 8px !important;
+  margin-right: 8px !important;
+}
+
+.comment-like-button.inline {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin-left: 4px !important;
+  color: var(--color-danger) !important;
+  font-size: 13px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+}
+
+.comment-like-button.inline.liked {
+  color: var(--color-danger) !important;
+}
+
+.comment-item p {
+  margin: 0 !important;
+  padding-left: 46px !important;
+  padding-bottom: 2px !important;
+  line-height: 1.7 !important;
+}
+
+.comment-actions {
+  margin-top: 12px !important;
+  padding-left: 46px !important;
+}
+
+@media (max-width: 640px) {
+  .comment-author {
+    flex-wrap: wrap !important;
+  }
+
+  .comment-like-button.inline {
+    margin-left: 0 !important;
+  }
+
+  .comment-item p,
+  .comment-actions {
+    padding-left: 0 !important;
+  }
+}
+
+
+/* === 주연: 페이지 상단 영역 재조정 - 제목 축소 / 버튼 남색 === */
+.page-hero-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  min-height: 0 !important;
+  margin: 0 0 24px !important;
+  padding-top: 0 !important;
+}
+
+.page-hero-row h1 {
+  margin: 0 !important;
+  color: #07142f !important;
+  font-size: clamp(34px, 3.7vw, 48px) !important;
+  line-height: 1.08 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.072em !important;
+}
+
+.page-hero-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+}
+
+.hero-primary-button,
+.hero-outline-button {
+  min-height: 42px !important;
+  padding: 0 18px !important;
+  border-radius: 14px !important;
+  font-size: 14px !important;
+  font-weight: 950 !important;
+  cursor: pointer !important;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease !important;
+}
+
+.hero-primary-button {
+  border: 1px solid #0b1f4d !important;
+  background: #0b1f4d !important;
+  color: #fff !important;
+  box-shadow: 0 12px 22px rgba(11, 31, 77, 0.18) !important;
+}
+
+.hero-outline-button {
+  border: 1px solid #c9d3e6 !important;
+  background: #fff !important;
+  color: #0b1f4d !important;
+  box-shadow: 0 10px 18px rgba(15, 27, 61, 0.04) !important;
+}
+
+.hero-primary-button:hover {
+  background: #071735 !important;
+  border-color: #071735 !important;
+}
+
+.hero-outline-button:hover {
+  border-color: #0b1f4d !important;
+  background: #f8fbff !important;
+  color: #0b1f4d !important;
+}
+
+@media (max-width: 760px) {
+  .page-hero-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    margin-bottom: 22px !important;
+  }
+
+  .page-hero-row h1 {
+    font-size: 34px !important;
+  }
+
+  .page-hero-actions {
+    width: 100% !important;
+  }
+
+  .hero-primary-button,
+  .hero-outline-button {
+    flex: 1 !important;
+  }
+}
+
+.community-page {
+  padding-top: 30px !important;
+}
+
 
 </style>

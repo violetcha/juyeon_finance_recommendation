@@ -1,6 +1,6 @@
 <template>
   <main class="recommend-page page-wrap">
-    <section class="recommend-hero">
+    <section class="recommend-hero page-hero-row">
       <div class="hero-copy">
         <h1>맞춤 추천 결과</h1>
         <p>
@@ -1395,6 +1395,122 @@ watch(
   font-size: 12px;
   font-weight: 950;
 }
+
+
+/* === 주연: 페이지 상단 영역 재조정 - 제목 축소 / 버튼 남색 === */
+.page-hero-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  min-height: 0 !important;
+  margin: 0 0 24px !important;
+  padding-top: 0 !important;
+}
+
+.page-hero-row h1 {
+  margin: 0 !important;
+  color: #07142f !important;
+  font-size: clamp(34px, 3.7vw, 48px) !important;
+  line-height: 1.08 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.072em !important;
+}
+
+.page-hero-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+}
+
+.hero-primary-button,
+.hero-outline-button {
+  min-height: 42px !important;
+  padding: 0 18px !important;
+  border-radius: 14px !important;
+  font-size: 14px !important;
+  font-weight: 950 !important;
+  cursor: pointer !important;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease !important;
+}
+
+.hero-primary-button {
+  border: 1px solid #0b1f4d !important;
+  background: #0b1f4d !important;
+  color: #fff !important;
+  box-shadow: 0 12px 22px rgba(11, 31, 77, 0.18) !important;
+}
+
+.hero-outline-button {
+  border: 1px solid #c9d3e6 !important;
+  background: #fff !important;
+  color: #0b1f4d !important;
+  box-shadow: 0 10px 18px rgba(15, 27, 61, 0.04) !important;
+}
+
+.hero-primary-button:hover {
+  background: #071735 !important;
+  border-color: #071735 !important;
+}
+
+.hero-outline-button:hover {
+  border-color: #0b1f4d !important;
+  background: #f8fbff !important;
+  color: #0b1f4d !important;
+}
+
+@media (max-width: 760px) {
+  .page-hero-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    margin-bottom: 22px !important;
+  }
+
+  .page-hero-row h1 {
+    font-size: 34px !important;
+  }
+
+  .page-hero-actions {
+    width: 100% !important;
+  }
+
+  .hero-primary-button,
+  .hero-outline-button {
+    flex: 1 !important;
+  }
+}
+
+.recommend-page {
+  padding-top: 30px !important;
+}
+
+.recommend-hero.page-hero-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  min-height: 0 !important;
+  margin-bottom: 24px !important;
+  padding-top: 0 !important;
+}
+
+.recommend-hero .hero-copy {
+  min-width: 0 !important;
+}
+
+.recommend-hero .hero-copy h1 {
+  margin: 0 !important;
+}
+
+.recommend-hero .hero-copy p,
+.recommend-hero .hero-visual {
+  display: none !important;
+}
+
 
 </style>
 

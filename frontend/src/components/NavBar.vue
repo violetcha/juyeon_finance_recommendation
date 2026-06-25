@@ -76,7 +76,31 @@ const checkLoginStatus = () => {
   isLoggedIn.value = !!localStorage.getItem('token')
 }
 
+const clearRecommendationStorage = () => {
+  const removeKeys = []
+
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i)
+
+    if (
+      key &&
+      (
+        key.startsWith('productRecommendationState:') ||
+        key === 'productRecommendationState:last'
+      )
+    ) {
+      removeKeys.push(key)
+    }
+  }
+
+  removeKeys.forEach((key) => {
+    localStorage.removeItem(key)
+  })
+}
+
 const handleLogout = () => {
+  clearRecommendationStorage()
+
   localStorage.removeItem('token')
   isLoggedIn.value = false
   closeMenu()
