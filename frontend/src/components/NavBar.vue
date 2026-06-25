@@ -1,7 +1,12 @@
 <template>
   <header class="navbar">
     <div class="nav-inner">
-      <RouterLink :to="{ name: 'home' }" class="logo" aria-label="주연 홈" @click="closeMenu">
+      <RouterLink
+        :to="{ name: 'home' }"
+        class="logo"
+        aria-label="주연 홈"
+        @click="closeMenu"
+      >
         <img :src="juyeonLogo" alt="주연" class="logo-image" />
       </RouterLink>
 
@@ -30,19 +35,33 @@
 
       <div class="nav-actions" :class="{ open: isMenuOpen }">
         <template v-if="isLoggedIn">
-          <RouterLink :to="{ name: 'mypage' }" class="mypage-btn" @click="closeMenu">
+          <RouterLink
+            :to="{ name: 'mypage' }"
+            class="nav-action-btn nav-action-btn--primary"
+            @click="closeMenu"
+          >
             내 정보
           </RouterLink>
-          <button type="button" class="login-btn" @click="handleLogout">
+
+          <button type="button" class="nav-action-btn" @click="handleLogout">
             로그아웃
           </button>
         </template>
 
         <template v-else>
-          <RouterLink :to="{ name: 'login' }" class="login-btn" @click="closeMenu">
+          <RouterLink
+            :to="{ name: 'login' }"
+            class="nav-action-btn"
+            @click="closeMenu"
+          >
             로그인
           </RouterLink>
-          <RouterLink :to="{ name: 'signup' }" class="signup-btn" @click="closeMenu">
+
+          <RouterLink
+            :to="{ name: 'signup' }"
+            class="nav-action-btn nav-action-btn--primary"
+            @click="closeMenu"
+          >
             회원가입
           </RouterLink>
         </template>
@@ -55,12 +74,14 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { logout } from '@/api/accounts'
-import juyeonLogo from '@/assets/branding/juyeon-logo.png'
 import { showAuthNotice } from '@/utils/authNotice'
+import juyeonLogo from '@/assets/branding/juyeon-logo.png'
 
 const router = useRouter()
+
 const isMenuOpen = ref(false)
 const isLoggedIn = ref(!!localStorage.getItem('token'))
+
 const navLinks = [
   { name: 'products', label: '예적금' },
   { name: 'main-bank', label: '주거래은행', requiresAuth: true },
@@ -78,11 +99,11 @@ const checkLoginStatus = () => {
   isLoggedIn.value = !!localStorage.getItem('token')
 }
 
-
 const handleNavClick = (event, link) => {
   if (link.requiresAuth && !isLoggedIn.value) {
     event.preventDefault()
     closeMenu()
+
     showAuthNotice('로그인 후 이용할 수 있습니다.')
 
     const redirectTarget = router.resolve({ name: link.name }).fullPath
@@ -93,6 +114,7 @@ const handleNavClick = (event, link) => {
         redirect: redirectTarget,
       },
     })
+
     return
   }
 
@@ -134,13 +156,16 @@ const handleLogout = async () => {
     localStorage.removeItem('token')
     isLoggedIn.value = false
     closeMenu()
+
     window.dispatchEvent(new Event('logout-success'))
+
     router.push({ name: 'login' })
   }
 }
 
 onMounted(() => {
   checkLoginStatus()
+
   window.addEventListener('storage', checkLoginStatus)
   window.addEventListener('login-success', checkLoginStatus)
   window.addEventListener('logout-success', checkLoginStatus)
@@ -206,6 +231,7 @@ onBeforeUnmount(() => {
   color: var(--color-text-muted);
   font-size: 15px;
   font-weight: 800;
+  text-decoration: none;
   white-space: nowrap;
   transition: color 0.16s ease;
 }
@@ -241,32 +267,49 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
-.login-btn,
-.signup-btn,
-.mypage-btn {
-  min-height: 40px;
+.nav-action-btn {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 1.5px solid #cfd9ea;
+  background: #fff;
+  color: #0f172a;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  font-weight: 850;
-  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
-.login-btn,
-.mypage-btn {
-  padding: 0 15px;
-  border: 1px solid var(--color-border-strong);
-  background: #fff;
-  color: var(--color-text);
+.nav-action-btn:hover {
+  transform: translateY(-1px);
+  background: #f8fbff;
+  border-color: #b8c7e3;
 }
 
-.signup-btn {
-  padding: 0 16px;
-  border: 1px solid var(--color-primary);
-  background: var(--color-primary);
+.nav-action-btn--primary {
+  background: #2454d6;
   color: #fff;
-  box-shadow: 0 10px 20px rgba(31, 79, 216, 0.18);
+  border-color: #2454d6;
+  box-shadow: 0 10px 22px rgba(36, 84, 214, 0.18);
+}
+
+.nav-action-btn--primary:hover {
+  background: #1f49bb;
+  border-color: #1f49bb;
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(36, 84, 214, 0.24);
 }
 
 .mobile-toggle {
@@ -278,6 +321,7 @@ onBeforeUnmount(() => {
   border-radius: 12px;
   background: #fff;
   color: var(--color-text);
+  cursor: pointer;
 }
 
 .mobile-toggle span {
@@ -296,7 +340,6 @@ onBeforeUnmount(() => {
   }
 
   .nav-inner {
-  position: relative;
     position: relative;
     min-height: var(--header-height);
     flex-wrap: wrap;
@@ -338,6 +381,10 @@ onBeforeUnmount(() => {
     padding: 0 0 16px;
     flex-wrap: wrap;
   }
-}
 
+  .nav-action-btn {
+    flex: 1;
+    min-width: 120px;
+  }
+}
 </style>

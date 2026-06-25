@@ -38,7 +38,7 @@
 
         <div class="profile-summary-grid">
           <div class="summary-item">
-            <span class="summary-icon red">👤</span>
+            <span class="summary-icon age">{{ ageIconText }}</span>
             <div>
               <small>나이</small>
               <strong>{{ profileForm.age ? `${profileForm.age}세` : '미입력' }}</strong>
@@ -46,7 +46,7 @@
           </div>
 
           <div class="summary-item">
-            <span class="summary-icon blue">⚥</span>
+            <span class="summary-icon" :class="genderIconClass">{{ genderIcon }}</span>
             <div>
               <small>성별</small>
               <strong>{{ genderLabel }}</strong>
@@ -54,7 +54,7 @@
           </div>
 
           <div class="summary-item">
-            <span class="summary-icon indigo">🏠</span>
+            <span class="summary-icon income">₩</span>
             <div>
               <small>월 소득 구간</small>
               <strong>{{ getOptionLabel('monthly_income_range', profileForm.monthly_income_range) }}</strong>
@@ -62,7 +62,7 @@
           </div>
 
           <div class="summary-item">
-            <span class="summary-icon purple">💼</span>
+            <span class="summary-icon saving">🐷</span>
             <div>
               <small>월 저축 가능 금액</small>
               <strong>{{ getOptionLabel('monthly_saving_amount', profileForm.monthly_saving_amount) }}</strong>
@@ -70,7 +70,7 @@
           </div>
 
           <div class="summary-item">
-            <span class="summary-icon mint">💰</span>
+            <span class="summary-icon lump-sum">🪙</span>
             <div>
               <small>현재 보유 목돈</small>
               <strong>{{ getOptionLabel('lump_sum_amount', profileForm.lump_sum_amount) }}</strong>
@@ -78,7 +78,7 @@
           </div>
 
           <div class="summary-item">
-            <span class="summary-icon yellow">🏦</span>
+            <span class="summary-icon bank">🏦</span>
             <div>
               <small>주거래은행</small>
               <strong>{{ profileForm.main_bank || '미입력' }}</strong>
@@ -86,7 +86,7 @@
           </div>
 
           <div class="summary-item">
-            <span class="summary-icon teal">📍</span>
+            <span class="summary-icon location">지역</span>
             <div>
               <small>거주 지역</small>
               <strong>{{ profileForm.address || '미입력' }}</strong>
@@ -94,7 +94,7 @@
           </div>
 
           <div class="summary-item">
-            <span class="summary-icon green">✓</span>
+            <span class="summary-icon consent">✓</span>
             <div>
               <small>개인정보 동의</small>
               <strong>{{ profileForm.personal_info_agree ? '동의 완료' : '미동의' }}</strong>
@@ -145,7 +145,7 @@
             <label>
               나이
               <select v-model.number="profileForm.age">
-                <option :value="null">나이를 선택하세요</option>
+                <option :value="null" disabled hidden>나이를 선택하세요</option>
                 <option
                   v-for="option in profileOptions.age"
                   :key="option.value"
@@ -172,7 +172,7 @@
             <label>
               월 소득 구간
               <select v-model="profileForm.monthly_income_range">
-                <option value="">월 소득 구간을 선택하세요</option>
+                <option value="" disabled hidden>월 소득 구간을 선택하세요</option>
                 <option
                   v-for="option in profileOptions.monthly_income_range"
                   :key="option.value"
@@ -186,7 +186,7 @@
             <label>
               월 저축 가능 금액
               <select v-model="profileForm.monthly_saving_amount">
-                <option value="">월 저축 가능 금액을 선택하세요</option>
+                <option value="" disabled hidden>월 저축 가능 금액을 선택하세요</option>
                 <option
                   v-for="option in profileOptions.monthly_saving_amount"
                   :key="option.value"
@@ -200,7 +200,7 @@
             <label>
               현재 보유 목돈
               <select v-model="profileForm.lump_sum_amount">
-                <option value="">현재 보유 목돈을 선택하세요</option>
+                <option value="" disabled hidden>현재 보유 목돈을 선택하세요</option>
                 <option
                   v-for="option in profileOptions.lump_sum_amount"
                   :key="option.value"
@@ -214,7 +214,7 @@
             <label>
               주거래은행
               <select v-model="profileForm.main_bank">
-                <option value="">주거래은행을 선택하세요</option>
+                <option value="" disabled hidden>주거래은행을 선택하세요</option>
                 <option
                   v-for="option in profileOptions.main_bank"
                   :key="option.value"
@@ -228,7 +228,7 @@
             <label>
               거주 지역
               <select v-model="profileForm.address">
-                <option value="">거주 지역을 선택하세요</option>
+                <option value="" disabled hidden>거주 지역을 선택하세요</option>
                 <option
                   v-for="option in profileOptions.address"
                   :key="option.value"
@@ -585,8 +585,44 @@ const profileInitial = computed(() => {
 })
 
 
+const ageIconText = computed(() => {
+  if (profileForm.value.age) {
+    return String(profileForm.value.age)
+  }
+
+  return '나이'
+})
+
+const normalizedGender = computed(() => {
+  return String(profileForm.value.gender || 'unknown').toLowerCase()
+})
+
 const genderLabel = computed(() => {
   return getOptionLabel('gender', profileForm.value.gender)
+})
+
+const genderIcon = computed(() => {
+  if (['female', 'f', 'woman', '여성'].includes(normalizedGender.value)) {
+    return '♀'
+  }
+
+  if (['male', 'm', 'man', '남성'].includes(normalizedGender.value)) {
+    return '♂'
+  }
+
+  return '⚥'
+})
+
+const genderIconClass = computed(() => {
+  if (['female', 'f', 'woman', '여성'].includes(normalizedGender.value)) {
+    return 'gender-female'
+  }
+
+  if (['male', 'm', 'man', '남성'].includes(normalizedGender.value)) {
+    return 'gender-male'
+  }
+
+  return 'gender-unknown'
 })
 
 const getProduct = (favorite) => {
@@ -1224,16 +1260,71 @@ onBeforeUnmount(() => {
   height: 42px;
   border-radius: 15px;
   font-size: 18px;
+  font-weight: 950;
+  line-height: 1;
 }
 
-.summary-icon.red { background: #fff1f2; color: #e11d48; }
-.summary-icon.blue { background: #eaf0ff; color: #3151db; }
-.summary-icon.indigo { background: #eef2ff; color: #4f46e5; }
-.summary-icon.purple { background: #f3e8ff; color: #7c3aed; }
-.summary-icon.mint { background: #dffaf5; color: #0f9f8b; }
-.summary-icon.yellow { background: #fff7e5; color: #d97706; }
-.summary-icon.teal { background: #e0f7fa; color: #0891b2; }
-.summary-icon.green { background: #ecfdf3; color: #16a34a; }
+.summary-icon.age {
+  background: #f4efff;
+  color: #6d28d9;
+  font-size: 13px;
+  letter-spacing: -0.04em;
+}
+
+.summary-icon.gender-male {
+  background: #eaf0ff;
+  color: #2454d6;
+  font-size: 23px;
+}
+
+.summary-icon.gender-female {
+  background: #fff1f7;
+  color: #db2777;
+  font-size: 23px;
+}
+
+.summary-icon.gender-unknown {
+  background: #eef2ff;
+  color: #64748b;
+  font-size: 21px;
+}
+
+.summary-icon.income {
+  background: #fff7e5;
+  color: #b45309;
+  font-size: 22px;
+}
+
+.summary-icon.saving {
+  background: #f3e8ff;
+  color: #7c3aed;
+  font-size: 19px;
+}
+
+.summary-icon.lump-sum {
+  background: #dffaf5;
+  color: #0f766e;
+  font-size: 19px;
+}
+
+.summary-icon.bank {
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 19px;
+}
+
+.summary-icon.location {
+  background: #e0f7fa;
+  color: #0891b2;
+  font-size: 13px;
+  letter-spacing: -0.06em;
+}
+
+.summary-icon.consent {
+  background: #ecfdf3;
+  color: #16a34a;
+  font-size: 20px;
+}
 
 .summary-item small {
   display: block;
