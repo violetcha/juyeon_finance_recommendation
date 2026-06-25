@@ -1063,13 +1063,16 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 50%;
   z-index: 8;
-  width: 58px;
-  height: 96px;
+  width: 50px;
+  height: 40px;
   box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 20px;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
   color: rgba(255, 255, 255, 0.94);
   font-size: 62px;
   font-weight: 700;
@@ -1077,11 +1080,13 @@ onBeforeUnmount(() => {
   cursor: pointer;
   text-shadow: 0 8px 24px rgba(15, 23, 42, 0.24);
   transform: translateY(-50%);
-  transition: transform 0.18s ease, color 0.18s ease, background 0.18s ease;
+  transition: transform 0.18s ease, color 0.18s ease;
 }
 
 .feature-stage > button.feature-arrow:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
   color: #fff;
   transform: translateY(-50%) scale(1.04);
 }

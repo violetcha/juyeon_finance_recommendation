@@ -3,7 +3,7 @@
     <section class="page-hero-row">
       <h1 class="page-title">
         <span class="title-blue">환율</span>
-        <span> 계산 · 시세 확인</span>
+        <span> 계산</span>
       </h1>
     </section>
 
@@ -94,7 +94,7 @@
       <article class="rates-card card">
         <div class="card-title-row">
           <div>
-            <h2>실시간 주요 통화 시세</h2>
+            <h2>주요 통화 환율</h2>
             <p>{{ baseDate || selectedDate }} 기준 · 주요 통화만 요약 표시</p>
           </div>
 
