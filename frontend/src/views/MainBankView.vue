@@ -2,34 +2,44 @@
 
 <template>
   <main class="main-bank-page">
-    <section class="page-header">
-      <p class="eyebrow">Main Bank Finder</p>
-      <h1>내 주변 주거래은행 찾기</h1>
-      <p>
-        5대 은행의 특징을 비교하고, 원하는 지역과 은행을 선택해 주변 지점을 지도에서 확인할 수 있습니다.
-        금융 가이드 영상은 검색 후 마이페이지에 저장할 수 있습니다.
-      </p>
+    <section class="page-hero-row">
+      <h1 class="page-title">
+        <span class="title-blue">내주변</span>
+        <span>  주거래은행</span>
+      </h1>
+
+      <div class="page-hero-actions">
+        <button type="button" class="hero-outline-button" @click="scrollToVideoSection">
+          ▶ 영상 보기
+        </button>
+      </div>
     </section>
 
-    <section class="bank-map-section">
+<section class="bank-map-section">
       <aside class="bank-list">
-        <h2>5대 은행 요약</h2>
+        <BankFitTest
+          ref="bankFitTestRef"
+          :key="bankFitTestKey"
+          class="bank-fit-test-panel"
+          @recommend="handleRecommendBank"
+        />
 
-        <button
-          v-for="bank in summaryBanks"
-          :key="bank.name"
-          class="bank-card"
-          :class="{ active: selectedSummaryBank?.name === bank.name }"
-          type="button"
-          @click="selectSummaryBank(bank)"
-        >
-          <div class="bank-card-header">
-            <span class="bank-icon">{{ bank.icon }}</span>
-            <strong>{{ bank.name }}</strong>
+        <section class="test-control-panel">
+          <div class="control-icon">↺</div>
+          <div>
+            <h3>이전 질문 다시 선택</h3>
+            <p>선택을 바꾸고 싶다면 이전 질문으로 돌아가거나 처음부터 다시 시작할 수 있습니다.</p>
           </div>
-          <p>{{ bank.description }}</p>
-          <small>{{ bank.keyword }}</small>
-        </button>
+
+          <div class="control-buttons">
+            <button type="button" class="control-button outline" @click="handlePreviousQuestion">
+              ← 이전 질문
+            </button>
+            <button type="button" class="control-button primary" @click="handleRestartTest">
+              ↻ 처음부터 다시
+            </button>
+          </div>
+        </section>
       </aside>
 
       <section class="map-area">
@@ -93,6 +103,14 @@
             <p class="search-base">
               검색 기준: {{ currentSearchLabel }} / 검색 은행: {{ selectedBankKeyword }}
             </p>
+
+            <p v-if="mapError" class="map-error">
+              {{ mapError }}
+            </p>
+
+            <p v-if="mapMessage" class="map-message">
+              {{ mapMessage }}
+            </p>
           </div>
         </div>
 
@@ -129,14 +147,10 @@
       </section>
     </section>
 
-    <section class="video-section">
+    <section ref="videoSection" id="bank-guide-videos" class="video-section">
       <div class="video-header">
         <div>
-          <p class="eyebrow">Financial Guide</p>
           <h2>주거래은행 선택 가이드 영상</h2>
-          <p>
-            기본 영상 3개를 먼저 보여주고, 검색어를 입력하면 다른 금융 가이드 영상도 확인할 수 있습니다.
-          </p>
         </div>
       </div>
 
@@ -153,36 +167,52 @@
       <p v-else-if="videoError" class="error">{{ videoError }}</p>
 
       <div v-else class="video-grid">
-        <article v-for="video in videos" :key="video.id" class="video-card">
+        <article v-for="video in videos" :key="getVideoId(video)" class="video-card">
           <button class="thumbnail-button" type="button" @click="selectVideo(video)">
-            <img :src="video.thumbnail" :alt="video.title" />
+            <img :src="video.thumbnail_url" :alt="video.title" />
           </button>
 
           <div class="video-info">
             <h3>{{ video.title }}</h3>
-            <p>{{ video.channelTitle }}</p>
+            <p>{{ video.channel_title }}</p>
 
             <div class="video-buttons">
               <button type="button" @click="selectVideo(video)">재생</button>
-              <button type="button" class="save-button" @click="handleSaveVideo(video)">
-                저장
+
+              <button
+                type="button"
+                class="save-button"
+                :class="{ saved: isSavedVideo(video) }"
+                :disabled="savingVideoId === getVideoId(video)"
+                @click="handleToggleSaveVideo(video)"
+              >
+                <span v-if="savingVideoId === getVideoId(video)">처리 중...</span>
+                <span v-else-if="isSavedVideo(video)">저장됨</span>
+                <span v-else>저장</span>
               </button>
             </div>
           </div>
         </article>
       </div>
 
-      <section v-if="selectedVideo" class="player-section">
+      <section v-if="selectedVideo && selectedVideoEmbedUrl" class="player-section">
         <h3>{{ selectedVideo.title }}</h3>
 
         <div class="iframe-box">
           <iframe
-            :src="`https://www.youtube.com/embed/${selectedVideo.id}`"
+            v-if="selectedVideo?.video_id"
+            :key="selectedVideo.video_id"
+            :src="`https://www.youtube.com/embed/${selectedVideo.video_id}`"
             :title="selectedVideo.title"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen
           ></iframe>
         </div>
       </section>
+
+      <p v-else-if="selectedVideo && !selectedVideo.video_id" class="error">
+        영상 ID가 없어 재생할 수 없습니다. 다시 검색해주세요.
+      </p>
     </section>
   </main>
 </template>
@@ -190,7 +220,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import api from '@/api/api'
-import { searchVideos, saveVideo } from '@/api/videos'
+import { searchVideos, saveVideo, getSavedVideos, deleteSavedVideo } from '@/api/videos'
+import BankFitTest from '@/components/BankFitTest.vue'
 
 const mapContainer = ref(null)
 const map = ref(null)
@@ -204,6 +235,11 @@ const routeError = ref('')
 const routeBorderLine = ref(null)
 const startRouteMarker = ref(null)
 const endRouteMarker = ref(null)
+const mapError = ref('')
+const mapMessage = ref('')
+const videoSection = ref(null)
+const bankFitTestRef = ref(null)
+const bankFitTestKey = ref(0)
 
 const BANK_SEARCH_RADIUS = 1500
 const MAX_BANK_RESULTS = 15
@@ -279,6 +315,14 @@ const bankOptions = [
 ]
 
 const selectedBankKeyword = ref('국민은행')
+
+const bankCodeToKeywordMap = {
+  KB: '국민은행',
+  SHINHAN: '신한은행',
+  HANA: '하나은행',
+  WOORI: '우리은행',
+  NH: '농협은행',
+}
 
 const regionData = {
   서울특별시: {
@@ -563,11 +607,24 @@ const dongOptions = computed(() => {
   return ['전체', ...dongs]
 })
 
+
+const selectedVideoEmbedUrl = computed(() => {
+  const videoId = selectedVideo.value?.video_id
+
+  if (!videoId) {
+    return ''
+  }
+
+  return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&origin=${window.location.origin}`
+})
+
 const videoKeyword = ref('주거래은행 선택 기준')
 const videos = ref([])
 const selectedVideo = ref(null)
 const videoLoading = ref(false)
 const videoError = ref('')
+const savedVideoIds = ref(new Set())
+const savingVideoId = ref(null)
 
 const loadKakaoMapScript = () => {
   return new Promise((resolve, reject) => {
@@ -601,6 +658,9 @@ const loadKakaoMapScript = () => {
 }
 
 const initMap = async () => {
+  mapError.value = ''
+  mapMessage.value = ''
+
   try {
     await loadKakaoMapScript()
 
@@ -614,7 +674,7 @@ const initMap = async () => {
     window.kakao.maps.event.addListener(map.value, 'click', closeMapOverlays)
   } catch (error) {
     console.error(error)
-    alert(error.message || '카카오 지도를 불러오지 못했습니다.')
+    mapError.value = error.message || '카카오 지도를 불러오지 못했습니다.'
   }
 }
 
@@ -669,8 +729,16 @@ const geocodeRegion = (keyword) => {
 }
 
 const searchBySelectedRegion = async () => {
+  mapError.value = ''
+  mapMessage.value = ''
+
   if (!selectedSido.value || !selectedGugun.value) {
-    alert('광역시/도와 시/군/구를 선택해주세요. 동은 전체로 두어도 됩니다.')
+    mapError.value = '광역시/도와 시/군/구를 선택해주세요. 동은 전체로 두어도 됩니다.'
+    return
+  }
+
+  if (!map.value || !window.kakao?.maps) {
+    mapError.value = '지도가 아직 준비되지 않았습니다.'
     return
   }
 
@@ -692,13 +760,16 @@ const searchBySelectedRegion = async () => {
     await searchNearbyBanks()
   } catch (error) {
     console.error(error)
-    alert(error.message || '지역 검색 중 오류가 발생했습니다.')
+    mapError.value = error.message || '지역 검색 중 오류가 발생했습니다.'
   }
 }
 
 const moveToUserLocation = () => {
+  mapError.value = ''
+  mapMessage.value = ''
+
   if (!navigator.geolocation) {
-    alert('브라우저에서 위치 기능을 지원하지 않습니다.')
+    mapError.value = '브라우저에서 위치 기능을 지원하지 않습니다.'
     return
   }
 
@@ -721,7 +792,7 @@ const moveToUserLocation = () => {
       await searchNearbyBanks()
     },
     () => {
-      alert('위치 권한을 허용하지 않아 현재 위치를 사용할 수 없습니다. 지역 선택 검색을 이용해주세요.')
+      mapError.value = '위치 권한을 허용하지 않아 현재 위치를 사용할 수 없습니다. 지역 선택 검색을 이용해주세요.'
     }
   )
 }
@@ -730,6 +801,43 @@ const selectSummaryBank = async (bank) => {
   selectedSummaryBank.value = bank
   selectedBankKeyword.value = bank.keyword
   await searchNearbyBanks()
+}
+
+const handleRecommendBank = async (payload) => {
+  const bankCode = typeof payload === 'string' ? payload : payload?.bankCode
+  const recommendLocation = typeof payload === 'object' ? payload?.userPosition : null
+  const keyword = bankCodeToKeywordMap[bankCode]
+
+  if (!keyword) {
+    mapError.value = '추천 은행 정보를 확인할 수 없습니다.'
+    return
+  }
+
+  selectedBankKeyword.value = keyword
+  selectedSummaryBank.value = summaryBanks.find((bank) => bank.keyword === keyword) || null
+
+  mapError.value = ''
+  mapMessage.value = `${keyword} 추천 결과를 지도에 반영했습니다.`
+
+  if (recommendLocation?.lat && recommendLocation?.lng && map.value && window.kakao?.maps) {
+    userLocation.value = {
+      lat: recommendLocation.lat,
+      lng: recommendLocation.lng,
+    }
+
+    currentSearchLabel.value = '은행 성향 테스트 위치'
+
+    const center = new window.kakao.maps.LatLng(recommendLocation.lat, recommendLocation.lng)
+
+    map.value.setCenter(center)
+    map.value.setLevel(4)
+
+    setBaseMarker(center, '은행 성향 테스트 위치', 'red')
+  }
+
+  if (map.value) {
+    await searchNearbyBanks()
+  }
 }
 
 const escapeHtml = (value = '') => {
@@ -960,6 +1068,8 @@ const getSearchKeyword = () => {
 const searchNearbyBanks = async () => {
   if (!map.value) return
 
+  mapError.value = ''
+  mapMessage.value = ''
   clearMarkers()
 
   const keyword = getSearchKeyword()
@@ -978,7 +1088,7 @@ const searchNearbyBanks = async () => {
       .slice(0, MAX_BANK_RESULTS)
 
     if (places.length === 0) {
-      alert(`${currentSearchLabel.value} 주변의 ${keyword} 검색 결과가 없습니다.`)
+      mapMessage.value = `${currentSearchLabel.value} 주변의 ${keyword} 검색 결과가 없습니다.`
       return
     }
 
@@ -1031,11 +1141,11 @@ const searchNearbyBanks = async () => {
     if (markers.value.length > 0) {
       map.value.setBounds(bounds)
     } else {
-      alert('은행 데이터는 받았지만 좌표가 없어 지도에 표시하지 못했습니다.')
+      mapMessage.value = '은행 데이터는 받았지만 좌표가 없어 지도에 표시하지 못했습니다.'
     }
   } catch (error) {
     console.error('은행 검색 실패:', error)
-    alert('은행 검색 중 오류가 발생했습니다. 백엔드 maps API를 확인해주세요.')
+    mapError.value = '은행 검색 중 오류가 발생했습니다. 백엔드 maps API를 확인해주세요.'
   }
 }
 
@@ -1136,7 +1246,6 @@ const drawDrivingRoute = async (place, destLat, destLng) => {
 
     const endPosition = new window.kakao.maps.LatLng(destLat, destLng)
 
-    // 흰색 외곽선
     routeBorderLine.value = new window.kakao.maps.Polyline({
       path,
       strokeWeight: 11,
@@ -1146,7 +1255,6 @@ const drawDrivingRoute = async (place, destLat, destLng) => {
       zIndex: 25,
     })
 
-    // 파란색 실제 경로선
     routeLine.value = new window.kakao.maps.Polyline({
       path,
       strokeWeight: 6,
@@ -1195,47 +1303,162 @@ const openKakaoDirection = () => {
   window.open(url, '_blank')
 }
 
+
+const selectVideo = (video) => {
+  selectedVideo.value = video
+}
+
+const getVideoId = (video) => {
+  if (!video) {
+    return ''
+  }
+
+  if (video.video_id) {
+    return video.video_id
+  }
+
+  if (video.id?.videoId) {
+    return video.id.videoId
+  }
+
+  if (typeof video.id === 'string') {
+    return video.id
+  }
+
+  return ''
+}
+
+const isSavedVideo = (video) => {
+  const videoId = getVideoId(video)
+  return savedVideoIds.value.has(videoId)
+}
+
+const loadSavedVideos = async () => {
+  const token = localStorage.getItem('token')
+
+  if (!token) {
+    savedVideoIds.value = new Set()
+    return
+  }
+
+  try {
+    const response = await getSavedVideos()
+    const savedVideos = response.data || []
+
+    savedVideoIds.value = new Set(
+      savedVideos
+        .map((video) => video.video_id || video.id)
+        .filter((videoId) => !!videoId)
+    )
+  } catch (error) {
+    console.error('저장 영상 목록 조회 실패:', error)
+    savedVideoIds.value = new Set()
+  }
+}
+
 const loadVideos = async (keyword, maxResults = 3) => {
   videoLoading.value = true
   videoError.value = ''
+  selectedVideo.value = null
 
   try {
     const response = await searchVideos(keyword, maxResults)
-    videos.value = response.data
-    selectedVideo.value = response.data[0] || null
+    const result = Array.isArray(response.data) ? response.data : []
+
+    videos.value = result
+    selectedVideo.value = result.length > 0 ? { ...result[0] } : null
   } catch (error) {
     console.error(error)
     videoError.value = '영상을 불러오지 못했습니다. 백엔드 videos API를 확인해주세요.'
+    videos.value = []
+    selectedVideo.value = null
   } finally {
     videoLoading.value = false
   }
 }
 
 const handleVideoSearch = () => {
+  videoError.value = ''
+
   if (!videoKeyword.value) {
-    alert('검색어를 입력해주세요.')
+    videoError.value = '검색어를 입력해주세요.'
     return
   }
 
   loadVideos(videoKeyword.value, 9)
 }
 
-const selectVideo = (video) => {
-  selectedVideo.value = video
+const scrollToVideoSection = () => {
+  videoSection.value?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
 }
 
-const handleSaveVideo = async (video) => {
+const handlePreviousQuestion = () => {
+  if (bankFitTestRef.value?.goPreviousQuestion) {
+    bankFitTestRef.value.goPreviousQuestion()
+    return
+  }
+
+  bankFitTestKey.value += 1
+}
+
+const handleRestartTest = () => {
+  if (bankFitTestRef.value?.resetTest) {
+    bankFitTestRef.value.resetTest()
+    return
+  }
+
+  bankFitTestKey.value += 1
+}
+
+
+const handleToggleSaveVideo = async (video) => {
+  const token = localStorage.getItem('token')
+  const videoId = getVideoId(video)
+
+  videoError.value = ''
+
+  if (!token) {
+    videoError.value = '로그인 후 저장할 수 있습니다.'
+    return
+  }
+
+  if (!videoId) {
+    videoError.value = '영상 정보를 확인할 수 없습니다.'
+    return
+  }
+
+  savingVideoId.value = videoId
+
   try {
-    await saveVideo(video)
-    alert('마이페이지에 영상을 저장했습니다.')
+    const nextSavedVideoIds = new Set(savedVideoIds.value)
+
+    if (nextSavedVideoIds.has(videoId)) {
+      await deleteSavedVideo(videoId)
+      nextSavedVideoIds.delete(videoId)
+    } else {
+      await saveVideo({
+        ...video,
+        id: videoId,
+        video_id: videoId,
+      })
+      nextSavedVideoIds.add(videoId)
+    }
+
+    savedVideoIds.value = nextSavedVideoIds
   } catch (error) {
     console.error(error)
 
     if (error.response?.status === 401) {
-      alert('로그인 후 저장할 수 있습니다.')
-    } else {
-      alert('영상 저장 중 오류가 발생했습니다.')
+      videoError.value = '로그인 후 저장할 수 있습니다.'
+      return
     }
+
+    videoError.value = '영상 저장 상태를 변경하지 못했습니다.'
+  } finally {
+    savingVideoId.value = null
   }
 }
 
@@ -1243,144 +1466,206 @@ onMounted(async () => {
   await initMap()
   await searchBySelectedRegion()
   await loadVideos('주거래은행 선택 기준', 3)
+  await loadSavedVideos()
 })
+
 </script>
 
 <style scoped>
+.page-title {
+  color: #0f172a;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.title-blue {
+  color: #2454d6;
+}
+
 .main-bank-page {
-  max-width: 1200px;
+  width: min(var(--container-width, 1360px), calc(100% - 48px));
   margin: 0 auto;
-  padding: 40px 20px 80px;
+  padding: 22px 0 64px;
+}
+
+.map-guide-banner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 18px;
+  margin-bottom: 24px;
+  border: 1px solid #c7d7fe;
+  border-radius: 16px;
+  background: linear-gradient(90deg, #eff6ff, #f8fbff);
+  color: #0f1b3d;
+}
+
+.banner-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 44px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(30, 64, 175, 0.08);
+  font-size: 26px;
+}
+
+.map-guide-banner strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.map-guide-banner p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .page-header {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+}
+
+.map-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-end;
 }
 
 .eyebrow {
   margin: 0 0 8px;
-  color: #2563eb;
-  font-weight: 700;
+  color: #1116b8;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
 }
 
 .page-header h1 {
-  margin: 0 0 12px;
-  font-size: 36px;
+  margin: 0 0 10px;
+  color: #0f1b3d;
+  font-size: clamp(32px, 3.4vw, 44px);
+  line-height: 1.15;
+  font-weight: 950;
+  letter-spacing: -0.06em;
 }
 
 .page-header p,
 .video-header p {
-  color: #6b7280;
-  line-height: 1.6;
+  margin: 0;
+  color: #64748b;
+  line-height: 1.65;
+}
+
+.page-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ghost-action {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #0f1b3d;
+  font-weight: 850;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(15, 27, 61, 0.04);
+}
+
+.ghost-action:hover {
+  border-color: #1116b8;
+  color: #1116b8;
 }
 
 .bank-map-section {
   display: grid;
-  grid-template-columns: 360px 1fr;
-  gap: 24px;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 18px;
   align-items: stretch;
 }
 
 .bank-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  min-width: 0;
 }
 
-.bank-list h2 {
-  margin: 0 0 8px;
-}
-
-.bank-card {
-  text-align: left;
-  border: 1px solid #e5e7eb;
-  background: white;
-  border-radius: 14px;
-  padding: 16px;
-  cursor: pointer;
-}
-
-.bank-card.active {
-  border-color: #2563eb;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12);
-}
-
-.bank-card-header {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 18px;
-}
-
-.bank-icon {
-  font-size: 22px;
-}
-
-.bank-card p {
-  margin: 0 0 10px;
-  color: #4b5563;
-  line-height: 1.5;
-}
-
-.bank-card small {
-  color: #2563eb;
-  font-weight: 700;
+.bank-fit-test-panel {
+  position: static;
 }
 
 .map-area {
-  border: 1px solid #e5e7eb;
-  border-radius: 16px;
+  min-width: 0;
+  border: 1px solid #dbe4f0;
+  border-radius: 22px;
   overflow: hidden;
-  background: white;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(15, 27, 61, 0.06);
 }
 
 .map-toolbar {
-  padding: 16px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 18px;
+  border-bottom: 1px solid #edf2f7;
+  background: #fff;
 }
 
 .search-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 .filter-row {
   display: grid;
   grid-template-columns: repeat(4, minmax(130px, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .filter-box {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
 .filter-box label {
-  font-size: 13px;
-  color: #6b7280;
-  font-weight: 700;
+  color: #52627a;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .filter-box select,
 .video-search input {
   width: 100%;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  padding: 10px 12px;
-  background: white;
-  color: #111827;
+  min-height: 44px;
+  border: 1px solid #d8e2ef;
+  border-radius: 13px;
+  padding: 0 13px;
+  background: #fff;
+  color: #0f1b3d;
+  font-weight: 750;
+  outline: none;
+}
+
+.filter-box select:focus,
+.video-search input:focus {
+  border-color: #1116b8;
+  box-shadow: 0 0 0 4px rgba(17, 22, 184, 0.08);
 }
 
 .bank-select-box select {
-  font-weight: 700;
+  font-weight: 900;
 }
 
 .button-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -1389,59 +1674,110 @@ onMounted(async () => {
 .selected-place button,
 .video-search button,
 .video-buttons button {
+  min-height: 42px;
   border: none;
-  border-radius: 8px;
-  padding: 10px 14px;
-  background: #2563eb;
+  border-radius: 12px;
+  padding: 0 16px;
+  background: #1116b8;
   color: white;
   cursor: pointer;
   white-space: nowrap;
+  font-weight: 900;
+  box-shadow: 0 12px 24px rgba(17, 22, 184, 0.16);
 }
 
 .location-button,
 .video-buttons .save-button {
-  background: #111827;
+  background: #0f1b3d;
+}
+
+.search-button:hover,
+.location-button:hover,
+.selected-place button:hover,
+.video-search button:hover,
+.video-buttons button:hover {
+  transform: translateY(-1px);
+}
+
+.video-buttons .save-button.saved {
+  background: #64748b;
+  cursor: pointer;
+}
+
+.video-buttons .save-button:disabled {
+  opacity: 0.75;
+  cursor: wait;
 }
 
 .search-base {
   margin: 0;
-  color: #6b7280;
+  color: #64748b;
   font-size: 13px;
+  font-weight: 750;
+}
+
+.map-error,
+.map-message {
+  margin: 0;
+  padding: 11px 13px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.map-error {
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: #dc2626;
+}
+
+.map-message {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1116b8;
 }
 
 .map {
   width: 100%;
   height: 520px;
+  background: #eef4fb;
 }
 
 .selected-place {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
+  gap: 18px;
   align-items: center;
-  padding: 16px;
-  border-top: 1px solid #e5e7eb;
+  padding: 18px;
+  border-top: 1px solid #edf2f7;
+  background: linear-gradient(180deg, #fff, #f8fbff);
 }
 
 .selected-label {
-  margin: 0 0 4px;
-  color: #2563eb;
-  font-size: 13px;
-  font-weight: 700;
+  margin: 0 0 5px;
+  color: #1116b8;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.04em;
 }
 
 .selected-place h3 {
   margin: 0 0 8px;
+  color: #0f1b3d;
+  font-size: 20px;
+  font-weight: 950;
 }
 
 .selected-place p {
   margin: 4px 0;
-  color: #4b5563;
+  color: #52627a;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 .route-summary {
-  font-weight: 700;
-  color: #2563eb !important;
+  font-weight: 900;
+  color: #1116b8 !important;
 }
 
 .route-error {
@@ -1449,7 +1785,13 @@ onMounted(async () => {
 }
 
 .video-section {
-  margin-top: 56px;
+  scroll-margin-top: calc(var(--header-height, 72px) + 18px);
+  margin-top: 46px;
+  padding: 26px;
+  border: 1px solid #dbe4f0;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(15, 27, 61, 0.05);
 }
 
 .video-header {
@@ -1458,12 +1800,16 @@ onMounted(async () => {
 
 .video-header h2 {
   margin: 0 0 10px;
+  color: #0f1b3d;
   font-size: 28px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
 }
 
 .video-search {
-  display: flex;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   margin-bottom: 24px;
 }
 
@@ -1478,10 +1824,11 @@ onMounted(async () => {
 }
 
 .video-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
   overflow: hidden;
-  background: white;
+  border: 1px solid #dbe4f0;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(15, 27, 61, 0.04);
 }
 
 .thumbnail-button {
@@ -1489,7 +1836,7 @@ onMounted(async () => {
   width: 100%;
   border: none;
   padding: 0;
-  background: transparent;
+  background: #f1f5f9;
   cursor: pointer;
 }
 
@@ -1501,19 +1848,21 @@ onMounted(async () => {
 }
 
 .video-info {
-  padding: 14px;
+  padding: 15px;
 }
 
 .video-info h3 {
   min-height: 44px;
   margin: 0 0 8px;
+  color: #0f1b3d;
   font-size: 16px;
   line-height: 1.4;
+  font-weight: 950;
 }
 
 .video-info p {
   margin: 0 0 12px;
-  color: #6b7280;
+  color: #64748b;
   font-size: 14px;
 }
 
@@ -1532,15 +1881,16 @@ onMounted(async () => {
 
 .player-section h3 {
   margin-bottom: 14px;
+  color: #0f1b3d;
 }
 
 .iframe-box {
   position: relative;
   width: 100%;
   padding-top: 56.25%;
-  border-radius: 16px;
+  border-radius: 18px;
   overflow: hidden;
-  background: #111827;
+  background: #0f1b3d;
 }
 
 .iframe-box iframe {
@@ -1552,22 +1902,40 @@ onMounted(async () => {
 }
 
 .message {
-  color: #6b7280;
+  color: #64748b;
 }
 
 .error {
   color: #dc2626;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1180px) {
+  .bank-map-section {
+    grid-template-columns: 1fr;
+  }
+
+  .bank-fit-test-panel {
+    position: static;
+  }
+
   .filter-row {
     grid-template-columns: repeat(2, minmax(130px, 1fr));
   }
 }
 
-@media (max-width: 980px) {
-  .bank-map-section {
-    grid-template-columns: 1fr;
+@media (max-width: 860px) {
+  .main-bank-page {
+    width: min(100% - 28px, var(--container-width, 1360px));
+  }
+
+  .map-heading,
+  .selected-place {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .page-actions {
+    justify-content: flex-start;
   }
 
   .video-grid {
@@ -1581,22 +1949,346 @@ onMounted(async () => {
 
 @media (max-width: 640px) {
   .filter-row,
-  .video-grid {
+  .video-grid,
+  .video-search {
     grid-template-columns: 1fr;
-  }
-
-  .video-search,
-  .selected-place {
-    flex-direction: column;
-    align-items: stretch;
   }
 
   .video-search button {
     padding: 12px;
   }
+}
 
-  .page-header h1 {
-    font-size: 28px;
+/* === 주연: 주거래은행 페이지 최종 정리 === */
+.map-guide-banner {
+  display: none !important;
+}
+
+.main-bank-page {
+  padding-top: 28px;
+}
+
+.map-heading {
+  margin-bottom: 22px;
+  align-items: center;
+}
+
+.map-heading h1 {
+  margin: 0;
+  font-size: clamp(36px, 4vw, 52px);
+  line-height: 1.08;
+  letter-spacing: -0.07em;
+}
+
+.video-jump-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid #cbd8ee;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #1116b8;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(15, 27, 61, 0.06);
+}
+
+.video-jump-button:hover {
+  border-color: #1116b8;
+  transform: translateY(-1px);
+}
+
+.bank-map-section {
+  align-items: start;
+}
+
+.bank-list {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.test-control-panel {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #dbe4f0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #f8fbff, #fff);
+  box-shadow: 0 16px 34px rgba(15, 27, 61, 0.06);
+}
+
+.control-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #1116b8;
+  font-size: 24px;
+  font-weight: 950;
+}
+
+.test-control-panel h3 {
+  margin: 2px 0 5px;
+  color: #0f1b3d;
+  font-size: 16px;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+}
+
+.test-control-panel p {
+  margin: 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.control-buttons {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 4px;
+}
+
+.control-button {
+  min-height: 42px;
+  border-radius: 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.control-button.outline {
+  border: 1px solid #cbd8ee;
+  background: #fff;
+  color: #1116b8;
+}
+
+.control-button.primary {
+  border: 0;
+  background: #1116b8;
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(17, 22, 184, 0.16);
+}
+
+.map-area {
+  border-radius: 22px;
+}
+
+.video-section {
+  scroll-margin-top: calc(var(--header-height, 64px) + 18px);
+}
+
+.video-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+}
+
+.video-header h2 {
+  margin-bottom: 8px;
+}
+
+.video-search {
+  margin-top: 18px;
+}
+
+@media (max-width: 1180px) {
+  .test-control-panel {
+    position: static;
   }
 }
+
+@media (max-width: 640px) {
+  .map-heading {
+    align-items: flex-start;
+  }
+
+  .video-jump-button {
+    width: 100%;
+  }
+
+  .control-buttons {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* === 주연: 주거래은행 페이지 스크롤/영상 문구 보정 === */
+.bank-fit-test-panel {
+  position: static !important;
+  top: auto !important;
+}
+
+.bank-list {
+  align-self: start;
+}
+
+.video-header p {
+  display: none !important;
+}
+
+.video-section {
+  margin-top: 34px;
+}
+
+
+/* === 주연: 주거래은행 영상 단순 복구 === */
+.video-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.iframe-box {
+  position: relative !important;
+  width: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+  background: #000 !important;
+}
+
+.iframe-box iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  background: #000 !important;
+}
+
+
+/* === 주연: 주거래은행 영상 재생 안정화 === */
+.iframe-box {
+  position: relative !important;
+  width: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+  background: #000 !important;
+}
+
+.iframe-box iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  background: #000 !important;
+}
+
+.video-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+
+/* === 주연: 페이지 상단 영역 재조정 - 제목 축소 / 버튼 남색 === */
+.page-hero-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  min-height: 0 !important;
+  margin: 0 0 24px !important;
+  padding-top: 0 !important;
+}
+
+.page-hero-row h1 {
+  margin: 0 !important;
+  color: #07142f !important;
+  font-size: clamp(34px, 3.7vw, 48px) !important;
+  line-height: 1.08 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.072em !important;
+}
+
+.page-hero-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+}
+
+.hero-primary-button,
+.hero-outline-button {
+  min-height: 42px !important;
+  padding: 0 18px !important;
+  border-radius: 14px !important;
+  font-size: 14px !important;
+  font-weight: 950 !important;
+  cursor: pointer !important;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease !important;
+}
+
+.hero-primary-button {
+  border: 1px solid #0b1f4d !important;
+  background: #0b1f4d !important;
+  color: #fff !important;
+  box-shadow: 0 12px 22px rgba(11, 31, 77, 0.18) !important;
+}
+
+.hero-outline-button {
+  border: 1px solid #c9d3e6 !important;
+  background: #fff !important;
+  color: #0b1f4d !important;
+  box-shadow: 0 10px 18px rgba(15, 27, 61, 0.04) !important;
+}
+
+.hero-primary-button:hover {
+  background: #071735 !important;
+  border-color: #071735 !important;
+}
+
+.hero-outline-button:hover {
+  border-color: #0b1f4d !important;
+  background: #f8fbff !important;
+  color: #0b1f4d !important;
+}
+
+@media (max-width: 760px) {
+  .page-hero-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    margin-bottom: 22px !important;
+  }
+
+  .page-hero-row h1 {
+    font-size: 34px !important;
+  }
+
+  .page-hero-actions {
+    width: 100% !important;
+  }
+
+  .hero-primary-button,
+  .hero-outline-button {
+    flex: 1 !important;
+  }
+}
+
+.main-bank-page {
+  padding-top: 30px !important;
+}
+
+.main-bank-page .page-hero-row {
+  margin-bottom: 24px !important;
+}
+
+
 </style>

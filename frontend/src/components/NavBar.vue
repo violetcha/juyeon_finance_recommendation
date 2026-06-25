@@ -1,38 +1,67 @@
 <template>
   <header class="navbar">
     <div class="nav-inner">
-      <RouterLink to="/" class="logo">
-        <span class="logo-icon">💰</span>
-        <span>FinBank</span>
+      <RouterLink
+        :to="{ name: 'home' }"
+        class="logo"
+        aria-label="주연 홈"
+        @click="closeMenu"
+      >
+        <img :src="juyeonLogo" alt="주연" class="logo-image" />
       </RouterLink>
 
-      <nav class="nav-menu">
-        <RouterLink to="/products">상품조회</RouterLink>
-        <RouterLink to="/recommend">예적금 추천</RouterLink>
-        <RouterLink to="/main-bank">주거래은행 찾기</RouterLink>
-        <RouterLink to="/exchange">환율 계산기</RouterLink>
-        <RouterLink to="/spot-assets">금·은 시세</RouterLink>
-        <RouterLink to="/community">커뮤니티</RouterLink>
-        
+      <button
+        type="button"
+        class="mobile-toggle"
+        :aria-expanded="isMenuOpen"
+        aria-label="메뉴 열기"
+        @click="isMenuOpen = !isMenuOpen"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+
+      <nav class="nav-menu" :class="{ open: isMenuOpen }" aria-label="주요 메뉴">
+        <RouterLink
+          v-for="link in navLinks"
+          :key="link.name"
+          :to="{ name: link.name }"
+          @click="handleNavClick($event, link)"
+        >
+          {{ link.label }}
+        </RouterLink>
       </nav>
 
-      <div class="nav-actions">
+      <div class="nav-actions" :class="{ open: isMenuOpen }">
         <template v-if="isLoggedIn">
-          <RouterLink to="/mypage" class="mypage-btn">
-            마이페이지
+          <RouterLink
+            :to="{ name: 'mypage' }"
+            class="nav-action-btn nav-action-btn--primary"
+            @click="closeMenu"
+          >
+            내 정보
           </RouterLink>
 
-          <button type="button" class="logout-btn" @click="handleLogout">
+          <button type="button" class="nav-action-btn" @click="handleLogout">
             로그아웃
           </button>
         </template>
 
         <template v-else>
-          <RouterLink to="/login" class="login-btn">
+          <RouterLink
+            :to="{ name: 'login' }"
+            class="nav-action-btn"
+            @click="closeMenu"
+          >
             로그인
           </RouterLink>
 
-          <RouterLink to="/signup" class="signup-btn">
+          <RouterLink
+            :to="{ name: 'signup' }"
+            class="nav-action-btn nav-action-btn--primary"
+            @click="closeMenu"
+          >
             회원가입
           </RouterLink>
         </template>
@@ -42,25 +71,96 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { logout } from '@/api/accounts'
+import { showAuthNotice } from '@/utils/authNotice'
+import juyeonLogo from '@/assets/branding/juyeon-logo.png'
 
 const router = useRouter()
 
+const isMenuOpen = ref(false)
 const isLoggedIn = ref(!!localStorage.getItem('token'))
 
-const checkLoginStatus = () => {
-  const token = localStorage.getItem('token')
-  isLoggedIn.value = !!token
+const navLinks = [
+  { name: 'products', label: '예적금' },
+  { name: 'main-bank', label: '주거래은행', requiresAuth: true },
+  { name: 'recommend', label: '맞춤추천', requiresAuth: true },
+  { name: 'exchange', label: '환율' },
+  { name: 'spot-assets', label: '금·은 시세' },
+  { name: 'community', label: '커뮤니티' },
+]
+
+const closeMenu = () => {
+  isMenuOpen.value = false
 }
 
-const handleLogout = () => {
-  localStorage.removeItem('token')
-  isLoggedIn.value = false
+const checkLoginStatus = () => {
+  isLoggedIn.value = !!localStorage.getItem('token')
+}
 
-  alert('로그아웃되었습니다.')
+const handleNavClick = (event, link) => {
+  if (link.requiresAuth && !isLoggedIn.value) {
+    event.preventDefault()
+    closeMenu()
 
-  router.push({ name: 'home' })
+    showAuthNotice('로그인 후 이용할 수 있습니다.')
+
+    const redirectTarget = router.resolve({ name: link.name }).fullPath
+
+    router.push({
+      name: 'login',
+      query: {
+        redirect: redirectTarget,
+      },
+    })
+
+    return
+  }
+
+  closeMenu()
+}
+
+const clearRecommendationStorage = () => {
+  const removeKeys = []
+
+  for (let i = 0; i < localStorage.length; i += 1) {
+    const key = localStorage.key(i)
+
+    if (
+      key &&
+      (
+        key.startsWith('productRecommendationState:') ||
+        key === 'productRecommendationState:last'
+      )
+    ) {
+      removeKeys.push(key)
+    }
+  }
+
+  removeKeys.forEach((key) => {
+    localStorage.removeItem(key)
+  })
+}
+
+const handleLogout = async () => {
+  clearRecommendationStorage()
+
+  try {
+    if (localStorage.getItem('token')) {
+      await logout()
+    }
+  } catch (error) {
+    console.error('로그아웃 API 호출 실패:', error)
+  } finally {
+    localStorage.removeItem('token')
+    isLoggedIn.value = false
+    closeMenu()
+
+    window.dispatchEvent(new Event('logout-success'))
+
+    router.push({ name: 'login' })
+  }
 }
 
 onMounted(() => {
@@ -68,122 +168,223 @@ onMounted(() => {
 
   window.addEventListener('storage', checkLoginStatus)
   window.addEventListener('login-success', checkLoginStatus)
+  window.addEventListener('logout-success', checkLoginStatus)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('storage', checkLoginStatus)
+  window.removeEventListener('login-success', checkLoginStatus)
+  window.removeEventListener('logout-success', checkLoginStatus)
 })
 </script>
 
 <style scoped>
 .navbar {
-  width: 100%;
-  border-bottom: 1px solid #d9d9d9;
-  background-color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: var(--header-height);
+  border-bottom: 1px solid rgba(227, 232, 242, 0.9);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(18px);
 }
 
 .nav-inner {
+  position: relative;
+  width: min(var(--container-width), calc(100% - 48px));
+  height: 100%;
+  margin: 0 auto;
   display: flex;
   align-items: center;
-  min-height: 64px;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 0 28px;
-  gap: 32px;
+  gap: 28px;
 }
 
 .logo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   flex-shrink: 0;
-  padding: 8px 12px;
-  border: 1px solid #bfbfbf;
-  color: #222;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 4px;
   text-decoration: none;
 }
 
-.logo-icon {
-  font-size: 18px;
+.logo-image {
+  display: block;
+  width: auto;
+  height: 42px;
+  max-width: 132px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(9, 38, 91, 0.08));
 }
 
 .nav-menu {
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: clamp(14px, 2.2vw, 34px);
-  flex: 1;
-  min-width: 0;
+  justify-content: center;
+  gap: clamp(16px, 2.7vw, 34px);
 }
 
 .nav-menu a {
-  color: #222;
-  font-size: 14px;
-  white-space: nowrap;
+  position: relative;
+  padding: 22px 0;
+  color: var(--color-text-muted);
+  font-size: 15px;
+  font-weight: 800;
   text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.16s ease;
 }
 
-.nav-menu a.router-link-active {
-  font-weight: 700;
+.nav-menu a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 13px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--color-primary);
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.16s ease;
+}
+
+.nav-menu a.router-link-active,
+.nav-menu a:hover {
+  color: var(--color-primary);
+}
+
+.nav-menu a.router-link-active::after,
+.nav-menu a:hover::after {
+  transform: scaleX(1);
 }
 
 .nav-actions {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
+  gap: 8px;
 }
 
-.login-btn,
-.signup-btn,
-.mypage-btn,
-.logout-btn {
-  padding: 9px 16px;
-  border: 1px solid #bfbfbf;
-  color: #222;
+.nav-action-btn {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 14px;
+  border: 1.5px solid #cfd9ea;
+  background: #fff;
+  color: #0f172a;
+  font-family: inherit;
   font-size: 14px;
-  white-space: nowrap;
+  font-weight: 800;
+  line-height: 1;
   text-decoration: none;
-  background-color: #fff;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.nav-action-btn:hover {
+  transform: translateY(-1px);
+  background: #f8fbff;
+  border-color: #b8c7e3;
+}
+
+.nav-action-btn--primary {
+  background: #2454d6;
+  color: #fff;
+  border-color: #2454d6;
+  box-shadow: 0 10px 22px rgba(36, 84, 214, 0.18);
+}
+
+.nav-action-btn--primary:hover {
+  background: #1f49bb;
+  border-color: #1f49bb;
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(36, 84, 214, 0.24);
+}
+
+.mobile-toggle {
+  display: none;
+  margin-left: auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--color-text);
   cursor: pointer;
 }
 
-.mypage-btn {
-  background-color: #333;
-  color: white;
-  border-color: #333;
+.mobile-toggle span {
+  display: block;
+  width: 18px;
+  height: 2px;
+  margin: 4px auto;
+  border-radius: 999px;
+  background: currentColor;
 }
 
-.logout-btn {
-  background-color: #fff;
-  color: #222;
-}
+@media (max-width: 980px) {
+  .navbar {
+    height: auto;
+    min-height: var(--header-height);
+  }
 
-@media (max-width: 900px) {
   .nav-inner {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 16px 20px;
-    gap: 14px;
+    position: relative;
+    min-height: var(--header-height);
+    flex-wrap: wrap;
+    width: min(100% - 28px, var(--container-width));
+    gap: 0;
+  }
+
+  .mobile-toggle {
+    display: inline-block;
+  }
+
+  .nav-menu,
+  .nav-actions {
+    display: none;
+    width: 100%;
+  }
+
+  .nav-menu.open,
+  .nav-actions.open {
+    display: flex;
   }
 
   .nav-menu {
-    flex-wrap: wrap;
-    gap: 12px 20px;
-  }
-
-  .nav-actions {
-    width: 100%;
-  }
-}
-
-@media (max-width: 520px) {
-  .nav-actions {
     flex-direction: column;
     align-items: stretch;
+    gap: 0;
+    padding: 10px 0;
   }
 
-  .login-btn,
-  .signup-btn,
-  .mypage-btn,
-  .logout-btn {
-    text-align: center;
+  .nav-menu a {
+    padding: 12px 0;
+  }
+
+  .nav-menu a::after {
+    display: none;
+  }
+
+  .nav-actions {
+    padding: 0 0 16px;
+    flex-wrap: wrap;
+  }
+
+  .nav-action-btn {
+    flex: 1;
+    min-width: 120px;
   }
 }
 </style>

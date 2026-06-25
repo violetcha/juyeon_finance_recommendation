@@ -1,62 +1,246 @@
 <template>
-  <div class="login-view">
-    <h1>로그인</h1>
+  <main class="auth-page">
+    <section class="auth-visual-panel">
+      <p class="eyebrow">SMART FINANCE START</p>
+      <h1>
+        주연과 함께<br>
+        <span>똑똑한 금융생활</span>을 시작하세요
+      </h1>
+      <p class="visual-description">
+        예적금 추천, 주거래은행 찾기, 환율·금은 시세, 금융 커뮤니티까지
+        한 계정으로 편하게 이용할 수 있어요.
+      </p>
 
-    <form class="login-form" @submit.prevent="handleLogin">
-      <div>
-        <label for="username">아이디</label>
-        <input
-          id="username"
-          v-model="username"
-          type="text"
-          placeholder="아이디를 입력하세요"
-        >
+      <div class="benefit-list">
+        <article>
+          <span class="benefit-icon mint">↗</span>
+          <div>
+            <strong>나에게 맞는 금융 추천</strong>
+            <p>프로필을 기반으로 예적금과 은행을 추천해드려요.</p>
+          </div>
+        </article>
+
+        <article>
+          <span class="benefit-icon purple">💬</span>
+          <div>
+            <strong>금융 커뮤니티 참여</strong>
+            <p>후기와 질문을 나누며 금융 정보를 함께 확인해요.</p>
+          </div>
+        </article>
+
+        <article>
+          <span class="benefit-icon blue">🔒</span>
+          <div>
+            <strong>안전하고 편리한 서비스</strong>
+            <p>로그인 후 관심상품과 저장 영상을 관리할 수 있어요.</p>
+          </div>
+        </article>
       </div>
 
-      <div>
-        <label for="password">비밀번호</label>
-        <input
-          id="password"
-          v-model="password"
-          type="password"
-          placeholder="비밀번호를 입력하세요"
-        >
+      <div class="auth-illustration" aria-hidden="true">
+        <div class="person-card">👨‍💻</div>
+        <div class="piggy-card">🐷</div>
+        <div class="chart-card">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <div class="coin-stack">₩</div>
       </div>
 
-      <button type="submit">로그인</button>
-    </form>
+      <div class="signup-benefit-card">
+        <span>🎁</span>
+        <div>
+          <strong>가입만 해도 금융생활 시작 준비 완료</strong>
+          <p>마이페이지 프로필을 채우면 추천 정확도가 더 좋아집니다.</p>
+        </div>
+      </div>
+    </section>
 
-    <p class="signup-link">
-      아직 계정이 없으신가요?
-      <RouterLink :to="{ name: 'signup' }">
-        회원가입
-      </RouterLink>
-    </p>
+    <section class="auth-card">
+      <div class="auth-tabs">
+        <button type="button" class="active">
+          로그인
+        </button>
+        <RouterLink :to="{ name: 'signup' }">
+          회원가입
+        </RouterLink>
+      </div>
 
-    <p v-if="errorMessage" class="error-message">
-      {{ errorMessage }}
-    </p>
-  </div>
+      <div class="auth-card-body">
+        <div class="form-panel">
+          <div class="form-heading">
+            <p class="eyebrow">LOGIN</p>
+            <h2>로그인</h2>
+            <p>아이디와 비밀번호를 입력해 주세요.</p>
+          </div>
+
+          <p v-if="successMessage" class="success-message">
+            {{ successMessage }}
+          </p>
+
+          <form class="login-form" @submit.prevent="handleLogin">
+            <div class="form-group">
+              <label for="username">아이디</label>
+              <input
+                id="username"
+                v-model.trim="username"
+                type="text"
+                placeholder="아이디를 입력하세요"
+                autocomplete="username"
+              >
+            </div>
+
+            <div class="form-group">
+              <label for="password">비밀번호</label>
+              <div class="password-field">
+                <input
+                  id="password"
+                  v-model="password"
+                  :type="showPassword ? 'text' : 'password'"
+                  placeholder="비밀번호를 입력하세요"
+                  autocomplete="current-password"
+                >
+                <button
+                  type="button"
+                  :aria-label="showPassword ? '비밀번호 숨기기' : '비밀번호 보기'"
+                  @click="showPassword = !showPassword"
+                >
+                  {{ showPassword ? '숨김' : '보기' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="form-help-row">
+              <label class="save-id">
+                <input v-model="rememberId" type="checkbox">
+                아이디 저장
+              </label>
+
+              <div class="account-help-links">
+                <RouterLink :to="{ name: 'find-username' }">
+                  아이디 찾기
+                </RouterLink>
+                <span>|</span>
+                <RouterLink :to="{ name: 'reset-password' }">
+                  비밀번호 재설정
+                </RouterLink>
+              </div>
+            </div>
+
+            <button type="submit" class="submit-button" :disabled="loading">
+              {{ loading ? '로그인 중...' : '로그인' }}
+            </button>
+          </form>
+
+          <p v-if="errorMessage" class="error-message">
+            {{ errorMessage }}
+          </p>
+
+          <div class="auth-notice">
+            <span>🔐</span>
+            <div>
+              <strong>안전한 금융생활을 위해</strong>
+              <p>공용 PC에서는 로그인 후 반드시 로그아웃해주세요.</p>
+            </div>
+          </div>
+        </div>
+
+        <aside class="signup-guide-panel">
+          <div class="guide-heading">
+            <h3>간편하게 회원가입하고<br>더 많은 서비스를 경험하세요.</h3>
+            <p>가입 후 금융 프로필을 입력하면 실제 데이터 기반 추천을 받을 수 있습니다.</p>
+          </div>
+
+          <ul class="profile-benefits">
+            <li>
+              <span>🎂</span>
+              <div>
+                <strong>나이·성별</strong>
+                <p>가입대상과 전용 상품 조건을 추천에 반영합니다.</p>
+              </div>
+            </li>
+            <li>
+              <span>💼</span>
+              <div>
+                <strong>월 소득 구간</strong>
+                <p>저축 가능성과 상품 조건을 함께 봅니다.</p>
+              </div>
+            </li>
+            <li>
+              <span>💰</span>
+              <div>
+                <strong>월 저축 가능 금액</strong>
+                <p>목표 금액에 맞는 상품을 추천합니다.</p>
+              </div>
+            </li>
+            <li>
+              <span>🏦</span>
+              <div>
+                <strong>주거래은행</strong>
+                <p>선호 은행과 추천 상품을 연결합니다.</p>
+              </div>
+            </li>
+            <li>
+              <span>📍</span>
+              <div>
+                <strong>거주 지역</strong>
+                <p>주변 은행 접근성 비교에 활용됩니다.</p>
+              </div>
+            </li>
+          </ul>
+
+          <RouterLink :to="{ name: 'signup' }" class="outline-cta">
+            회원가입 시작하기
+          </RouterLink>
+        </aside>
+      </div>
+    </section>
+  </main>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { login } from '@/api/accounts'
 
 const router = useRouter()
+const route = useRoute()
 
 const username = ref('')
 const password = ref('')
 const errorMessage = ref('')
+const successMessage = ref('')
+const loading = ref(false)
+const showPassword = ref(false)
+const rememberId = ref(false)
+
+const getErrorMessage = (error) => {
+  if (error.response?.data?.message) {
+    return error.response.data.message
+  }
+
+  if (error.response?.status === 400) {
+    return '아이디 또는 비밀번호가 올바르지 않습니다.'
+  }
+
+  if (error.response?.status === 401) {
+    return '로그인이 필요한 요청입니다.'
+  }
+
+  return '로그인 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.'
+}
 
 const handleLogin = async () => {
   errorMessage.value = ''
+  successMessage.value = ''
 
   if (!username.value || !password.value) {
     errorMessage.value = '아이디와 비밀번호를 입력해주세요.'
     return
   }
+
+  loading.value = true
 
   try {
     const response = await login({
@@ -64,71 +248,752 @@ const handleLogin = async () => {
       password: password.value,
     })
 
-    console.log('로그인 응답:', response.data)
-
     const token = response.data.token
 
     if (!token) {
-      errorMessage.value = '로그인 응답에서 토큰을 찾을 수 없습니다.'
+      errorMessage.value = '로그인 처리 중 문제가 발생했습니다.'
       return
     }
 
-    // 1. 토큰 저장
     localStorage.setItem('token', token)
 
-    // 2. Navbar에게 로그인 상태가 바뀌었다고 알려주기
+    if (rememberId.value) {
+      localStorage.setItem('savedUsername', username.value)
+    } else {
+      localStorage.removeItem('savedUsername')
+    }
+
     window.dispatchEvent(new Event('login-success'))
 
-    alert('로그인되었습니다.')
+    const redirectTarget = typeof route.query.redirect === 'string'
+      ? route.query.redirect
+      : null
 
-    // 3. 홈으로 이동
-    router.push({ name: 'home' })
+    router.push(redirectTarget || { name: 'home' })
   } catch (error) {
     console.error(error)
-
-    if (error.response?.data?.message) {
-      errorMessage.value = error.response.data.message
-    } else {
-      errorMessage.value = '로그인에 실패했습니다. 아이디와 비밀번호를 확인해주세요.'
-    }
+    errorMessage.value = getErrorMessage(error)
+  } finally {
+    loading.value = false
   }
 }
+
+onMounted(() => {
+  const savedUsername = localStorage.getItem('savedUsername')
+
+  if (savedUsername) {
+    username.value = savedUsername
+    rememberId.value = true
+  }
+
+  if (route.query.signup === 'success') {
+    successMessage.value = '회원가입이 완료되었습니다. 로그인해주세요.'
+  }
+})
 </script>
 
 <style scoped>
-.login-view {
-  padding: 24px;
+.auth-page {
+  width: min(var(--container-width), calc(100% - 48px));
+  margin: 0 auto;
+  padding: 64px 0 70px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.92fr) minmax(620px, 1.08fr);
+  gap: 46px;
+  align-items: center;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+
+.auth-visual-panel h1 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: clamp(40px, 5vw, 58px);
+  line-height: 1.16;
+  font-weight: 950;
+  letter-spacing: -0.065em;
+}
+
+.auth-visual-panel h1 span {
+  color: var(--color-primary);
+}
+
+.visual-description {
+  max-width: 460px;
+  margin: 24px 0 0;
+  color: var(--color-text-muted);
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.benefit-list {
+  display: grid;
+  gap: 22px;
+  margin-top: 34px;
+}
+
+.benefit-list article,
+.signup-benefit-card,
+.profile-benefits li,
+.auth-notice {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.benefit-icon,
+.profile-benefits span,
+.auth-notice span,
+.signup-benefit-card > span {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  flex-shrink: 0;
+  font-weight: 950;
+}
+
+.benefit-icon.mint {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.benefit-icon.purple {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.benefit-icon.blue {
+  background: #eaf0ff;
+  color: var(--color-primary);
+}
+
+.benefit-list strong,
+.signup-benefit-card strong,
+.profile-benefits strong,
+.auth-notice strong {
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 950;
+}
+
+.benefit-list p,
+.signup-benefit-card p,
+.profile-benefits p,
+.auth-notice p {
+  margin: 6px 0 0;
+  color: var(--color-text-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.auth-illustration {
+  position: relative;
+  height: 220px;
+  margin-top: 24px;
+}
+
+.person-card,
+.piggy-card,
+.chart-card,
+.coin-stack {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow-soft);
+}
+
+.person-card {
+  left: 180px;
+  top: 30px;
+  width: 170px;
+  height: 150px;
+  border-radius: 42px;
+  background: #eff6ff;
+  font-size: 82px;
+}
+
+.piggy-card {
+  left: 104px;
+  bottom: 18px;
+  width: 86px;
+  height: 70px;
+  border-radius: 28px;
+  background: var(--color-accent-soft);
+  font-size: 42px;
+}
+
+.chart-card {
+  right: 112px;
+  top: 10px;
+  width: 88px;
+  height: 72px;
+  grid-template-columns: repeat(3, 12px);
+  gap: 8px;
+  align-items: end;
+  padding: 14px;
+  border-radius: 22px;
+}
+
+.chart-card span {
+  display: block;
+  width: 12px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #6875ff, var(--color-primary));
+}
+
+.chart-card span:nth-child(1) { height: 26px; }
+.chart-card span:nth-child(2) { height: 42px; }
+.chart-card span:nth-child(3) { height: 56px; background: linear-gradient(180deg, #3ee5ca, var(--color-accent)); }
+
+.coin-stack {
+  right: 64px;
+  bottom: 30px;
+  width: 70px;
+  height: 70px;
+  border-radius: 26px;
+  background: #fff7e5;
+  color: #d97706;
+  font-size: 34px;
+  font-weight: 950;
+}
+
+.signup-benefit-card {
+  max-width: 500px;
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: var(--shadow-soft);
+}
+
+.signup-benefit-card > span {
+  background: #eff6ff;
+}
+
+.auth-card {
+  border: 1px solid var(--color-border);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.auth-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-soft);
+}
+
+.auth-tabs button,
+.auth-tabs a {
+  display: grid;
+  place-items: center;
+  min-height: 66px;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 18px;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.auth-tabs .active {
+  background: #fff;
+  color: var(--color-primary);
+  box-shadow: inset 0 -3px 0 var(--color-primary);
+}
+
+.auth-card-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 0.92fr;
+  gap: 0;
+}
+
+.form-panel,
+.signup-guide-panel {
+  padding: 36px 34px;
+}
+
+.form-panel {
+  border-right: 1px solid var(--color-border);
+}
+
+.form-heading h2 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 28px;
+  font-weight: 950;
+}
+
+.form-heading p,
+.guide-heading p {
+  margin: 8px 0 0;
+  color: var(--color-text-muted);
+  line-height: 1.55;
 }
 
 .login-form {
-  max-width: 360px;
+  display: grid;
+  gap: 18px;
+  margin-top: 26px;
 }
 
-.login-form div {
-  margin-bottom: 12px;
-}
-
-.login-form label {
+.form-group label {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 950;
 }
 
-.login-form input {
+.form-group input,
+.password-field input {
   width: 100%;
-  padding: 8px;
+  min-height: 48px;
   box-sizing: border-box;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--color-text);
+  outline: none;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 800;
 }
 
-.login-form button {
-  padding: 8px 16px;
+.form-group input:focus,
+.password-field input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(17, 22, 184, 0.08);
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 64px;
+}
+
+.password-field button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 950;
+  transform: translateY(-50%);
   cursor: pointer;
 }
 
-.signup-link {
-  margin-top: 16px;
+.form-help-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.save-id {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  color: var(--color-text-muted);
+  font-weight: 800;
+}
+
+.save-id input {
+  accent-color: var(--color-primary);
+}
+
+.account-help-links {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.account-help-links a {
+  color: var(--color-primary);
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.account-help-links span {
+  color: var(--color-border-strong);
+}
+
+.submit-button {
+  min-height: 50px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 950;
+  cursor: pointer;
+  box-shadow: 0 16px 28px rgba(17, 22, 184, 0.22);
+}
+
+.submit-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-message,
+.success-message {
+  margin: 16px 0 0;
+  padding: 13px 14px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .error-message {
-  margin-top: 16px;
+  border: 1px solid #fecaca;
+  background: #fff5f5;
+  color: var(--color-danger);
 }
+
+.success-message {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.auth-notice {
+  margin-top: 26px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+}
+
+.auth-notice span {
+  width: 38px;
+  height: 38px;
+  background: #eaf0ff;
+}
+
+.signup-guide-panel {
+  background: linear-gradient(180deg, #fff 0%, #f8fbff 100%);
+}
+
+.guide-heading h3 {
+  margin: 0;
+  color: var(--color-text);
+  font-size: 21px;
+  line-height: 1.38;
+  font-weight: 950;
+}
+
+.profile-benefits {
+  display: grid;
+  gap: 18px;
+  margin: 26px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-benefits span {
+  width: 44px;
+  height: 44px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+}
+
+.outline-cta {
+  display: grid;
+  place-items: center;
+  min-height: 48px;
+  border: 1px solid var(--color-primary);
+  border-radius: 14px;
+  color: var(--color-primary);
+  background: #fff;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+@media (max-width: 1120px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-visual-panel {
+    display: none;
+  }
+
+  .auth-card-body {
+    grid-template-columns: 1fr;
+  }
+
+  .form-panel {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+}
+
+@media (max-width: 680px) {
+  .auth-page {
+    width: min(100% - 28px, var(--container-width));
+    padding: 28px 0 44px;
+  }
+
+  .form-panel,
+  .signup-guide-panel {
+    padding: 26px 22px;
+  }
+
+  .form-help-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+/* === 주연: 로그인 페이지 정리 - 안전 수정본 === */
+.auth-page {
+  padding: 34px 0 64px !important;
+  grid-template-columns: minmax(420px, 0.9fr) minmax(620px, 1.1fr) !important;
+  gap: 38px !important;
+}
+
+.auth-visual-panel {
+  min-height: 600px;
+  padding: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: var(--shadow-soft);
+}
+
+.auth-visual-panel > .eyebrow,
+.form-heading > .eyebrow,
+.visual-description,
+.auth-illustration,
+.signup-benefit-card,
+.auth-notice,
+.form-heading > p,
+.guide-heading > p {
+  display: none !important;
+}
+
+.auth-visual-panel h1 {
+  font-size: clamp(38px, 4.8vw, 56px) !important;
+  line-height: 1.15 !important;
+}
+
+.benefit-list {
+  margin-top: 38px !important;
+  gap: 24px !important;
+}
+
+.auth-card {
+  border-radius: 26px !important;
+}
+
+.auth-tabs button,
+.auth-tabs a {
+  min-height: 64px !important;
+}
+
+.form-panel,
+.signup-guide-panel {
+  padding: 34px 34px !important;
+}
+
+.form-heading h2 {
+  font-size: 32px !important;
+}
+
+.login-form {
+  margin-top: 28px !important;
+}
+
+.signup-guide-panel {
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.signup-guide-panel .guide-heading h3 {
+  margin-top: 0;
+  font-size: 24px;
+  line-height: 1.35;
+  letter-spacing: -0.04em;
+}
+
+.profile-benefits {
+  margin-top: 28px;
+}
+
+.profile-benefits li p {
+  margin-top: 4px !important;
+}
+
+.outline-cta {
+  margin-top: 22px !important;
+}
+
+@media (max-width: 1120px) {
+  .auth-page {
+    grid-template-columns: 1fr !important;
+  }
+
+  .auth-visual-panel {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .auth-page {
+    width: min(100% - 28px, var(--container-width)) !important;
+    padding-top: 20px !important;
+  }
+
+  .auth-card-body {
+    grid-template-columns: 1fr !important;
+  }
+
+  .form-panel {
+    border-right: 0 !important;
+  }
+}
+
+
+/* === 주연: 로그인 페이지 최종 레이아웃 재조정 === */
+.auth-page {
+  width: min(1280px, calc(100% - 48px)) !important;
+  padding: 28px 0 64px !important;
+  grid-template-columns: 520px minmax(560px, 640px) !important;
+  gap: 42px !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+}
+
+.auth-visual-panel {
+  width: 100% !important;
+  min-height: 620px !important;
+  box-sizing: border-box !important;
+}
+
+.auth-visual-panel h1 {
+  font-size: 48px !important;
+  line-height: 1.18 !important;
+  letter-spacing: -0.06em !important;
+  word-break: keep-all !important;
+}
+
+.benefit-list {
+  margin-top: 42px !important;
+}
+
+.auth-card {
+  min-height: 620px !important;
+}
+
+.auth-card-body {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+}
+
+.form-panel {
+  border-right: 0 !important;
+  padding: 42px 46px !important;
+}
+
+.signup-guide-panel {
+  display: none !important;
+}
+
+.form-heading h2 {
+  font-size: 34px !important;
+}
+
+.login-form {
+  max-width: 420px !important;
+}
+
+.form-help-row {
+  max-width: 420px !important;
+}
+
+.submit-button {
+  max-width: 420px !important;
+}
+
+@media (max-width: 1120px) {
+  .auth-page {
+    grid-template-columns: 1fr !important;
+  }
+
+  .auth-visual-panel,
+  .auth-card {
+    min-height: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .auth-page {
+    width: min(100% - 28px, var(--container-width)) !important;
+    padding-top: 18px !important;
+  }
+
+  .auth-visual-panel h1 {
+    font-size: 40px !important;
+  }
+
+  .form-panel {
+    padding: 28px 24px !important;
+  }
+}
+
+
+/* === 주연: 로그인 폼 중앙 정렬 === */
+.auth-card-body {
+  min-height: 540px !important;
+}
+
+.form-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  border-right: 0 !important;
+}
+
+.form-heading,
+.login-form,
+.success-message,
+.error-message {
+  width: min(100%, 430px) !important;
+}
+
+.form-heading {
+  text-align: left !important;
+}
+
+.login-form {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.form-help-row {
+  width: min(100%, 430px) !important;
+}
+
+.submit-button {
+  width: min(100%, 430px) !important;
+  max-width: 430px !important;
+}
+
 </style>

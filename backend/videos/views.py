@@ -16,7 +16,7 @@ YOUTUBE_BASE_URL = 'https://www.googleapis.com/youtube/v3'
 @permission_classes([AllowAny])
 def youtube_search(request):
     keyword = request.GET.get('q', '주거래은행 선택 기준')
-    max_results = request.GET.get('max_results', 3)
+    max_results = int(request.GET.get('max_results', 3))
 
     if not settings.YOUTUBE_API_KEY:
         return Response(
@@ -25,51 +25,114 @@ def youtube_search(request):
         )
 
     try:
-        response = requests.get(
+        # 1차: 검색 결과는 임베드 가능한 영상 위주로 요청합니다.
+        search_response = requests.get(
             f'{YOUTUBE_BASE_URL}/search',
             params={
                 'key': settings.YOUTUBE_API_KEY,
                 'part': 'snippet',
                 'q': keyword,
                 'type': 'video',
-                'maxResults': max_results,
+                'videoEmbeddable': 'true',
+                'maxResults': min(max_results * 3, 15),
                 'order': 'relevance',
+                'regionCode': 'KR',
+                'relevanceLanguage': 'ko',
             },
             timeout=5,
         )
-        response.raise_for_status()
-    except requests.RequestException:
+
+        if search_response.status_code != 200:
+            try:
+                youtube_error = search_response.json()
+            except ValueError:
+                youtube_error = search_response.text
+
+            return Response(
+                {
+                    'message': 'YouTube API 요청 중 오류가 발생했습니다.',
+                    'youtube_status_code': search_response.status_code,
+                    'youtube_error': youtube_error,
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        search_items = search_response.json().get('items', [])
+        video_ids = [
+            item.get('id', {}).get('videoId')
+            for item in search_items
+            if item.get('id', {}).get('videoId')
+        ]
+
+        if not video_ids:
+            return Response([])
+
+        # 2차: 실제 임베드 가능 상태(status.embeddable)를 다시 확인합니다.
+        detail_response = requests.get(
+            f'{YOUTUBE_BASE_URL}/videos',
+            params={
+                'key': settings.YOUTUBE_API_KEY,
+                'part': 'snippet,status',
+                'id': ','.join(video_ids),
+                'maxResults': min(len(video_ids), 15),
+            },
+            timeout=5,
+        )
+
+        if detail_response.status_code != 200:
+            try:
+                youtube_error = detail_response.json()
+            except ValueError:
+                youtube_error = detail_response.text
+
+            return Response(
+                {
+                    'message': 'YouTube 영상 상세 요청 중 오류가 발생했습니다.',
+                    'youtube_status_code': detail_response.status_code,
+                    'youtube_error': youtube_error,
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    except requests.RequestException as error:
         return Response(
-            {'message': 'YouTube API 요청 중 오류가 발생했습니다.'},
+            {
+                'message': 'YouTube API 요청 중 네트워크 오류가 발생했습니다.',
+                'error': str(error),
+            },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-    items = response.json().get('items', [])
-
     videos = []
 
-    for item in items:
+    for item in detail_response.json().get('items', []):
+        if not item.get('status', {}).get('embeddable', False):
+            continue
+
         snippet = item.get('snippet', {})
         thumbnails = snippet.get('thumbnails', {})
-
-        video_id = item.get('id', {}).get('videoId')
+        video_id = item.get('id')
 
         if not video_id:
             continue
 
         videos.append({
-            'id': video_id,
+            'video_id': video_id,
             'title': snippet.get('title', ''),
             'description': snippet.get('description', ''),
-            'channelTitle': snippet.get('channelTitle', ''),
-            'channelId': snippet.get('channelId', ''),
-            'publishedAt': snippet.get('publishedAt'),
-            'thumbnail': (
+            'channel_title': snippet.get('channelTitle', ''),
+            'channel_id': snippet.get('channelId', ''),
+            'published_at': snippet.get('publishedAt'),
+            'thumbnail_url': (
                 thumbnails.get('medium', {}).get('url')
+                or thumbnails.get('high', {}).get('url')
                 or thumbnails.get('default', {}).get('url')
                 or ''
             ),
         })
+
+        if len(videos) >= max_results:
+            break
 
     return Response(videos)
 
@@ -93,10 +156,28 @@ def youtube_detail(request, video_id):
             },
             timeout=5,
         )
-        response.raise_for_status()
-    except requests.RequestException:
+
+        if response.status_code != 200:
+            try:
+                youtube_error = response.json()
+            except ValueError:
+                youtube_error = response.text
+
+            return Response(
+                {
+                    'message': 'YouTube API 요청 중 오류가 발생했습니다.',
+                    'youtube_status_code': response.status_code,
+                    'youtube_error': youtube_error,
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    except requests.RequestException as error:
         return Response(
-            {'message': 'YouTube API 요청 중 오류가 발생했습니다.'},
+            {
+                'message': 'YouTube API 요청 중 네트워크 오류가 발생했습니다.',
+                'error': str(error),
+            },
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
@@ -114,18 +195,18 @@ def youtube_detail(request, video_id):
     thumbnails = snippet.get('thumbnails', {})
 
     video = {
-        'id': item.get('id'),
+        'video_id': item.get('id'),
         'title': snippet.get('title', ''),
         'description': snippet.get('description', ''),
-        'channelTitle': snippet.get('channelTitle', ''),
-        'channelId': snippet.get('channelId', ''),
-        'publishedAt': snippet.get('publishedAt'),
-        'thumbnail': (
+        'channel_title': snippet.get('channelTitle', ''),
+        'channel_id': snippet.get('channelId', ''),
+        'published_at': snippet.get('publishedAt'),
+        'thumbnail_url': (
             thumbnails.get('medium', {}).get('url')
             or thumbnails.get('default', {}).get('url')
             or ''
         ),
-        'viewCount': statistics.get('viewCount'),
+        'view_count': statistics.get('viewCount'),
     }
 
     return Response(video)

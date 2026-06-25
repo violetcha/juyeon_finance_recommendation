@@ -1,8 +1,9 @@
 <template>
-  <div class="app">
+  <div class="app-shell">
     <NavBar />
+    <AuthNotice />
 
-    <main class="main">
+    <main class="app-main">
       <RouterView />
     </main>
 
@@ -13,19 +14,24 @@
 <script setup>
 import { RouterView } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
+import AuthNotice from '@/components/AuthNotice.vue'
 import ChatbotFloatingButton from '@/components/ChatbotFloatingButton.vue'
 </script>
 
 <style scoped>
-.app {
+.app-shell {
   min-height: 100vh;
-  background-color: #ffffff;
-  color: #222;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 12% -10%, rgba(31, 79, 216, 0.08), transparent 28%),
+    radial-gradient(circle at 88% 4%, rgba(16, 185, 129, 0.08), transparent 30%),
+    var(--color-bg);
+  color: var(--color-text);
 }
 
-.main {
+.app-main {
+  flex: 1;
   width: 100%;
-  max-width: 1440px;
-  margin: 0 auto;
 }
 </style>
