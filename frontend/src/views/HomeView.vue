@@ -94,10 +94,6 @@
             ></button>
           </div>
         </section>
-
-        <p v-if="loginRequiredMessage" class="auth-required-message">
-          {{ loginRequiredMessage }}
-        </p>
       </div>
 
     </section>
@@ -248,13 +244,11 @@ import { getPosts } from '@/api/community'
 import { getExchangeRates } from '@/api/exchanges'
 import BankLogo from '@/components/BankLogo.vue'
 import { getBankDisplayName } from '@/constants/bankLogoMap'
+import { showAuthNotice } from '@/utils/authNotice'
 import heroCharacterImage from '@/assets/juyeon-character.png'
 
 
 const router = useRouter()
-const loginRequiredMessage = ref('')
-let loginWarningTimer = null
-
 const productLoading = ref(false)
 const productError = ref('')
 const depositProducts = ref([])
@@ -404,13 +398,28 @@ const selectFeatureSlide = (index) => {
   setFeatureSlide(index, direction)
 }
 
+const moveToLogin = (routeName) => {
+  showAuthNotice('로그인 후 이용할 수 있습니다.')
+
+  const redirectTarget = routeName
+    ? router.resolve({ name: routeName }).fullPath
+    : '/'
+
+  router.push({
+    name: 'login',
+    query: {
+      redirect: redirectTarget,
+    },
+  })
+}
+
 const moveToFeatureRoute = (routeName, requiresAuth = false) => {
   if (!routeName) {
     return
   }
 
   if (requiresAuth && !localStorage.getItem('token')) {
-    showLoginRequiredMessage()
+    moveToLogin(routeName)
     return
   }
 
@@ -427,22 +436,9 @@ const goFeatureSecondary = () => {
   moveToFeatureRoute(slide.secondaryRouteName, slide.secondaryRequiresAuth)
 }
 
-const showLoginRequiredMessage = () => {
-  loginRequiredMessage.value = '로그인 후 이용할 수 있습니다.'
-
-  if (loginWarningTimer) {
-    window.clearTimeout(loginWarningTimer)
-  }
-
-  loginWarningTimer = window.setTimeout(() => {
-    loginRequiredMessage.value = ''
-    loginWarningTimer = null
-  }, 2200)
-}
-
 const goProtectedPage = (routeName) => {
   if (!localStorage.getItem('token')) {
-    showLoginRequiredMessage()
+    moveToLogin(routeName)
     return
   }
 
@@ -747,10 +743,6 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopFeatureSlider()
-
-  if (loginWarningTimer) {
-    window.clearTimeout(loginWarningTimer)
-  }
 })
 </script>
 
@@ -1555,20 +1547,6 @@ onBeforeUnmount(() => {
   font-weight: 800;
 }
 
-
-.auth-required-message {
-  display: inline-flex;
-  align-items: center;
-  min-height: 40px;
-  margin: 16px 0 0;
-  padding: 0 14px;
-  border: 1px solid #fecaca;
-  border-radius: 14px;
-  background: #fff5f5;
-  color: var(--color-danger);
-  font-size: 14px;
-  font-weight: 950;
-}
 
 button.btn-primary,
 button.btn-secondary {

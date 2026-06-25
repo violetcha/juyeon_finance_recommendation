@@ -47,10 +47,6 @@
           </RouterLink>
         </template>
       </div>
-
-      <p v-if="navWarning" class="nav-warning">
-        {{ navWarning }}
-      </p>
     </div>
   </header>
 </template>
@@ -60,13 +56,11 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { logout } from '@/api/accounts'
 import juyeonLogo from '@/assets/branding/juyeon-logo.png'
+import { showAuthNotice } from '@/utils/authNotice'
 
 const router = useRouter()
 const isMenuOpen = ref(false)
 const isLoggedIn = ref(!!localStorage.getItem('token'))
-const navWarning = ref('')
-let warningTimer = null
-
 const navLinks = [
   { name: 'products', label: '예적금' },
   { name: 'main-bank', label: '주거래은행', requiresAuth: true },
@@ -84,24 +78,21 @@ const checkLoginStatus = () => {
   isLoggedIn.value = !!localStorage.getItem('token')
 }
 
-const showNavWarning = (message = '로그인 후 이용할 수 있습니다.') => {
-  navWarning.value = message
-
-  if (warningTimer) {
-    window.clearTimeout(warningTimer)
-  }
-
-  warningTimer = window.setTimeout(() => {
-    navWarning.value = ''
-    warningTimer = null
-  }, 2200)
-}
 
 const handleNavClick = (event, link) => {
   if (link.requiresAuth && !isLoggedIn.value) {
     event.preventDefault()
     closeMenu()
-    showNavWarning('로그인 후 이용할 수 있습니다.')
+    showAuthNotice('로그인 후 이용할 수 있습니다.')
+
+    const redirectTarget = router.resolve({ name: link.name }).fullPath
+
+    router.push({
+      name: 'login',
+      query: {
+        redirect: redirectTarget,
+      },
+    })
     return
   }
 
@@ -159,10 +150,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('storage', checkLoginStatus)
   window.removeEventListener('login-success', checkLoginStatus)
   window.removeEventListener('logout-success', checkLoginStatus)
-
-  if (warningTimer) {
-    window.clearTimeout(warningTimer)
-  }
 })
 </script>
 
@@ -351,22 +338,6 @@ onBeforeUnmount(() => {
     padding: 0 0 16px;
     flex-wrap: wrap;
   }
-}
-
-.nav-warning {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 70;
-  margin: 0;
-  padding: 10px 14px;
-  border: 1px solid #fecaca;
-  border-radius: 14px;
-  background: #fff5f5;
-  color: var(--color-danger);
-  font-size: 13px;
-  font-weight: 950;
-  box-shadow: 0 12px 24px rgba(220, 38, 38, 0.12);
 }
 
 </style>

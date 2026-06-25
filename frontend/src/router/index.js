@@ -13,6 +13,7 @@ import SignupView from '@/views/SignupView.vue'
 import MainBankView from '@/views/MainBankView.vue'
 import FindUsernameView from '@/views/FindUsernameView.vue'
 import ResetPasswordView from '@/views/ResetPasswordView.vue'
+import { showAuthNotice } from '@/utils/authNotice'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -98,7 +99,7 @@ router.beforeEach((to) => {
   const isLoggedIn = !!localStorage.getItem('token')
 
   if (to.meta.requiresAuth && !isLoggedIn) {
-    alert('로그인 후 이용할 수 있습니다.')
+    showAuthNotice('로그인 후 이용할 수 있습니다.')
     return {
       name: 'login',
       query: {
