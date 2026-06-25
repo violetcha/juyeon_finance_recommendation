@@ -1,6 +1,7 @@
 <template>
   <div class="app-shell">
     <NavBar />
+    <AuthNotice />
 
     <main class="app-main">
       <RouterView />
@@ -13,6 +14,7 @@
 <script setup>
 import { RouterView } from 'vue-router'
 import NavBar from '@/components/NavBar.vue'
+import AuthNotice from '@/components/AuthNotice.vue'
 import ChatbotFloatingButton from '@/components/ChatbotFloatingButton.vue'
 </script>
 

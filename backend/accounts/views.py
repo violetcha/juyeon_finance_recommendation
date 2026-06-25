@@ -43,6 +43,57 @@ def get_first_error_message(errors):
 
     return '입력값을 확인해주세요.'
 
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def check_username(request):
+    username = request.query_params.get('username', '').strip()
+
+    if not username:
+        return Response(
+            {
+                'available': False,
+                'message': '아이디를 입력해주세요.',
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    is_exists = User.objects.filter(username=username).exists()
+
+    return Response(
+        {
+            'available': not is_exists,
+            'message': '사용 가능한 아이디입니다.' if not is_exists else '이미 사용 중인 아이디입니다.',
+        },
+        status=status.HTTP_200_OK
+    )
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def check_email(request):
+    email = request.query_params.get('email', '').strip()
+
+    if not email:
+        return Response(
+            {
+                'available': False,
+                'message': '이메일을 입력해주세요.',
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    is_exists = User.objects.filter(email__iexact=email).exists()
+
+    return Response(
+        {
+            'available': not is_exists,
+            'message': '사용 가능한 이메일입니다.' if not is_exists else '이미 사용 중인 이메일입니다.',
+        },
+        status=status.HTTP_200_OK
+    )
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def signup(request):
@@ -50,9 +101,12 @@ def signup(request):
 
     if serializer.is_valid():
         user = serializer.save()
+        token, created = Token.objects.get_or_create(user=user)
+
         return Response(
             {
                 'message': '회원가입이 완료되었습니다.',
+                'token': token.key,
                 'user': UserSerializer(
                     user,
                     context={'request': request}
@@ -106,6 +160,7 @@ def login_user(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_user(request):
+    Token.objects.filter(user=request.user).delete()
     logout(request)
     return Response({'message': '로그아웃되었습니다.'})
 
@@ -317,6 +372,7 @@ def profile_options(request):
     ]
 
     bank_options = [
+        {'value': '없음', 'label': '없음'},
         {'value': '국민은행', 'label': '국민은행'},
         {'value': '신한은행', 'label': '신한은행'},
         {'value': '우리은행', 'label': '우리은행'},

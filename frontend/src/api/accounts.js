@@ -10,6 +10,11 @@ export const login = (loginData) => {
   return api.post('/accounts/login/', loginData)
 }
 
+// 로그아웃
+export const logout = () => {
+  return api.post('/accounts/logout/')
+}
+
 // 아이디 찾기
 export const findUsername = (findData) => {
   return api.post('/accounts/find-username/', findData)

@@ -1,7 +1,7 @@
 <template>
   <main class="signup-page">
     <section class="signup-visual-panel">
-      <p class="eyebrow">JOIN JUYEON</p>
+      <p class="eyebrow">JOIN FIRST FINANCE</p>
       <h1>
         간단하게 가입하고<br>
         <span>맞춤 금융 추천</span>을 받아보세요
@@ -90,29 +90,75 @@
 
               <div class="form-grid two">
                 <div class="form-group">
-                  <label for="username">아이디</label>
-                  <input
-                    id="username"
-                    v-model.trim="form.username"
-                    type="text"
-                    placeholder="아이디를 입력하세요"
-                    autocomplete="username"
-                  >
+                  <div class="label-row">
+                    <label for="username">아이디</label>
+                    <span
+                      v-if="usernameCheck.message"
+                      :class="['inline-check-message', usernameCheck.available ? 'success' : 'error']"
+                    >
+                      {{ usernameCheck.message }}
+                    </span>
+                  </div>
+
+                  <div class="input-with-button">
+                    <input
+                      id="username"
+                      v-model.trim="form.username"
+                      type="text"
+                      placeholder="아이디를 입력하세요"
+                      autocomplete="username"
+                      @input="resetUsernameCheck"
+                    >
+                    <button
+                      type="button"
+                      class="check-button"
+                      :disabled="usernameCheck.loading || !form.username"
+                      @click="handleCheckUsername"
+                    >
+                      {{ usernameCheck.loading ? '확인중' : '중복확인' }}
+                    </button>
+                  </div>
                 </div>
 
                 <div class="form-group">
-                  <label for="email">이메일</label>
-                  <input
-                    id="email"
-                    v-model.trim="form.email"
-                    type="email"
-                    placeholder="이메일을 입력하세요"
-                    autocomplete="email"
-                  >
+                  <div class="label-row">
+                    <label for="email">이메일</label>
+                    <span
+                      v-if="emailCheck.message"
+                      :class="['inline-check-message', emailCheck.available ? 'success' : 'error']"
+                    >
+                      {{ emailCheck.message }}
+                    </span>
+                  </div>
+
+                  <div class="input-with-button">
+                    <input
+                      id="email"
+                      v-model.trim="form.email"
+                      type="email"
+                      placeholder="이메일을 입력하세요"
+                      autocomplete="email"
+                      @input="resetEmailCheck"
+                    >
+                    <button
+                      type="button"
+                      class="check-button"
+                      :disabled="emailCheck.loading || !form.email"
+                      @click="handleCheckEmail"
+                    >
+                      {{ emailCheck.loading ? '확인중' : '중복확인' }}
+                    </button>
+                  </div>
                 </div>
 
                 <div class="form-group">
-                  <label for="password1">비밀번호</label>
+                  <div class="label-row">
+                    <label for="password1">비밀번호</label>
+                    <span v-if="passwordValidationMessage" class="inline-check-message error">
+                      {{ passwordValidationMessage }}
+                    </span>
+                  </div>
+
                   <input
                     id="password1"
                     v-model="form.password"
@@ -123,7 +169,13 @@
                 </div>
 
                 <div class="form-group">
-                  <label for="password2">비밀번호 확인</label>
+                  <div class="label-row">
+                    <label for="password2">비밀번호 확인</label>
+                    <span v-if="passwordConfirmValidationMessage" class="inline-check-message error">
+                      {{ passwordConfirmValidationMessage }}
+                    </span>
+                  </div>
+
                   <input
                     id="password2"
                     v-model="form.password_confirm"
@@ -311,9 +363,9 @@
         </div>
 
         <aside class="signup-guide-panel">
-          <h2>입력 정보가 추천에 반영돼요</h2>
+          <h2>가입 후 바로 이용할 수 있어요</h2>
           <p>
-            마이페이지에서 언제든 수정할 수 있고, 추천 결과는 실제 저장된 상품 데이터와 비교됩니다.
+            회원가입 후 맞춤 추천, 관심상품, 커뮤니티 기능을 이용할 수 있습니다.
           </p>
 
           <ul>
@@ -345,15 +397,69 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { signup, getProfileOptions } from '@/api/accounts'
+import { signup, login, getProfileOptions } from '@/api/accounts'
+import api from '@/api/api'
 
 const router = useRouter()
+
+
+const checkUsername = (username) => {
+  return api.get('/accounts/check-username/', {
+    params: { username },
+  })
+}
+
+const checkEmail = (email) => {
+  return api.get('/accounts/check-email/', {
+    params: { email },
+  })
+}
+
+
+const finalMainBankOptions = [
+  '없음',
+  '국민은행',
+  '신한은행',
+  '하나은행',
+  '우리은행',
+  'NH농협은행',
+  '부산은행',
+  '경남은행',
+  '광주은행',
+  '전북은행',
+  '제주은행',
+  'IBK기업은행',
+  'SC제일은행',
+  'iM뱅크',
+  'KDB산업은행',
+  '수협은행',
+  '카카오뱅크',
+  '토스뱅크',
+  '케이뱅크',
+].map((name) => ({
+  value: name,
+  label: name,
+}))
 
 const currentStep = ref(1)
 const errorMessage = ref('')
 const submitting = ref(false)
+
+const usernameCheck = ref({
+  loading: false,
+  available: false,
+  checkedValue: '',
+  message: '',
+})
+
+const emailCheck = ref({
+  loading: false,
+  available: false,
+  checkedValue: '',
+  message: '',
+})
 
 const form = ref({
   username: '',
@@ -380,9 +486,110 @@ const profileOptions = ref({
   monthly_income_range: [],
   monthly_saving_amount: [],
   lump_sum_amount: [],
-  main_bank: [],
+  main_bank: finalMainBankOptions,
   address: [],
 })
+
+
+const passwordValidationMessage = computed(() => {
+  if (!form.value.password) {
+    return ''
+  }
+
+  if (form.value.password.length < 8) {
+    return '8자 이상 입력해주세요.'
+  }
+
+  return ''
+})
+
+const passwordConfirmValidationMessage = computed(() => {
+  if (!form.value.password_confirm) {
+    return ''
+  }
+
+  if (form.value.password !== form.value.password_confirm) {
+    return '비밀번호가 일치하지 않습니다.'
+  }
+
+  return ''
+})
+
+const resetUsernameCheck = () => {
+  usernameCheck.value = {
+    loading: false,
+    available: false,
+    checkedValue: '',
+    message: '',
+  }
+}
+
+const resetEmailCheck = () => {
+  emailCheck.value = {
+    loading: false,
+    available: false,
+    checkedValue: '',
+    message: '',
+  }
+}
+
+const handleCheckUsername = async () => {
+  if (!form.value.username) {
+    usernameCheck.value.message = '아이디를 입력해주세요.'
+    usernameCheck.value.available = false
+    return
+  }
+
+  usernameCheck.value.loading = true
+  usernameCheck.value.message = ''
+
+  try {
+    const response = await checkUsername(form.value.username)
+
+    usernameCheck.value = {
+      loading: false,
+      available: Boolean(response.data.available),
+      checkedValue: form.value.username,
+      message: response.data.message || '확인이 완료되었습니다.',
+    }
+  } catch (error) {
+    usernameCheck.value = {
+      loading: false,
+      available: false,
+      checkedValue: '',
+      message: error.response?.data?.message || '아이디 중복 확인에 실패했습니다.',
+    }
+  }
+}
+
+const handleCheckEmail = async () => {
+  if (!form.value.email) {
+    emailCheck.value.message = '이메일을 입력해주세요.'
+    emailCheck.value.available = false
+    return
+  }
+
+  emailCheck.value.loading = true
+  emailCheck.value.message = ''
+
+  try {
+    const response = await checkEmail(form.value.email)
+
+    emailCheck.value = {
+      loading: false,
+      available: Boolean(response.data.available),
+      checkedValue: form.value.email,
+      message: response.data.message || '확인이 완료되었습니다.',
+    }
+  } catch (error) {
+    emailCheck.value = {
+      loading: false,
+      available: false,
+      checkedValue: '',
+      message: error.response?.data?.message || '이메일 중복 확인에 실패했습니다.',
+    }
+  }
+}
 
 const getFirstErrorFromObject = (data) => {
   if (!data) {
@@ -438,6 +645,7 @@ const fetchProfileOptions = async () => {
         { value: 'male', label: '남성' },
         { value: 'female', label: '여성' },
       ],
+      main_bank: finalMainBankOptions,
     }
   } catch (error) {
     console.error(error)
@@ -456,13 +664,28 @@ const validateStepOne = () => {
     return false
   }
 
+  if (passwordValidationMessage.value) {
+    errorMessage.value = passwordValidationMessage.value
+    return false
+  }
+
   if (!form.value.password_confirm) {
     errorMessage.value = '비밀번호 확인을 입력해주세요.'
     return false
   }
 
-  if (form.value.password !== form.value.password_confirm) {
-    errorMessage.value = '비밀번호가 일치하지 않습니다.'
+  if (passwordConfirmValidationMessage.value) {
+    errorMessage.value = passwordConfirmValidationMessage.value
+    return false
+  }
+
+  if (!usernameCheck.value.available || usernameCheck.value.checkedValue !== form.value.username) {
+    errorMessage.value = '아이디 중복 확인을 완료해주세요.'
+    return false
+  }
+
+  if (form.value.email && (!emailCheck.value.available || emailCheck.value.checkedValue !== form.value.email)) {
+    errorMessage.value = '이메일 중복 확인을 완료해주세요.'
     return false
   }
 
@@ -538,7 +761,7 @@ const submitSignup = async () => {
   submitting.value = true
 
   try {
-    await signup({
+    const signupResponse = await signup({
       username: form.value.username,
       email: form.value.email,
       password: form.value.password,
@@ -553,12 +776,25 @@ const submitSignup = async () => {
       personal_info_agree: form.value.personal_info_agree,
     })
 
-    router.push({
-      name: 'login',
-      query: {
-        signup: 'success',
-      },
-    })
+    let token = signupResponse.data?.token
+
+    if (!token) {
+      const loginResponse = await login({
+        username: form.value.username,
+        password: form.value.password,
+      })
+
+      token = loginResponse.data?.token
+    }
+
+    if (!token) {
+      throw new Error('회원가입은 완료되었지만 자동 로그인 토큰을 받지 못했습니다.')
+    }
+
+    localStorage.setItem('token', token)
+    window.dispatchEvent(new Event('login-success'))
+
+    router.push({ name: 'home' })
   } catch (error) {
     console.error(error)
     errorMessage.value = getSignupErrorMessage(error)
@@ -1109,76 +1345,354 @@ onMounted(() => {
   }
 }
 
-/* Juyeon clean signup override */
+/* === 주연: 회원가입 페이지 정리 - 안전 수정본 === */
 .signup-page {
-  align-items: start;
-  padding: 48px 0 68px;
+  padding: 34px 0 64px !important;
+  grid-template-columns: minmax(420px, 0.9fr) minmax(680px, 1.1fr) !important;
+  gap: 38px !important;
+  align-items: start !important;
 }
 
 .signup-visual-panel {
-  padding: 30px;
+  min-height: 600px;
+  padding: 34px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.82);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.84);
   box-shadow: var(--shadow-soft);
 }
 
-.signup-visual-panel h1 {
-  font-size: clamp(34px, 4.2vw, 50px);
+.signup-visual-panel > .eyebrow,
+.signup-header > .eyebrow,
+.visual-description,
+.signup-illustration,
+.signup-header > p,
+.section-title > p,
+.field-help {
+  display: none !important;
 }
 
-.signup-illustration {
-  display: none;
+.signup-visual-panel h1 {
+  margin: 0 !important;
+  font-size: clamp(38px, 4.8vw, 56px) !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.065em !important;
+}
+
+.signup-visual-panel h1 span {
+  color: var(--color-primary);
+}
+
+.join-benefit-list {
+  margin-top: 38px !important;
+  gap: 24px !important;
 }
 
 .signup-shell {
-  border-radius: 24px;
-  background: #fff;
-  box-shadow: var(--shadow-card);
+  border-radius: 26px !important;
 }
 
-.auth-tabs {
-  background: #f8fafc;
+.auth-tabs button,
+.auth-tabs a {
+  min-height: 64px !important;
+}
+
+.signup-card-body {
+  grid-template-columns: minmax(0, 1fr) 300px !important;
 }
 
 .signup-main-card,
 .signup-guide-panel {
-  padding: 32px;
+  padding: 34px 34px !important;
+}
+
+.signup-header h1 {
+  margin: 0 !important;
+  font-size: 32px !important;
+}
+
+.step-indicator {
+  margin-top: 26px !important;
+}
+
+.section-title {
+  margin-bottom: 18px !important;
+}
+
+.section-title h2 {
+  margin-bottom: 0 !important;
+}
+
+.signup-guide-panel {
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.signup-guide-panel h2 {
+  margin-top: 0 !important;
+  font-size: 24px !important;
+  line-height: 1.35 !important;
+  letter-spacing: -0.04em !important;
+}
+
+.signup-guide-panel > p,
+.signup-guide-panel > ul {
+  display: none !important;
+}
+
+.signup-guide-panel .outline-cta {
+  margin-top: 22px !important;
+}
+
+@media (max-width: 1120px) {
+  .signup-page {
+    grid-template-columns: 1fr !important;
+  }
+
+  .signup-visual-panel {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .signup-card-body {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .signup-page {
+    width: min(100% - 28px, var(--container-width)) !important;
+    padding-top: 20px !important;
+  }
+
+  .form-grid.two,
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* === 주연: 회원가입 페이지 최종 레이아웃/은행목록 재조정 === */
+.signup-page {
+  width: min(1280px, calc(100% - 48px)) !important;
+  padding: 28px 0 64px !important;
+  grid-template-columns: 520px minmax(640px, 720px) !important;
+  gap: 42px !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+}
+
+.signup-visual-panel {
+  width: 100% !important;
+  min-height: 620px !important;
+  box-sizing: border-box !important;
+}
+
+.signup-visual-panel h1 {
+  font-size: 48px !important;
+  line-height: 1.18 !important;
+  letter-spacing: -0.06em !important;
+  word-break: keep-all !important;
+}
+
+.join-benefit-list {
+  margin-top: 42px !important;
+}
+
+.signup-shell {
+  min-height: 620px !important;
+}
+
+.signup-card-body {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+}
+
+.signup-guide-panel {
+  display: none !important;
+}
+
+.signup-main-card {
+  padding: 38px 46px !important;
+}
+
+.signup-header h1 {
+  font-size: 34px !important;
+}
+
+.form-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  column-gap: 18px !important;
+  row-gap: 18px !important;
+}
+
+.form-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 18px !important;
 }
 
 .form-group input,
 .form-group select {
-  border-color: var(--color-border-strong);
-  background: #fff;
+  min-height: 50px !important;
+  font-size: 14px !important;
 }
 
-.next-button,
-.prev-button,
+.checkbox-label {
+  margin-top: 18px !important;
+}
+
+.button-row {
+  margin-top: 24px !important;
+}
+
 .submit-button {
-  border-radius: 13px;
+  min-height: 52px !important;
 }
 
-.join-benefit-list li,
-.summary-box,
-.recommend-tip-card {
-  border-radius: 18px;
-}
-
-@media (max-width: 1180px) {
+@media (max-width: 1120px) {
   .signup-page {
+    grid-template-columns: 1fr !important;
+  }
+
+  .signup-visual-panel,
+  .signup-shell {
+    min-height: 0 !important;
+  }
+}
+
+@media (max-width: 860px) {
+  .signup-main-card {
+    padding: 28px 24px !important;
+  }
+
+  .form-grid.two,
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .signup-page {
+    width: min(100% - 28px, var(--container-width)) !important;
+    padding-top: 18px !important;
+  }
+
+  .signup-visual-panel h1 {
+    font-size: 40px !important;
+  }
+}
+
+
+/* === 주연: 회원가입 금융 정보 select 글씨 잘림 보정 === */
+.form-section .form-grid:not(.two) {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.form-section .form-grid:not(.two) .form-group:last-child {
+  grid-column: 1 / -1 !important;
+}
+
+.form-group select {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 42px 0 16px !important;
+  font-size: 14px !important;
+  text-overflow: ellipsis !important;
+}
+
+.summary-box {
+  margin-top: 20px !important;
+}
+
+@media (max-width: 760px) {
+  .form-section .form-grid:not(.two),
+  .form-grid.two {
+    grid-template-columns: 1fr !important;
+  }
+
+  .form-section .form-grid:not(.two) .form-group:last-child {
+    grid-column: auto !important;
+  }
+}
+
+
+/* === 주연: 회원가입 중복확인/비밀번호 검증 UI === */
+.label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.label-row label {
+  margin-bottom: 0 !important;
+}
+
+.inline-check-message {
+  flex: 0 1 auto;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.inline-check-message.success {
+  color: #10b981;
+}
+
+.inline-check-message.error {
+  color: #ef4444;
+}
+
+.input-with-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-with-button input {
+  min-width: 0;
+}
+
+.check-button {
+  height: 50px;
+  border: 1px solid var(--color-primary);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.check-button:disabled {
+  border-color: var(--color-border-strong);
+  color: var(--color-text-muted);
+  background: var(--color-surface-soft);
+  cursor: not-allowed;
+}
+
+.check-button:not(:disabled):hover {
+  background: #eef4ff;
+}
+
+@media (max-width: 760px) {
+  .label-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .input-with-button {
     grid-template-columns: 1fr;
   }
-}
 
-@media (max-width: 680px) {
-  .signup-page {
-    width: min(100% - 28px, var(--container-width));
-    padding: 28px 0 44px;
+  .check-button {
+    width: 100%;
   }
 
-  .signup-main-card,
-  .signup-guide-panel {
-    padding: 26px 22px;
+  .inline-check-message {
+    white-space: normal;
   }
 }
 

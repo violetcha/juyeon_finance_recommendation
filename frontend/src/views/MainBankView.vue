@@ -2,14 +2,17 @@
 
 <template>
   <main class="main-bank-page">
-<section class="page-header map-heading">
-      <div>
-        <h1>내 주변 주거래은행 찾기</h1>
-      </div>
+    <section class="page-hero-row">
+      <h1 class="page-title">
+        <span class="title-blue">내주변</span>
+        <span>  주거래은행</span>
+      </h1>
 
-      <button type="button" class="video-jump-button" @click="scrollToVideoSection">
-        ▶ 영상 보기
-      </button>
+      <div class="page-hero-actions">
+        <button type="button" class="hero-outline-button" @click="scrollToVideoSection">
+          ▶ 영상 보기
+        </button>
+      </div>
     </section>
 
 <section class="bank-map-section">
@@ -166,12 +169,12 @@
       <div v-else class="video-grid">
         <article v-for="video in videos" :key="getVideoId(video)" class="video-card">
           <button class="thumbnail-button" type="button" @click="selectVideo(video)">
-            <img :src="video.thumbnail" :alt="video.title" />
+            <img :src="video.thumbnail_url" :alt="video.title" />
           </button>
 
           <div class="video-info">
             <h3>{{ video.title }}</h3>
-            <p>{{ video.channelTitle }}</p>
+            <p>{{ video.channel_title }}</p>
 
             <div class="video-buttons">
               <button type="button" @click="selectVideo(video)">재생</button>
@@ -192,17 +195,24 @@
         </article>
       </div>
 
-      <section v-if="selectedVideo" class="player-section">
+      <section v-if="selectedVideo && selectedVideoEmbedUrl" class="player-section">
         <h3>{{ selectedVideo.title }}</h3>
 
         <div class="iframe-box">
           <iframe
-            :src="`https://www.youtube.com/embed/${selectedVideo.id}`"
+            v-if="selectedVideo?.video_id"
+            :key="selectedVideo.video_id"
+            :src="`https://www.youtube.com/embed/${selectedVideo.video_id}`"
             :title="selectedVideo.title"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowfullscreen
           ></iframe>
         </div>
       </section>
+
+      <p v-else-if="selectedVideo && !selectedVideo.video_id" class="error">
+        영상 ID가 없어 재생할 수 없습니다. 다시 검색해주세요.
+      </p>
     </section>
   </main>
 </template>
@@ -243,7 +253,7 @@ const selectedPlace = ref(null)
 
 const summaryBanks = [
   {
-    name: '국민은행',
+    name: 'KB국민은행',
     keyword: '국민은행',
     icon: '🟡',
     description:
@@ -272,7 +282,7 @@ const summaryBanks = [
   },
   {
     name: 'NH농협은행',
-    keyword: 'NH농협은행',
+    keyword: '농협은행',
     icon: '🌱',
     description:
       '지역 접근성과 생활 밀착 금융이 강점입니다. 지방 거주자나 가까운 지점 접근성을 중시하는 사용자에게 적합합니다.',
@@ -287,20 +297,21 @@ const bankOptions = [
   '신한은행',
   '하나은행',
   '우리은행',
-  'NH농협은행',
-  '부산은행',
-  '경남은행',
+  '농협은행',
+  '기업은행',
+  'SC제일은행',
+  '씨티은행',
+  '산업은행',
+  '수협은행',
   '광주은행',
   '전북은행',
+  '대구은행',
+  '부산은행',
+  '경남은행',
   '제주은행',
-  'IBK기업은행',
-  'SC제일은행',
-  'iM뱅크',
-  'KDB산업은행',
-  '수협은행',
-  '카카오뱅크',
-  '토스뱅크',
-  '케이뱅크',
+  '새마을금고',
+  '신협',
+  '우체국',
 ]
 
 const selectedBankKeyword = ref('국민은행')
@@ -310,16 +321,7 @@ const bankCodeToKeywordMap = {
   SHINHAN: '신한은행',
   HANA: '하나은행',
   WOORI: '우리은행',
-  NH: 'NH농협은행',
-}
-
-
-const bankSearchKeywordMap = {
-  '전체 은행': '은행',
-  'NH농협은행': '농협은행',
-  'iM뱅크': '대구은행',
-  'IBK기업은행': '기업은행',
-  'KDB산업은행': '산업은행',
+  NH: '농협은행',
 }
 
 const regionData = {
@@ -603,6 +605,17 @@ const dongOptions = computed(() => {
   if (!selectedSido.value || !selectedGugun.value) return []
   const dongs = regionData[selectedSido.value]?.[selectedGugun.value] || []
   return ['전체', ...dongs]
+})
+
+
+const selectedVideoEmbedUrl = computed(() => {
+  const videoId = selectedVideo.value?.video_id
+
+  if (!videoId) {
+    return ''
+  }
+
+  return `https://www.youtube.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1&origin=${window.location.origin}`
 })
 
 const videoKeyword = ref('주거래은행 선택 기준')
@@ -1049,7 +1062,7 @@ const normalizeBankResults = (data) => {
 }
 
 const getSearchKeyword = () => {
-  return bankSearchKeywordMap[selectedBankKeyword.value] || selectedBankKeyword.value
+  return selectedBankKeyword.value === '전체 은행' ? '은행' : selectedBankKeyword.value
 }
 
 const searchNearbyBanks = async () => {
@@ -1300,16 +1313,16 @@ const getVideoId = (video) => {
     return ''
   }
 
-  if (typeof video.id === 'string') {
-    return video.id
+  if (video.video_id) {
+    return video.video_id
   }
 
   if (video.id?.videoId) {
     return video.id.videoId
   }
 
-  if (video.video_id) {
-    return video.video_id
+  if (typeof video.id === 'string') {
+    return video.id
   }
 
   return ''
@@ -1346,14 +1359,19 @@ const loadSavedVideos = async () => {
 const loadVideos = async (keyword, maxResults = 3) => {
   videoLoading.value = true
   videoError.value = ''
+  selectedVideo.value = null
 
   try {
     const response = await searchVideos(keyword, maxResults)
-    videos.value = response.data
-    selectedVideo.value = response.data[0] || null
+    const result = Array.isArray(response.data) ? response.data : []
+
+    videos.value = result
+    selectedVideo.value = result.length > 0 ? { ...result[0] } : null
   } catch (error) {
     console.error(error)
     videoError.value = '영상을 불러오지 못했습니다. 백엔드 videos API를 확인해주세요.'
+    videos.value = []
+    selectedVideo.value = null
   } finally {
     videoLoading.value = false
   }
@@ -1454,6 +1472,18 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.page-title {
+  color: #0f172a;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.title-blue {
+  color: #2454d6;
+}
+
 .main-bank-page {
   width: min(var(--container-width, 1360px), calc(100% - 48px));
   margin: 0 auto;
@@ -1755,6 +1785,7 @@ onMounted(async () => {
 }
 
 .video-section {
+  scroll-margin-top: calc(var(--header-height, 72px) + 18px);
   margin-top: 46px;
   padding: 26px;
   border: 1px solid #dbe4f0;
@@ -2106,5 +2137,158 @@ onMounted(async () => {
 .video-section {
   margin-top: 34px;
 }
+
+
+/* === 주연: 주거래은행 영상 단순 복구 === */
+.video-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.iframe-box {
+  position: relative !important;
+  width: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+  background: #000 !important;
+}
+
+.iframe-box iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  background: #000 !important;
+}
+
+
+/* === 주연: 주거래은행 영상 재생 안정화 === */
+.iframe-box {
+  position: relative !important;
+  width: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  overflow: hidden !important;
+  border-radius: 18px !important;
+  background: #000 !important;
+}
+
+.iframe-box iframe {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  background: #000 !important;
+}
+
+.video-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+
+/* === 주연: 페이지 상단 영역 재조정 - 제목 축소 / 버튼 남색 === */
+.page-hero-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  min-height: 0 !important;
+  margin: 0 0 24px !important;
+  padding-top: 0 !important;
+}
+
+.page-hero-row h1 {
+  margin: 0 !important;
+  color: #07142f !important;
+  font-size: clamp(34px, 3.7vw, 48px) !important;
+  line-height: 1.08 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.072em !important;
+}
+
+.page-hero-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+}
+
+.hero-primary-button,
+.hero-outline-button {
+  min-height: 42px !important;
+  padding: 0 18px !important;
+  border-radius: 14px !important;
+  font-size: 14px !important;
+  font-weight: 950 !important;
+  cursor: pointer !important;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease !important;
+}
+
+.hero-primary-button {
+  border: 1px solid #0b1f4d !important;
+  background: #0b1f4d !important;
+  color: #fff !important;
+  box-shadow: 0 12px 22px rgba(11, 31, 77, 0.18) !important;
+}
+
+.hero-outline-button {
+  border: 1px solid #c9d3e6 !important;
+  background: #fff !important;
+  color: #0b1f4d !important;
+  box-shadow: 0 10px 18px rgba(15, 27, 61, 0.04) !important;
+}
+
+.hero-primary-button:hover {
+  background: #071735 !important;
+  border-color: #071735 !important;
+}
+
+.hero-outline-button:hover {
+  border-color: #0b1f4d !important;
+  background: #f8fbff !important;
+  color: #0b1f4d !important;
+}
+
+@media (max-width: 760px) {
+  .page-hero-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    margin-bottom: 22px !important;
+  }
+
+  .page-hero-row h1 {
+    font-size: 34px !important;
+  }
+
+  .page-hero-actions {
+    width: 100% !important;
+  }
+
+  .hero-primary-button,
+  .hero-outline-button {
+    flex: 1 !important;
+  }
+}
+
+.main-bank-page {
+  padding-top: 30px !important;
+}
+
+.main-bank-page .page-hero-row {
+  margin-bottom: 24px !important;
+}
+
 
 </style>

@@ -7,50 +7,95 @@
           내 금융생활의<br>
           <strong>주연이 되는 첫 은행 찾기</strong>
         </h1>
-        <p>
-          주연은 사회초년생이 주거래은행과 예적금 상품을 한 번에 비교하고,
-          환율·커뮤니티 데이터까지 연결해 금융생활을 시작하도록 돕는 서비스입니다.
-        </p>
 
-        <div class="hero-actions">
-          <RouterLink :to="{ name: 'recommend' }" class="btn-primary">
-            맞춤 상품 추천받기
-            <span>→</span>
-          </RouterLink>
-          <RouterLink :to="{ name: 'main-bank' }" class="btn-secondary">
-            주거래은행 찾기
-          </RouterLink>
+        <div class="hero-mascot" aria-hidden="true">
+          <img :src="heroCharacterImage" alt="" />
         </div>
+
+        <section
+          class="feature-stage"
+          aria-label="주요 기능 소개"
+          @mouseenter="pauseFeatureSlider"
+          @mouseleave="resumeFeatureSlider"
+        >
+          <button
+            type="button"
+            class="feature-arrow feature-arrow-prev"
+            aria-label="이전 기능 보기"
+            @click="prevFeatureSlide"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            class="feature-arrow feature-arrow-next"
+            aria-label="다음 기능 보기"
+            @click="nextFeatureSlide"
+          >
+            ›
+          </button>
+
+          <Transition :name="featureTransitionName" mode="out-in">
+            <article :key="currentFeatureSlide.key" class="feature-slide">
+              <div class="feature-slide-top">
+                <span class="feature-badge">{{ currentFeatureSlide.badge }}</span>
+                <div class="feature-status">
+                  <span class="feature-count">{{ currentFeatureIndex + 1 }} / {{ featureSlides.length }}</span>
+                  <button
+                    type="button"
+                    class="feature-play-toggle"
+                    :aria-label="isFeatureSliderPaused ? '기능 소개 자동 재생' : '기능 소개 일시정지'"
+                    @click.stop="toggleFeatureSlider"
+                  >
+                    <span v-if="isFeatureSliderPaused">▶</span>
+                    <span v-else>Ⅱ</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="feature-slide-content">
+                <div class="feature-copy-stack">
+                  <div class="feature-text">
+                    <h2>{{ currentFeatureSlide.title }}</h2>
+                    <p>{{ currentFeatureSlide.description }}</p>
+                  </div>
+
+                  <ul class="feature-points" aria-label="기능 핵심 포인트">
+                    <li v-for="point in currentFeatureSlide.points" :key="point">{{ point }}</li>
+                  </ul>
+                </div>
+
+                <div class="feature-actions">
+                  <button type="button" class="btn-primary" @click="goFeaturePrimary">
+                    {{ currentFeatureSlide.primaryLabel }}
+                  </button>
+                  <button
+                    v-if="currentFeatureSlide.secondaryLabel"
+                    type="button"
+                    class="btn-secondary"
+                    @click="goFeatureSecondary"
+                  >
+                    {{ currentFeatureSlide.secondaryLabel }}
+                  </button>
+                </div>
+              </div>
+            </article>
+          </Transition>
+
+
+          <div class="feature-dots" aria-label="기능 소개 슬라이드 선택">
+            <button
+              v-for="(slide, index) in featureSlides"
+              :key="slide.key"
+              type="button"
+              :class="{ active: index === currentFeatureIndex }"
+              :aria-label="`${slide.badge} 보기`"
+              @click="selectFeatureSlide(index)"
+            ></button>
+          </div>
+        </section>
       </div>
 
-      <aside class="hero-panel" aria-label="서비스 요약">
-        <div class="panel-header">
-          <span>추천 흐름</span>
-          <strong>Profile → Bank → Product</strong>
-        </div>
-
-        <div class="metric-grid">
-          <div>
-            <span>등록 상품</span>
-            <strong>{{ productLoading ? '조회 중' : `${totalProductCount}개` }}</strong>
-          </div>
-          <div>
-            <span>커뮤니티 글</span>
-            <strong>{{ communityPosts.length }}개</strong>
-          </div>
-          <div>
-            <span>USD 기준</span>
-            <strong>{{ usdRate ? `${formatNumber(usdRate.ratePerUnit)}원` : '-' }}</strong>
-          </div>
-        </div>
-
-        <ol class="flow-list">
-          <li v-for="step in processSteps" :key="step.label">
-            <span>{{ step.icon }}</span>
-            <strong>{{ step.label }}</strong>
-          </li>
-        </ol>
-      </aside>
     </section>
 
     <section class="home-grid">
@@ -124,9 +169,9 @@
         </div>
 
 
-        <RouterLink :to="{ name: 'main-bank' }" class="btn-primary block-button">
+        <button type="button" class="btn-primary block-button" @click="goProtectedPage('main-bank')">
           테스트 시작하기
-        </RouterLink>
+        </button>
       </article>
 
       <article class="card exchange-card">
@@ -192,16 +237,18 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import * as productApi from '@/api/products'
 import { getPosts } from '@/api/community'
 import { getExchangeRates } from '@/api/exchanges'
 import BankLogo from '@/components/BankLogo.vue'
 import { getBankDisplayName } from '@/constants/bankLogoMap'
+import { showAuthNotice } from '@/utils/authNotice'
+import heroCharacterImage from '@/assets/juyeon-character.png'
+
 
 const router = useRouter()
-
 const productLoading = ref(false)
 const productError = ref('')
 const depositProducts = ref([])
@@ -222,6 +269,181 @@ const processSteps = [
   { icon: '🎯', label: '추천 결과' },
   { icon: '✅', label: '비교·선택' },
 ]
+
+const featureSlides = [
+  {
+    key: 'recommend',
+    badge: '맞춤추천',
+    title: '내 조건에 맞는 예적금 상품 추천',
+    description: '예치 금액, 저축 기간, 선호 은행을 기준으로 예금·적금 상품을 한눈에 비교합니다.',
+    points: ['조건 기반 추천', '금리·기간 비교', '상품 상세 연결'],
+    routeName: 'recommend',
+    requiresAuth: true,
+    primaryLabel: '맞춤 상품 추천받기',
+    secondaryLabel: '전체 상품 보기',
+    secondaryRouteName: 'products',
+  },
+  {
+    key: 'main-bank',
+    badge: '주거래은행',
+    title: '내 금융생활의 첫 주거래은행 찾기',
+    description: '금융성향 테스트와 주변 은행 정보를 함께 보고 첫 주거래은행을 선택합니다.',
+    points: ['성향 테스트', '은행별 특징', '주변 지점 확인'],
+    routeName: 'main-bank',
+    requiresAuth: true,
+    primaryLabel: '주거래은행 찾기',
+    secondaryLabel: '맞춤추천 보기',
+    secondaryRouteName: 'recommend',
+    secondaryRequiresAuth: true,
+  },
+  {
+    key: 'market',
+    badge: '환율·금은',
+    title: '주요 통화 시세와 금·은 가격 확인',
+    description: '한국 원화 기준 환율 계산과 주요 통화, 금·은 가격 흐름을 함께 확인합니다.',
+    points: ['KRW 기준 계산', '기간별 그래프', '금·은 시세'],
+    routeName: 'exchange',
+    primaryLabel: '환율 보러가기',
+    secondaryLabel: '금·은 시세보기',
+    secondaryRouteName: 'spot-assets',
+  },
+  {
+    key: 'community',
+    badge: '커뮤니티',
+    title: '금융 고민과 상품 정보를 함께 공유',
+    description: '예적금 후기와 은행 이용 경험, 금융 팁을 게시글과 댓글로 나눕니다.',
+    points: ['게시글 작성', '댓글 소통', '좋아요 기반 반응'],
+    routeName: 'community',
+    primaryLabel: '커뮤니티 입장하기',
+    secondaryLabel: '상품 먼저 보기',
+    secondaryRouteName: 'products',
+  },
+]
+
+const currentFeatureIndex = ref(0)
+const currentFeatureDirection = ref('next')
+const isFeatureSliderPaused = ref(false)
+const FEATURE_SLIDE_INTERVAL = 4200
+let featureSlideTimer = null
+
+const currentFeatureSlide = computed(() => {
+  return featureSlides[currentFeatureIndex.value] || featureSlides[0]
+})
+
+const featureTransitionName = computed(() => {
+  return currentFeatureDirection.value === 'prev' ? 'feature-slide-prev' : 'feature-slide-next'
+})
+
+const stopFeatureSlider = () => {
+  if (featureSlideTimer) {
+    window.clearInterval(featureSlideTimer)
+    featureSlideTimer = null
+  }
+}
+
+const setFeatureSlide = (index, direction = 'next', restart = true) => {
+  currentFeatureDirection.value = direction
+  currentFeatureIndex.value = (index + featureSlides.length) % featureSlides.length
+
+  if (restart) {
+    startFeatureSlider()
+  }
+}
+
+const startFeatureSlider = () => {
+  stopFeatureSlider()
+
+  if (isFeatureSliderPaused.value) {
+    return
+  }
+
+  featureSlideTimer = window.setInterval(() => {
+    setFeatureSlide(currentFeatureIndex.value + 1, 'next', false)
+  }, FEATURE_SLIDE_INTERVAL)
+}
+
+const pauseFeatureSlider = () => {
+  stopFeatureSlider()
+}
+
+const resumeFeatureSlider = () => {
+  startFeatureSlider()
+}
+
+const toggleFeatureSlider = () => {
+  isFeatureSliderPaused.value = !isFeatureSliderPaused.value
+
+  if (isFeatureSliderPaused.value) {
+    stopFeatureSlider()
+    return
+  }
+
+  startFeatureSlider()
+}
+
+const nextFeatureSlide = () => {
+  setFeatureSlide(currentFeatureIndex.value + 1, 'next')
+}
+
+const prevFeatureSlide = () => {
+  setFeatureSlide(currentFeatureIndex.value - 1, 'prev')
+}
+
+const selectFeatureSlide = (index) => {
+  if (index === currentFeatureIndex.value) {
+    return
+  }
+
+  const direction = index > currentFeatureIndex.value ? 'next' : 'prev'
+  setFeatureSlide(index, direction)
+}
+
+const moveToLogin = (routeName) => {
+  showAuthNotice('로그인 후 이용할 수 있습니다.')
+
+  const redirectTarget = routeName
+    ? router.resolve({ name: routeName }).fullPath
+    : '/'
+
+  router.push({
+    name: 'login',
+    query: {
+      redirect: redirectTarget,
+    },
+  })
+}
+
+const moveToFeatureRoute = (routeName, requiresAuth = false) => {
+  if (!routeName) {
+    return
+  }
+
+  if (requiresAuth && !localStorage.getItem('token')) {
+    moveToLogin(routeName)
+    return
+  }
+
+  router.push({ name: routeName })
+}
+
+const goFeaturePrimary = () => {
+  const slide = currentFeatureSlide.value
+  moveToFeatureRoute(slide.routeName, slide.requiresAuth)
+}
+
+const goFeatureSecondary = () => {
+  const slide = currentFeatureSlide.value
+  moveToFeatureRoute(slide.secondaryRouteName, slide.secondaryRequiresAuth)
+}
+
+const goProtectedPage = (routeName) => {
+  if (!localStorage.getItem('token')) {
+    moveToLogin(routeName)
+    return
+  }
+
+  router.push({ name: routeName })
+}
 
 const currencyMeta = {
   USD: { flag: '🇺🇸', name: '미국 달러' },
@@ -439,14 +661,16 @@ const getRelativeTime = (value) => {
 }
 
 const getPostLink = (post) => {
-  if (router.hasRoute('post-detail')) {
-    return {
-      name: 'post-detail',
-      params: { id: post.id },
-    }
+  if (!post?.id) {
+    return { name: 'community' }
   }
 
-  return { name: 'community' }
+  return {
+    path: '/community',
+    query: {
+      post: post.id,
+    },
+  }
 }
 
 const fetchPreviewProducts = async () => {
@@ -514,6 +738,11 @@ onMounted(() => {
   fetchPreviewProducts()
   fetchExchangeSummary()
   fetchCommunitySummary()
+  startFeatureSlider()
+})
+
+onBeforeUnmount(() => {
+  stopFeatureSlider()
 })
 </script>
 
@@ -525,17 +754,16 @@ onMounted(() => {
 }
 
 .hero-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 430px;
-  gap: 34px;
-  align-items: stretch;
-  padding: clamp(30px, 5vw, 54px);
+  position: relative;
+  display: block;
+  padding: clamp(30px, 4.6vw, 54px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-xl);
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(244, 248, 255, 0.98)),
-    radial-gradient(circle at 84% 20%, rgba(16, 185, 129, 0.16), transparent 32%);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(244, 248, 255, 0.98)),
+    radial-gradient(circle at 86% 16%, rgba(16, 185, 129, 0.14), transparent 34%);
   box-shadow: var(--shadow-card);
+  overflow: hidden;
 }
 
 .eyebrow {
@@ -547,13 +775,21 @@ onMounted(() => {
   letter-spacing: 0.11em;
 }
 
+.hero-copy {
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
 .hero-copy h1 {
+  max-width: 760px;
   margin: 0;
   color: var(--color-text);
   font-size: clamp(36px, 4.8vw, 58px);
   line-height: 1.16;
   font-weight: 950;
   letter-spacing: -0.07em;
+  word-break: keep-all;
 }
 
 .hero-copy h1 strong {
@@ -561,12 +797,50 @@ onMounted(() => {
   font-weight: 950;
 }
 
+.hero-mascot {
+  position: absolute;
+  top: clamp(18px, 3vw, 34px);
+  right: clamp(34px, 5.6vw, 76px);
+  z-index: 1;
+  width: clamp(150px, 17vw, 230px);
+  max-height: 182px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.hero-mascot::before {
+  content: '';
+  position: absolute;
+  right: 8%;
+  top: 12%;
+  width: 86%;
+  height: 76%;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.10), transparent 68%);
+  filter: blur(8px);
+}
+
+.hero-mascot img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: auto;
+  max-height: 182px;
+  object-fit: contain;
+  object-position: center top;
+  filter: drop-shadow(0 18px 28px rgba(15, 23, 42, 0.12));
+  user-select: none;
+}
+
 .hero-copy p {
-  max-width: 640px;
-  margin: 22px 0 0;
+  max-width: 700px;
+  margin: 18px 0 0;
   color: var(--color-text-muted);
   font-size: 17px;
   line-height: 1.76;
+  word-break: keep-all;
 }
 
 .hero-actions {
@@ -579,6 +853,342 @@ onMounted(() => {
 .hero-actions .btn-primary,
 .hero-actions .btn-secondary {
   min-width: 190px;
+}
+
+.feature-stage {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 386px;
+  margin-top: 28px;
+  padding: 40px 92px 70px;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 88% 14%, rgba(255, 255, 255, 0.34), transparent 34%),
+    radial-gradient(circle at 12% 0%, rgba(255, 255, 255, 0.18), transparent 28%),
+    linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #38bdf8 100%);
+  box-shadow: 0 26px 58px rgba(37, 99, 235, 0.24);
+  overflow: hidden;
+}
+
+.feature-stage::before {
+  content: '';
+  position: absolute;
+  inset: auto -74px -112px auto;
+  width: 286px;
+  height: 286px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  pointer-events: none;
+}
+
+.feature-stage::after {
+  content: '';
+  position: absolute;
+  inset: -88px auto auto -72px;
+  width: 232px;
+  height: 232px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.10);
+  pointer-events: none;
+}
+
+.feature-slide {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  min-height: 276px;
+  color: #fff;
+}
+
+.feature-slide-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.feature-badge,
+.feature-count,
+.feature-play-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.feature-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.feature-count {
+  background: rgba(15, 23, 42, 0.16);
+}
+
+.feature-play-toggle {
+  width: 34px;
+  min-width: 34px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1;
+  background: rgba(15, 23, 42, 0.18);
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.feature-play-toggle:hover {
+  background: rgba(15, 23, 42, 0.26);
+  transform: translateY(-1px);
+}
+
+.feature-slide-content {
+  position: relative;
+  display: block;
+  flex: 1;
+  min-height: 220px;
+  padding-top: 36px;
+}
+
+.feature-copy-stack {
+  min-width: 0;
+  max-width: calc(100% - 92px);
+  padding-top: 18px;
+}
+
+.feature-text {
+  width: 100%;
+  max-width: 100%;
+}
+
+.feature-text h2 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(32px, 3.45vw, 48px);
+  line-height: 1.13;
+  font-weight: 950;
+  letter-spacing: -0.055em;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  white-space: nowrap;
+}
+
+.feature-text p {
+  max-width: 940px;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.91);
+  font-size: 16px;
+  line-height: 1.68;
+  word-break: keep-all;
+  white-space: nowrap;
+}
+
+.feature-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 26px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feature-points li {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 13px;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.feature-actions {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  width: 260px;
+  margin: 0;
+  padding-top: 0;
+}
+
+.feature-actions .btn-primary,
+.feature-actions .btn-secondary {
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  justify-content: center;
+}
+
+.feature-actions .btn-primary {
+  background: #fff;
+  color: var(--color-primary);
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+}
+
+.feature-actions .btn-primary:hover {
+  transform: translateY(-1px);
+  background: #f8fbff;
+}
+
+.feature-actions .btn-secondary {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.feature-stage > button.feature-arrow {
+  all: unset;
+  position: absolute;
+  top: 50%;
+  z-index: 8;
+  width: 50px;
+  height: 40px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 62px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  text-shadow: 0 8px 24px rgba(15, 23, 42, 0.24);
+  transform: translateY(-50%);
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.feature-stage > button.feature-arrow:hover {
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  color: #fff;
+  transform: translateY(-50%) scale(1.04);
+}
+
+.feature-stage > button.feature-arrow-prev {
+  left: 18px;
+}
+
+.feature-stage > button.feature-arrow-next {
+  right: 18px;
+}
+
+
+.feature-dots {
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.feature-dots button {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.48);
+  cursor: pointer;
+  transition: width 0.2s ease, background 0.2s ease;
+}
+
+.feature-dots button.active {
+  width: 26px;
+  background: #fff;
+}
+
+.feature-slide-next-enter-active,
+.feature-slide-next-leave-active,
+.feature-slide-prev-enter-active,
+.feature-slide-prev-leave-active {
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.feature-slide-next-enter-from {
+  opacity: 0;
+  transform: translateX(72px);
+}
+
+.feature-slide-next-leave-to {
+  opacity: 0;
+  transform: translateX(-72px);
+}
+
+.feature-slide-prev-enter-from {
+  opacity: 0;
+  transform: translateX(-72px);
+}
+
+.feature-slide-prev-leave-to {
+  opacity: 0;
+  transform: translateX(72px);
+}
+
+@media (max-width: 1040px) {
+  .feature-stage {
+    padding: 36px 72px 66px;
+  }
+
+  .feature-slide-content {
+    display: block;
+    min-height: auto;
+    padding-top: 28px;
+  }
+
+  .feature-copy-stack {
+    max-width: 100%;
+  }
+
+  .feature-text p {
+    white-space: normal;
+  }
+
+  .feature-actions {
+    position: static;
+    flex-direction: row;
+    width: auto;
+    margin-top: 28px;
+  }
+
+  .feature-actions .btn-primary,
+  .feature-actions .btn-secondary {
+    width: auto;
+    min-width: 172px;
+  }
+
+  .feature-text h2 {
+    white-space: normal;
+  }
 }
 
 .hero-panel {
@@ -942,6 +1552,25 @@ onMounted(() => {
   font-weight: 800;
 }
 
+
+button.btn-primary,
+button.btn-secondary {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+@media (max-width: 980px) {
+  .hero-mascot {
+    opacity: 0.55;
+    width: 150px;
+  }
+
+  .feature-text h2 {
+    white-space: normal;
+  }
+}
+
 @media (max-width: 1120px) {
   .hero-card,
   .home-grid {
@@ -956,6 +1585,10 @@ onMounted(() => {
 }
 
 @media (max-width: 760px) {
+  .hero-mascot {
+    display: none;
+  }
+
   .home-view {
     width: min(100% - 28px, var(--container-width));
     padding-top: 24px;
@@ -963,6 +1596,50 @@ onMounted(() => {
 
   .hero-card {
     padding: 26px 20px;
+  }
+
+  .feature-stage {
+    min-height: 420px;
+    padding: 24px 22px 84px;
+  }
+
+  .feature-slide {
+    min-height: 312px;
+  }
+
+  .feature-slide-main {
+    margin-top: 30px;
+  }
+
+  .feature-stage > button.feature-arrow {
+    top: auto;
+    bottom: 18px;
+    width: 48px;
+    height: 52px;
+    font-size: 46px;
+    transform: none;
+  }
+
+  .feature-stage > button.feature-arrow:hover {
+    transform: scale(1.04);
+  }
+
+  .feature-stage > button.feature-arrow-prev {
+    left: 18px;
+  }
+
+  .feature-stage > button.feature-arrow-next {
+    right: 18px;
+  }
+
+  .feature-actions,
+  .feature-actions .btn-primary,
+  .feature-actions .btn-secondary {
+    width: 100%;
+  }
+
+  .feature-dots {
+    bottom: 34px;
   }
 
   .hero-actions,

@@ -1,19 +1,10 @@
 <template>
   <main class="community-page">
-    <section class="community-hero">
-      <div>
-        <p class="eyebrow">FINANCIAL COMMUNITY</p>
-        <h1>금융 커뮤니티</h1>
-        <p>
-          예적금 후기, 금융상품 질문, 재테크 팁을 실제 회원들과 나누는 공간입니다.
-        </p>
-      </div>
-
-      <div class="community-hero-art" aria-hidden="true">
-        <div class="bubble-card">💬</div>
-        <div class="piggy-card">🐷</div>
-        <div class="coin-card">₩</div>
-      </div>
+    <section class="page-hero-row">
+      <h1 class="page-title">
+        <span class="title-blue">커뮤니티</span>
+        <span> 게시판</span>
+      </h1>
     </section>
 
     <p v-if="errorMessage" class="error-message global">
@@ -75,7 +66,7 @@
 
           <div v-else class="post-list">
             <article
-              v-for="post in filteredPosts"
+              v-for="post in paginatedPosts"
               :key="post.id"
               class="post-list-item"
               @click="openPost(post.id)"
@@ -98,7 +89,13 @@
 
               <div class="post-author">
                 <span class="author-avatar" :class="getCategoryTone(post.category)">
-                  {{ getAuthorInitial(post.username) }}
+                  <img
+                    v-if="getUserProfileImage(post)"
+                    :src="getUserProfileImage(post)"
+                    :alt="post.username || '작성자'"
+                    class="author-avatar-img"
+                  >
+                  <span v-else>{{ getAuthorInitial(post.username) }}</span>
                 </span>
                 <strong>{{ post.username || '익명' }}</strong>
               </div>
@@ -108,13 +105,41 @@
               </span>
 
               <div class="post-stats">
-                <span>👍 {{ post.like_count || 0 }}</span>
+                <span>♥ {{ post.like_count || 0 }}</span>
                 <span>💬 {{ post.comment_count || 0 }}</span>
                 <span>👁 {{ post.view_count || 0 }}</span>
               </div>
 
               <time>{{ getRelativeTime(post.created_at) }}</time>
             </article>
+          </div>
+
+          <div v-if="filteredPosts.length > pageSize" class="community-pagination">
+            <button
+              type="button"
+              :disabled="currentPage === 1"
+              @click="goPage(currentPage - 1)"
+            >
+              ‹
+            </button>
+
+            <button
+              v-for="page in visiblePageNumbers"
+              :key="page"
+              type="button"
+              :class="{ active: currentPage === page }"
+              @click="goPage(page)"
+            >
+              {{ page }}
+            </button>
+
+            <button
+              type="button"
+              :disabled="currentPage === totalPages"
+              @click="goPage(currentPage + 1)"
+            >
+              ›
+            </button>
           </div>
         </section>
 
@@ -134,29 +159,12 @@
             >
               <span class="rank-badge">{{ index + 1 }}</span>
               <strong>{{ post.title }}</strong>
-              <em>👍 {{ post.like_count || 0 }}</em>
+              <em>♥ {{ post.like_count || 0 }}</em>
             </button>
 
             <p v-if="popularPosts.length === 0" class="side-empty">
               아직 인기 게시글이 없습니다.
             </p>
-          </section>
-
-          <section class="side-card">
-            <div class="side-title">
-              <h2>인기 태그</h2>
-              <span>실제 카테고리 기준</span>
-            </div>
-
-            <div class="tag-cloud">
-              <button
-                v-for="tag in popularTags"
-                :key="tag"
-                type="button"
-              >
-                # {{ tag }}
-              </button>
-            </div>
           </section>
 
           <section class="side-card guide">
@@ -178,9 +186,8 @@
     <section v-else-if="viewMode === 'write'" class="post-form-card">
       <div class="detail-header">
         <div>
-          <p class="eyebrow">WRITE</p>
+          
           <h2>{{ editingPostId ? '게시글 수정' : '새 게시글 작성' }}</h2>
-          <p>금융 정보를 나누되 개인정보나 광고성 내용은 제외해주세요.</p>
         </div>
 
         <button type="button" class="ghost-button" @click="goList">
@@ -193,9 +200,9 @@
           <label for="post-category">카테고리</label>
           <select id="post-category" v-model="postForm.category">
             <option value="free">자유게시판</option>
-            <option value="product">상품질문</option>
-            <option value="review">가입후기</option>
-            <option value="tip">금융팁</option>
+            <option value="review">예적금후기</option>
+            <option value="tip">재테크 팁</option>
+            <option value="product">질문답변</option>
           </select>
         </div>
 
@@ -244,7 +251,21 @@
           <h2>{{ selectedPost.title }}</h2>
 
           <div class="detail-meta">
-            <span>{{ selectedPost.username || '익명' }}</span>
+            <span class="detail-author">
+              <span class="author-avatar detail-author-avatar" :class="getCategoryTone(selectedPost.category)">
+                <img
+                  v-if="getUserProfileImage(selectedPost)"
+                  :src="getUserProfileImage(selectedPost)"
+                  :alt="selectedPost.username || '작성자'"
+                  class="author-avatar-img"
+                >
+                <span v-else>{{ getAuthorInitial(selectedPost.username) }}</span>
+              </span>
+
+              <strong>{{ selectedPost.username || '익명' }}</strong>
+            </span>
+
+            <span class="detail-meta-divider"></span>
             <span>{{ formatDateTime(selectedPost.created_at) }}</span>
             <span>조회 {{ selectedPost.view_count || 0 }}</span>
             <span>댓글 {{ selectedPost.comments?.length || 0 }}</span>
@@ -322,9 +343,29 @@
             class="comment-item"
           >
             <div class="comment-top">
-              <div>
+              <div class="comment-author">
+                <span class="author-avatar comment-author-avatar">
+                  <img
+                    v-if="getUserProfileImage(comment)"
+                    :src="getUserProfileImage(comment)"
+                    :alt="comment.username || '댓글 작성자'"
+                    class="author-avatar-img"
+                  >
+                  <span v-else>{{ getAuthorInitial(comment.username) }}</span>
+                </span>
+
                 <strong>{{ comment.username || '익명' }}</strong>
-                <span>{{ formatDateTime(comment.created_at) }}</span>
+                <span class="comment-date">{{ formatDateTime(comment.created_at) }}</span>
+
+                <button
+                  type="button"
+                  class="comment-like-button inline"
+                  :class="{ liked: comment.is_liked }"
+                  @click="handleToggleCommentLike(comment.id)"
+                >
+                  {{ comment.is_liked ? '❤️' : '🤍' }}
+                  {{ comment.like_count || 0 }}
+                </button>
               </div>
             </div>
 
@@ -359,19 +400,12 @@
 
             <p v-else>{{ comment.content }}</p>
 
-            <div class="comment-actions">
+            <div
+              v-if="comment.is_author"
+              class="comment-actions"
+            >
               <button
-                type="button"
-                class="comment-like-button"
-                :class="{ liked: comment.is_liked }"
-                @click="handleToggleCommentLike(comment.id)"
-              >
-                {{ comment.is_liked ? '❤️' : '🤍' }}
-                {{ comment.like_count || 0 }}
-              </button>
-
-              <button
-                v-if="comment.is_author && editingCommentId !== comment.id"
+                v-if="editingCommentId !== comment.id"
                 type="button"
                 class="comment-edit-button"
                 @click="startEditComment(comment)"
@@ -380,7 +414,6 @@
               </button>
 
               <button
-                v-if="comment.is_author"
                 type="button"
                 class="comment-delete-button"
                 @click="handleDeleteComment(comment.id)"
@@ -399,6 +432,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { showAuthNotice } from '@/utils/authNotice'
 import {
   getPosts,
   createPost,
@@ -428,6 +462,8 @@ const selectedCategory = ref('all')
 const searchTarget = ref('all')
 const keyword = ref('')
 const sortType = ref('latest')
+const currentPage = ref(1)
+const pageSize = 10
 
 const editingPostId = ref(null)
 const commentContent = ref('')
@@ -442,9 +478,29 @@ const postForm = reactive({
 
 const categoryMap = {
   free: '자유게시판',
-  product: '상품질문',
-  review: '가입후기',
-  tip: '금융팁',
+  review: '예적금후기',
+  tip: '재테크 팁',
+  product: '질문답변',
+}
+
+const LOGIN_REQUIRED_MESSAGE = '로그인 후 이용할 수 있습니다.'
+
+const isLoggedIn = () => {
+  return !!localStorage.getItem('token')
+}
+
+const notify = (message = LOGIN_REQUIRED_MESSAGE) => {
+  showAuthNotice(message)
+}
+
+const getActionErrorMessage = (error, fallbackMessage) => {
+  const statusCode = error.response?.status
+
+  if (statusCode === 401 || statusCode === 403) {
+    return LOGIN_REQUIRED_MESSAGE
+  }
+
+  return error.response?.data?.message || fallbackMessage
 }
 
 const filteredPosts = computed(() => {
@@ -498,6 +554,40 @@ const filteredPosts = computed(() => {
     return new Date(b.created_at) - new Date(a.created_at)
   })
 })
+
+
+const totalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredPosts.value.length / pageSize))
+})
+
+const paginatedPosts = computed(() => {
+  const safePage = Math.min(currentPage.value, totalPages.value)
+  const start = (safePage - 1) * pageSize
+
+  return filteredPosts.value.slice(start, start + pageSize)
+})
+
+const visiblePageNumbers = computed(() => {
+  const pages = []
+  const maxVisible = 5
+  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2))
+  let end = Math.min(totalPages.value, start + maxVisible - 1)
+
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+
+  for (let page = start; page <= end; page += 1) {
+    pages.push(page)
+  }
+
+  return pages
+})
+
+const goPage = (page) => {
+  const nextPage = Math.min(Math.max(1, page), totalPages.value)
+  currentPage.value = nextPage
+}
 
 const fetchPosts = async () => {
   loading.value = true
@@ -572,6 +662,11 @@ const openPost = async (postId) => {
 }
 
 const openCreateForm = async () => {
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   await router.push({
     path: '/community',
     query: {
@@ -592,8 +687,13 @@ const goList = async () => {
 }
 
 const submitPost = async () => {
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!postForm.title || !postForm.content) {
-    alert('제목과 내용을 입력해주세요.')
+    notify('제목과 내용을 입력해주세요.')
     return
   }
 
@@ -627,9 +727,7 @@ const submitPost = async () => {
   } catch (error) {
     console.error(error)
 
-    errorMessage.value =
-      error.response?.data?.message ||
-      '게시글 저장에 실패했습니다. 로그인 여부를 확인해주세요.'
+    notify(getActionErrorMessage(error, '게시글 저장에 실패했습니다.'))
   } finally {
     submitting.value = false
   }
@@ -638,8 +736,13 @@ const submitPost = async () => {
 const startEditPost = () => {
   if (!selectedPost.value) return
 
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!selectedPost.value.is_author) {
-    alert('본인이 작성한 게시글만 수정할 수 있습니다.')
+    notify('본인이 작성한 게시글만 수정할 수 있습니다.')
     return
   }
 
@@ -653,8 +756,13 @@ const startEditPost = () => {
 const handleDeletePost = async () => {
   if (!selectedPost.value) return
 
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!selectedPost.value.is_author) {
-    alert('본인이 작성한 게시글만 삭제할 수 있습니다.')
+    notify('본인이 작성한 게시글만 삭제할 수 있습니다.')
     return
   }
 
@@ -671,15 +779,17 @@ const handleDeletePost = async () => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '게시글 삭제에 실패했습니다. 본인이 작성한 글인지 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '게시글 삭제에 실패했습니다.'))
   }
 }
 
 const handleTogglePostLike = async () => {
   if (!selectedPost.value) return
+
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
 
   try {
     const response = await togglePostLike(selectedPost.value.id)
@@ -696,18 +806,20 @@ const handleTogglePostLike = async () => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '좋아요 처리에 실패했습니다. 로그인 여부를 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '좋아요 처리에 실패했습니다.'))
   }
 }
 
 const submitComment = async () => {
   if (!selectedPost.value) return
 
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!commentContent.value) {
-    alert('댓글 내용을 입력해주세요.')
+    notify('댓글 내용을 입력해주세요.')
     return
   }
 
@@ -723,18 +835,20 @@ const submitComment = async () => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '댓글 등록에 실패했습니다. 로그인 여부를 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '댓글 등록에 실패했습니다.'))
   } finally {
     commentSubmitting.value = false
   }
 }
 
 const startEditComment = (comment) => {
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!comment.is_author) {
-    alert('본인이 작성한 댓글만 수정할 수 있습니다.')
+    notify('본인이 작성한 댓글만 수정할 수 있습니다.')
     return
   }
 
@@ -749,8 +863,13 @@ const cancelEditComment = () => {
 const submitEditComment = async (commentId) => {
   if (!selectedPost.value) return
 
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!editingCommentContent.value) {
-    alert('댓글 내용을 입력해주세요.')
+    notify('댓글 내용을 입력해주세요.')
     return
   }
 
@@ -764,22 +883,24 @@ const submitEditComment = async (commentId) => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '댓글 수정에 실패했습니다. 본인이 작성한 댓글인지 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '댓글 수정에 실패했습니다.'))
   }
 }
 
 const handleDeleteComment = async (commentId) => {
   if (!selectedPost.value) return
 
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   const targetComment = selectedPost.value.comments?.find(
     (comment) => comment.id === commentId
   )
 
   if (targetComment && !targetComment.is_author) {
-    alert('본인이 작성한 댓글만 삭제할 수 있습니다.')
+    notify('본인이 작성한 댓글만 삭제할 수 있습니다.')
     return
   }
 
@@ -794,15 +915,17 @@ const handleDeleteComment = async (commentId) => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '댓글 삭제에 실패했습니다. 본인이 작성한 댓글인지 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '댓글 삭제에 실패했습니다.'))
   }
 }
 
 const handleToggleCommentLike = async (commentId) => {
   if (!selectedPost.value) return
+
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
 
   try {
     const response = await toggleCommentLike(commentId)
@@ -818,10 +941,7 @@ const handleToggleCommentLike = async (commentId) => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '댓글 좋아요 처리에 실패했습니다. 로그인 여부를 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '댓글 좋아요 처리에 실패했습니다.'))
   }
 }
 
@@ -870,7 +990,7 @@ const categoryItems = computed(() => {
   const base = [
     { value: 'all', label: '전체' },
     { value: 'free', label: '자유게시판' },
-    { value: 'review', label: '예적금 후기' },
+    { value: 'review', label: '예적금후기' },
     { value: 'tip', label: '재테크 팁' },
     { value: 'product', label: '질문답변' },
   ]
@@ -887,22 +1007,7 @@ const popularPosts = computed(() => {
     .slice(0, 5)
 })
 
-const popularTags = computed(() => {
-  const tags = [
-    { label: '예적금', value: 'review' },
-    { label: '상품질문', value: 'product' },
-    { label: '재테크', value: 'tip' },
-    { label: '자유게시판', value: 'free' },
-  ]
-
-  const dynamicTags = posts.value
-    .map((post) => getCategoryLabel(post.category))
-    .filter(Boolean)
-
-  const uniqueLabels = [...new Set([...tags.map((tag) => tag.label), ...dynamicTags])]
-
-  return uniqueLabels.slice(0, 8)
-})
+const popularTags = computed(() => [])
 
 const getCategoryCount = (category) => {
   if (category === 'all') {
@@ -925,6 +1030,27 @@ const getCategoryTone = (category) => {
   }
 
   return tones[category] || 'gray'
+}
+
+
+const getUserProfileImage = (item) => {
+  const image =
+    item?.user_profile_image ||
+    item?.profile_image ||
+    item?.author_profile_image
+
+  if (!image) {
+    return ''
+  }
+
+  if (String(image).startsWith('http')) {
+    return image
+  }
+
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
+  const normalizedPath = String(image).startsWith('/') ? image : `/${image}`
+
+  return `${apiBaseUrl}${normalizedPath}`
 }
 
 const getAuthorInitial = (name) => {
@@ -969,7 +1095,22 @@ const getRelativeTime = (value) => {
 
 const changeCategory = (category) => {
   selectedCategory.value = category
+  currentPage.value = 1
 }
+
+
+watch(
+  [selectedCategory, searchTarget, keyword, sortType],
+  () => {
+    currentPage.value = 1
+  }
+)
+
+watch(totalPages, (pageCount) => {
+  if (currentPage.value > pageCount) {
+    currentPage.value = pageCount
+  }
+})
 
 watch(
   () => route.fullPath,
@@ -980,6 +1121,12 @@ watch(
     }
 
     if (route.query.mode === 'write') {
+      if (!isLoggedIn()) {
+        notify()
+        await router.replace({ path: '/community' })
+        return
+      }
+
       viewMode.value = 'write'
       editingPostId.value = null
       selectedPost.value = null
@@ -998,6 +1145,18 @@ watch(
 
 
 <style scoped>
+.page-title {
+  color: #0f172a;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.title-blue {
+  color: #2454d6;
+}
+
 .community-page {
   width: min(var(--container-width), calc(100% - 48px));
   margin: 0 auto;
@@ -1284,11 +1443,19 @@ watch(
   place-items: center;
   width: 34px;
   height: 34px;
-  border-radius: 14px;
+  overflow: hidden;
+  border-radius: 50%;
   color: #fff;
   font-size: 13px;
   font-weight: 950;
   flex-shrink: 0;
+}
+
+.author-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .post-author strong {
@@ -1566,6 +1733,33 @@ watch(
   font-weight: 800;
 }
 
+
+.detail-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.detail-author-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 11px;
+}
+
+.comment-author {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 10px;
+}
+
+.comment-author-avatar {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, #60a5fa, #2454d6);
+  font-size: 12px;
+}
+
 .detail-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1823,4 +2017,521 @@ watch(
     justify-content: flex-start;
   }
 }
+
+/* === 주연 공통 톤 보정: 커뮤니티 페이지 === */
+.community-page {
+  width: min(var(--container-width, 1360px), calc(100% - 48px));
+  padding: 28px 0 72px;
+}
+
+.community-hero {
+  display: block;
+  min-height: 0;
+  margin-bottom: 22px;
+}
+
+.community-hero h1 {
+  font-size: clamp(36px, 4vw, 48px);
+  line-height: 1.08;
+  letter-spacing: -0.07em;
+}
+
+.community-hero p,
+.community-hero-art {
+  display: none;
+}
+
+.community-layout {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 22px;
+}
+
+.board-card,
+.post-detail-card,
+.post-form-card,
+.side-card {
+  border-radius: 22px;
+  box-shadow: 0 18px 44px rgba(15, 27, 61, 0.07);
+}
+
+.category-tabs {
+  padding: 18px 20px 14px;
+  gap: 10px;
+}
+
+.category-tabs button {
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 13px;
+}
+
+.board-tools {
+  grid-template-columns: minmax(320px, 1fr) 130px 130px 118px;
+  gap: 12px;
+  padding: 18px 20px;
+}
+
+.search-box input,
+.board-tools select {
+  min-height: 45px;
+  border-radius: 13px;
+}
+
+.write-button {
+  min-height: 45px;
+  border-radius: 13px;
+}
+
+.post-list-item {
+  grid-template-columns: minmax(0, 1.6fr) 128px 112px 148px 74px;
+  gap: 14px;
+  min-height: 88px;
+  padding: 18px 20px;
+}
+
+.post-title-row h2 {
+  font-size: 19px;
+  letter-spacing: -0.04em;
+}
+
+.post-preview {
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.author-avatar {
+  width: 34px;
+  height: 34px;
+}
+
+.category-badge {
+  min-height: 30px;
+  border-radius: 999px;
+}
+
+.side-card {
+  padding: 22px;
+}
+
+.side-title h2 {
+  font-size: 22px;
+  letter-spacing: -0.045em;
+}
+
+.popular-post {
+  min-height: 44px;
+  gap: 10px;
+}
+
+.tag-cloud {
+  gap: 8px;
+}
+
+.tag-cloud button {
+  min-height: 34px;
+  border-radius: 999px;
+}
+
+.guide ul {
+  gap: 12px;
+}
+
+.post-form-card,
+.post-detail-card {
+  padding: 28px;
+}
+
+.detail-header h2 {
+  font-size: 30px;
+  letter-spacing: -0.05em;
+}
+
+@media (max-width: 1120px) {
+  .community-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .community-sidebar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .board-tools,
+  .post-list-item,
+  .community-sidebar {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === 주연: 커뮤니티 페이지 불필요 문구/태그 정리 === */
+.community-hero {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-end !important;
+  min-height: 0 !important;
+  margin-bottom: 22px !important;
+}
+
+.community-hero .eyebrow,
+.community-hero p,
+.community-hero-art,
+.bubble-card,
+.piggy-card,
+.coin-card {
+  display: none !important;
+}
+
+.community-hero h1 {
+  margin: 0 !important;
+}
+
+.community-sidebar .side-card:has(.tag-cloud) {
+  display: none !important;
+}
+
+.post-form-card .detail-header {
+  align-items: center !important;
+  margin-bottom: 24px !important;
+}
+
+.post-form-card .detail-header .eyebrow,
+.post-form-card .detail-header p {
+  display: none !important;
+}
+
+.post-form-card .detail-header h2 {
+  margin: 0 !important;
+}
+
+.post-form select {
+  max-width: 100% !important;
+}
+
+
+/* === 주연: 커뮤니티 게시글 10개 단위 페이지네이션 === */
+.community-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 0 2px;
+  border-top: 1px solid var(--color-border);
+  background: #fff;
+}
+
+.community-pagination button {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.community-pagination button.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(17, 22, 184, 0.16);
+}
+
+.community-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.post-list {
+  min-height: 640px;
+}
+
+
+/* === 주연: 커뮤니티 페이지네이션 여백 재조정 === */
+.post-list {
+  min-height: 0 !important;
+}
+
+.community-pagination {
+  padding: 18px 0 22px !important;
+  margin-top: 0 !important;
+  border-top: 1px solid var(--color-border);
+}
+
+.board-card {
+  overflow: hidden;
+}
+
+.post-list-item {
+  min-height: 82px;
+}
+
+.post-list:has(.post-list-item:only-child) {
+  padding-bottom: 24px;
+}
+
+@media (max-width: 760px) {
+  .community-pagination {
+    padding-bottom: 18px !important;
+  }
+}
+
+/* === 주연: 게시글 상세/댓글 작성자 프로필 정렬 보정 === */
+.detail-meta {
+  align-items: center !important;
+  column-gap: 14px !important;
+  row-gap: 8px !important;
+}
+
+.detail-author {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  color: var(--color-text) !important;
+}
+
+.detail-author strong {
+  color: var(--color-text) !important;
+  font-size: 13px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+}
+
+.detail-author-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  font-size: 11px !important;
+}
+
+.detail-meta-divider {
+  width: 1px !important;
+  height: 14px !important;
+  background: var(--color-border-strong) !important;
+}
+
+.comment-top {
+  align-items: center !important;
+  margin-bottom: 12px !important;
+}
+
+.comment-author {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+}
+
+.comment-author-avatar {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #60a5fa, #2454d6);
+  font-size: 12px !important;
+}
+
+.comment-author strong {
+  color: var(--color-text) !important;
+  font-size: 14px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+}
+
+.comment-date {
+  margin-left: 8px !important;
+  color: var(--color-text-light) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+.comment-item p {
+  padding-left: 46px;
+}
+
+@media (max-width: 640px) {
+  .detail-meta {
+    column-gap: 10px !important;
+  }
+
+  .detail-meta-divider {
+    display: none !important;
+  }
+
+  .comment-item p {
+    padding-left: 0;
+  }
+
+  .comment-author {
+    flex-wrap: wrap;
+  }
+}
+
+/* === 주연: 댓글 좋아요 위치/댓글 카드 여백 보정 === */
+.comment-item {
+  padding: 18px 18px 18px !important;
+}
+
+.comment-top {
+  align-items: center !important;
+  margin-bottom: 14px !important;
+}
+
+.comment-author {
+  width: 100% !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.comment-date {
+  margin-left: 8px !important;
+  margin-right: 8px !important;
+}
+
+.comment-like-button.inline {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin-left: 4px !important;
+  color: var(--color-danger) !important;
+  font-size: 13px !important;
+  font-weight: 950 !important;
+  line-height: 1 !important;
+}
+
+.comment-like-button.inline.liked {
+  color: var(--color-danger) !important;
+}
+
+.comment-item p {
+  margin: 0 !important;
+  padding-left: 46px !important;
+  padding-bottom: 2px !important;
+  line-height: 1.7 !important;
+}
+
+.comment-actions {
+  margin-top: 12px !important;
+  padding-left: 46px !important;
+}
+
+@media (max-width: 640px) {
+  .comment-author {
+    flex-wrap: wrap !important;
+  }
+
+  .comment-like-button.inline {
+    margin-left: 0 !important;
+  }
+
+  .comment-item p,
+  .comment-actions {
+    padding-left: 0 !important;
+  }
+}
+
+
+/* === 주연: 페이지 상단 영역 재조정 - 제목 축소 / 버튼 남색 === */
+.page-hero-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  min-height: 0 !important;
+  margin: 0 0 24px !important;
+  padding-top: 0 !important;
+}
+
+.page-hero-row h1 {
+  margin: 0 !important;
+  color: #07142f !important;
+  font-size: clamp(34px, 3.7vw, 48px) !important;
+  line-height: 1.08 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.072em !important;
+}
+
+.page-hero-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+}
+
+.hero-primary-button,
+.hero-outline-button {
+  min-height: 42px !important;
+  padding: 0 18px !important;
+  border-radius: 14px !important;
+  font-size: 14px !important;
+  font-weight: 950 !important;
+  cursor: pointer !important;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease !important;
+}
+
+.hero-primary-button {
+  border: 1px solid #0b1f4d !important;
+  background: #0b1f4d !important;
+  color: #fff !important;
+  box-shadow: 0 12px 22px rgba(11, 31, 77, 0.18) !important;
+}
+
+.hero-outline-button {
+  border: 1px solid #c9d3e6 !important;
+  background: #fff !important;
+  color: #0b1f4d !important;
+  box-shadow: 0 10px 18px rgba(15, 27, 61, 0.04) !important;
+}
+
+.hero-primary-button:hover {
+  background: #071735 !important;
+  border-color: #071735 !important;
+}
+
+.hero-outline-button:hover {
+  border-color: #0b1f4d !important;
+  background: #f8fbff !important;
+  color: #0b1f4d !important;
+}
+
+@media (max-width: 760px) {
+  .page-hero-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+    margin-bottom: 22px !important;
+  }
+
+  .page-hero-row h1 {
+    font-size: 34px !important;
+  }
+
+  .page-hero-actions {
+    width: 100% !important;
+  }
+
+  .hero-primary-button,
+  .hero-outline-button {
+    flex: 1 !important;
+  }
+}
+
+.community-page {
+  padding-top: 30px !important;
+}
+
+
 </style>
