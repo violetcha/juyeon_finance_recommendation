@@ -101,9 +101,12 @@ def signup(request):
 
     if serializer.is_valid():
         user = serializer.save()
+        token, created = Token.objects.get_or_create(user=user)
+
         return Response(
             {
                 'message': '회원가입이 완료되었습니다.',
+                'token': token.key,
                 'user': UserSerializer(
                     user,
                     context={'request': request}
@@ -157,6 +160,7 @@ def login_user(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_user(request):
+    Token.objects.filter(user=request.user).delete()
     logout(request)
     return Response({'message': '로그아웃되었습니다.'})
 
@@ -368,6 +372,7 @@ def profile_options(request):
     ]
 
     bank_options = [
+        {'value': '없음', 'label': '없음'},
         {'value': '국민은행', 'label': '국민은행'},
         {'value': '신한은행', 'label': '신한은행'},
         {'value': '우리은행', 'label': '우리은행'},

@@ -1,5 +1,0 @@
-FSS_API_KEY = '6d024a5359a95cd17b2297bf1433f040'
-EXCHANGE_API_KEY = 'OeOJSV3pRcPPeKOctXJcBJLJ6Y9mlvST'
-
-GMS_BASE_URL=https://gms.ssafy.io/gmsapi/api.openai.com/v1/
-GMS_MODEL=gpt-5-nano
