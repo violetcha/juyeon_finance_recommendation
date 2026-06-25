@@ -1,7 +1,10 @@
 <template>
   <main class="community-page">
     <section class="page-hero-row">
-      <h1>금융 커뮤니티</h1>
+      <h1 class="page-title">
+        <span class="title-blue">커뮤니티</span>
+        <span> 게시판</span>
+      </h1>
     </section>
 
     <p v-if="errorMessage" class="error-message global">
@@ -429,6 +432,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { showAuthNotice } from '@/utils/authNotice'
 import {
   getPosts,
   createPost,
@@ -477,6 +481,26 @@ const categoryMap = {
   review: '예적금후기',
   tip: '재테크 팁',
   product: '질문답변',
+}
+
+const LOGIN_REQUIRED_MESSAGE = '로그인 후 이용할 수 있습니다.'
+
+const isLoggedIn = () => {
+  return !!localStorage.getItem('token')
+}
+
+const notify = (message = LOGIN_REQUIRED_MESSAGE) => {
+  showAuthNotice(message)
+}
+
+const getActionErrorMessage = (error, fallbackMessage) => {
+  const statusCode = error.response?.status
+
+  if (statusCode === 401 || statusCode === 403) {
+    return LOGIN_REQUIRED_MESSAGE
+  }
+
+  return error.response?.data?.message || fallbackMessage
 }
 
 const filteredPosts = computed(() => {
@@ -638,6 +662,11 @@ const openPost = async (postId) => {
 }
 
 const openCreateForm = async () => {
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   await router.push({
     path: '/community',
     query: {
@@ -658,8 +687,13 @@ const goList = async () => {
 }
 
 const submitPost = async () => {
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!postForm.title || !postForm.content) {
-    alert('제목과 내용을 입력해주세요.')
+    notify('제목과 내용을 입력해주세요.')
     return
   }
 
@@ -693,9 +727,7 @@ const submitPost = async () => {
   } catch (error) {
     console.error(error)
 
-    errorMessage.value =
-      error.response?.data?.message ||
-      '게시글 저장에 실패했습니다. 로그인 여부를 확인해주세요.'
+    notify(getActionErrorMessage(error, '게시글 저장에 실패했습니다.'))
   } finally {
     submitting.value = false
   }
@@ -704,8 +736,13 @@ const submitPost = async () => {
 const startEditPost = () => {
   if (!selectedPost.value) return
 
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!selectedPost.value.is_author) {
-    alert('본인이 작성한 게시글만 수정할 수 있습니다.')
+    notify('본인이 작성한 게시글만 수정할 수 있습니다.')
     return
   }
 
@@ -719,8 +756,13 @@ const startEditPost = () => {
 const handleDeletePost = async () => {
   if (!selectedPost.value) return
 
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!selectedPost.value.is_author) {
-    alert('본인이 작성한 게시글만 삭제할 수 있습니다.')
+    notify('본인이 작성한 게시글만 삭제할 수 있습니다.')
     return
   }
 
@@ -737,15 +779,17 @@ const handleDeletePost = async () => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '게시글 삭제에 실패했습니다. 본인이 작성한 글인지 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '게시글 삭제에 실패했습니다.'))
   }
 }
 
 const handleTogglePostLike = async () => {
   if (!selectedPost.value) return
+
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
 
   try {
     const response = await togglePostLike(selectedPost.value.id)
@@ -762,18 +806,20 @@ const handleTogglePostLike = async () => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '좋아요 처리에 실패했습니다. 로그인 여부를 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '좋아요 처리에 실패했습니다.'))
   }
 }
 
 const submitComment = async () => {
   if (!selectedPost.value) return
 
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!commentContent.value) {
-    alert('댓글 내용을 입력해주세요.')
+    notify('댓글 내용을 입력해주세요.')
     return
   }
 
@@ -789,18 +835,20 @@ const submitComment = async () => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '댓글 등록에 실패했습니다. 로그인 여부를 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '댓글 등록에 실패했습니다.'))
   } finally {
     commentSubmitting.value = false
   }
 }
 
 const startEditComment = (comment) => {
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!comment.is_author) {
-    alert('본인이 작성한 댓글만 수정할 수 있습니다.')
+    notify('본인이 작성한 댓글만 수정할 수 있습니다.')
     return
   }
 
@@ -815,8 +863,13 @@ const cancelEditComment = () => {
 const submitEditComment = async (commentId) => {
   if (!selectedPost.value) return
 
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   if (!editingCommentContent.value) {
-    alert('댓글 내용을 입력해주세요.')
+    notify('댓글 내용을 입력해주세요.')
     return
   }
 
@@ -830,22 +883,24 @@ const submitEditComment = async (commentId) => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '댓글 수정에 실패했습니다. 본인이 작성한 댓글인지 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '댓글 수정에 실패했습니다.'))
   }
 }
 
 const handleDeleteComment = async (commentId) => {
   if (!selectedPost.value) return
 
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
+
   const targetComment = selectedPost.value.comments?.find(
     (comment) => comment.id === commentId
   )
 
   if (targetComment && !targetComment.is_author) {
-    alert('본인이 작성한 댓글만 삭제할 수 있습니다.')
+    notify('본인이 작성한 댓글만 삭제할 수 있습니다.')
     return
   }
 
@@ -860,15 +915,17 @@ const handleDeleteComment = async (commentId) => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '댓글 삭제에 실패했습니다. 본인이 작성한 댓글인지 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '댓글 삭제에 실패했습니다.'))
   }
 }
 
 const handleToggleCommentLike = async (commentId) => {
   if (!selectedPost.value) return
+
+  if (!isLoggedIn()) {
+    notify()
+    return
+  }
 
   try {
     const response = await toggleCommentLike(commentId)
@@ -884,10 +941,7 @@ const handleToggleCommentLike = async (commentId) => {
   } catch (error) {
     console.error(error)
 
-    alert(
-      error.response?.data?.message ||
-      '댓글 좋아요 처리에 실패했습니다. 로그인 여부를 확인해주세요.'
-    )
+    notify(getActionErrorMessage(error, '댓글 좋아요 처리에 실패했습니다.'))
   }
 }
 
@@ -1067,6 +1121,12 @@ watch(
     }
 
     if (route.query.mode === 'write') {
+      if (!isLoggedIn()) {
+        notify()
+        await router.replace({ path: '/community' })
+        return
+      }
+
       viewMode.value = 'write'
       editingPostId.value = null
       selectedPost.value = null
@@ -1085,6 +1145,18 @@ watch(
 
 
 <style scoped>
+.page-title {
+  color: #0f172a;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.title-blue {
+  color: #2454d6;
+}
+
 .community-page {
   width: min(var(--container-width), calc(100% - 48px));
   margin: 0 auto;

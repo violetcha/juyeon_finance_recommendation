@@ -1,7 +1,10 @@
 <template>
   <div class="product-list-page">
     <section class="page-hero-row">
-      <h1>예적금 상품 한눈에 보기</h1>
+      <h1 class="page-title">
+        <span class="title-blue">예적금</span>
+        <span> 상품 한눈에 보기</span>
+      </h1>
     </section>
 
     <div class="product-layout">
@@ -1068,6 +1071,18 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.page-title {
+  color: #0f172a;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.title-blue {
+  color: #2454d6;
+}
+
 .product-list-page {
   width: min(var(--container-width), calc(100% - 48px));
   margin: 0 auto;

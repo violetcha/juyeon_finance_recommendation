@@ -2,7 +2,10 @@
   <main class="recommend-page page-wrap">
     <section class="recommend-hero page-hero-row">
       <div class="hero-copy">
-        <h1>맞춤 추천 결과</h1>
+        <h1 class="page-title">
+          <span class="title-blue">맞춤</span>
+          <span> 상품 추천</span>
+        </h1>
         <p>
           마이페이지 금융 프로필과 추천 조건을 바탕으로 실제 저장된 예금·적금 상품 중
           가장 적합한 상품을 분석합니다.
@@ -1032,6 +1035,18 @@ watch(
 <!-- FINAL OVERRIDE: 맞춤추천 결과 카드 가독성 재정리 -->
 <style scoped>
 /* FINAL FIX: 맞춤추천 카드 행형 정리 + 알림 위치/은행명 표기 */
+.page-title {
+  color: #0f172a;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.title-blue {
+  color: #2454d6;
+}
+
 .recommend-page {
   padding-top: 18px !important;
 }

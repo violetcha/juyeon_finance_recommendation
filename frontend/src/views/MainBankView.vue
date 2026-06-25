@@ -3,7 +3,10 @@
 <template>
   <main class="main-bank-page">
     <section class="page-hero-row">
-      <h1>내 주변 주거래은행 찾기</h1>
+      <h1 class="page-title">
+        <span class="title-blue">내주변</span>
+        <span>  주거래은행</span>
+      </h1>
 
       <div class="page-hero-actions">
         <button type="button" class="hero-outline-button" @click="scrollToVideoSection">
@@ -1469,6 +1472,18 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.page-title {
+  color: #0f172a;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.title-blue {
+  color: #2454d6;
+}
+
 .main-bank-page {
   width: min(var(--container-width, 1360px), calc(100% - 48px));
   margin: 0 auto;

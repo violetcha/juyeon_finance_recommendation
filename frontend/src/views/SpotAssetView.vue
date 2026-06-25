@@ -1,7 +1,10 @@
 <template>
   <main class="asset-page">
     <section class="page-hero-row">
-      <h1>금 · 은 시세</h1>
+      <h1 class="page-title">
+        <span class="title-blue">금 · 은</span>
+        <span> 시세 확인</span>
+      </h1>
     </section>
 
     <section class="asset-section card">
@@ -487,6 +490,18 @@ onMounted(() => {
 </script>
 
 <style scoped>
+.page-title {
+  color: #0f172a;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.title-blue {
+  color: #2454d6;
+}
+
 .asset-page {
   width: min(var(--container-width, 1360px), calc(100% - 48px));
   margin: 0 auto;

@@ -1,8 +1,10 @@
 <template>
   <main class="exchange-page">
     <section class="page-hero-row">
-      <h1>환율 계산 · 시세 확인</h1>
-
+      <h1 class="page-title">
+        <span class="title-blue">환율</span>
+        <span> 계산 · 시세 확인</span>
+      </h1>
     </section>
 
     <section class="exchange-grid">
@@ -1037,6 +1039,18 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.page-title {
+  color: #0f172a;
+  font-size: 42px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.15;
+}
+
+.title-blue {
+  color: #2454d6;
+}
+
 .exchange-page {
   width: min(var(--container-width), calc(100% - 48px));
   margin: 0 auto;
