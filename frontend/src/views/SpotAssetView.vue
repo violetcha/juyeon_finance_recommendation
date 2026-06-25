@@ -1,14 +1,14 @@
 <template>
   <main class="asset-page">
     <section class="page-hero-row">
-      <h1>금·은 시세</h1>
+      <h1>금 · 은 시세</h1>
     </section>
 
     <section class="asset-section card">
       <div class="asset-header">
         <div>
-          <h2>금·은 가격 변동 시각화</h2>
-          <p>금·은 가격 데이터를 기간별 그래프와 표로 확인합니다.</p>
+          <h2>금 · 은 가격 변동 시각화</h2>
+
         </div>
 
         <div class="asset-buttons">
