@@ -438,7 +438,7 @@ Kakao Maps API를 활용하여 사용자가 선택한 지역과 은행명을 기
 | Kakao Maps API | 지도 출력, 은행 지점 검색 |
 | Kakao Mobility API | 선택 지점 경로 안내 |
 | YouTube Data API | 금융·주거래은행 관련 영상 검색 |
-| OpenAI API 또는 AI API | 금융 용어 챗봇 및 개발 보조 |
+| GMS API | 금융 용어 챗봇 |
 
 <br>
 
