@@ -1,7 +1,7 @@
 <template>
   <main class="auth-page">
     <section class="auth-visual-panel">
-      <p class="eyebrow">JUYEON FINANCE START</p>
+      <p class="eyebrow">SMART FINANCE START</p>
       <h1>
         주연과 함께<br>
         <span>똑똑한 금융생활</span>을 시작하세요
@@ -51,8 +51,8 @@
       <div class="signup-benefit-card">
         <span>🎁</span>
         <div>
-          <strong>가입 후 맞춤 추천 준비 완료</strong>
-          <p>금융 프로필을 채우면 추천 정확도가 더 좋아집니다.</p>
+          <strong>가입만 해도 금융생활 시작 준비 완료</strong>
+          <p>마이페이지 프로필을 채우면 추천 정확도가 더 좋아집니다.</p>
         </div>
       </div>
     </section>
@@ -758,78 +758,238 @@ onMounted(() => {
   }
 }
 
-/* Juyeon clean auth override */
+/* === 주연: 로그인 페이지 정리 - 안전 수정본 === */
 .auth-page {
-  align-items: start;
-  padding: 48px 0 68px;
+  padding: 34px 0 64px !important;
+  grid-template-columns: minmax(420px, 0.9fr) minmax(620px, 1.1fr) !important;
+  gap: 38px !important;
 }
 
 .auth-visual-panel {
-  padding: 30px;
+  min-height: 600px;
+  padding: 34px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  background: rgba(255, 255, 255, 0.82);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.84);
   box-shadow: var(--shadow-soft);
 }
 
-.auth-visual-panel h1 {
-  font-size: clamp(34px, 4.4vw, 52px);
+.auth-visual-panel > .eyebrow,
+.form-heading > .eyebrow,
+.visual-description,
+.auth-illustration,
+.signup-benefit-card,
+.auth-notice,
+.form-heading > p,
+.guide-heading > p {
+  display: none !important;
 }
 
-.auth-illustration {
-  display: none;
+.auth-visual-panel h1 {
+  font-size: clamp(38px, 4.8vw, 56px) !important;
+  line-height: 1.15 !important;
+}
+
+.benefit-list {
+  margin-top: 38px !important;
+  gap: 24px !important;
 }
 
 .auth-card {
-  border-radius: 24px;
-  background: #fff;
-  box-shadow: var(--shadow-card);
+  border-radius: 26px !important;
 }
 
-.auth-tabs {
-  background: #f8fafc;
+.auth-tabs button,
+.auth-tabs a {
+  min-height: 64px !important;
 }
 
 .form-panel,
 .signup-guide-panel {
-  padding: 32px;
+  padding: 34px 34px !important;
 }
 
-.form-group input,
-.password-field,
-.form-group select {
-  border-color: var(--color-border-strong);
-  background: #fff;
+.form-heading h2 {
+  font-size: 32px !important;
 }
 
-.submit-button,
+.login-form {
+  margin-top: 28px !important;
+}
+
+.signup-guide-panel {
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.signup-guide-panel .guide-heading h3 {
+  margin-top: 0;
+  font-size: 24px;
+  line-height: 1.35;
+  letter-spacing: -0.04em;
+}
+
+.profile-benefits {
+  margin-top: 28px;
+}
+
+.profile-benefits li p {
+  margin-top: 4px !important;
+}
+
 .outline-cta {
-  border-radius: 13px;
+  margin-top: 22px !important;
 }
 
-.signup-benefit-card,
-.benefit-list article,
-.auth-notice,
-.profile-benefits li {
-  border-radius: 18px;
-}
-
-@media (max-width: 1180px) {
+@media (max-width: 1120px) {
   .auth-page {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+  }
+
+  .auth-visual-panel {
+    min-height: 0;
   }
 }
 
-@media (max-width: 680px) {
+@media (max-width: 760px) {
   .auth-page {
-    width: min(100% - 28px, var(--container-width));
-    padding: 28px 0 44px;
+    width: min(100% - 28px, var(--container-width)) !important;
+    padding-top: 20px !important;
   }
 
-  .form-panel,
-  .signup-guide-panel {
-    padding: 26px 22px;
+  .auth-card-body {
+    grid-template-columns: 1fr !important;
   }
+
+  .form-panel {
+    border-right: 0 !important;
+  }
+}
+
+
+/* === 주연: 로그인 페이지 최종 레이아웃 재조정 === */
+.auth-page {
+  width: min(1280px, calc(100% - 48px)) !important;
+  padding: 28px 0 64px !important;
+  grid-template-columns: 520px minmax(560px, 640px) !important;
+  gap: 42px !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+}
+
+.auth-visual-panel {
+  width: 100% !important;
+  min-height: 620px !important;
+  box-sizing: border-box !important;
+}
+
+.auth-visual-panel h1 {
+  font-size: 48px !important;
+  line-height: 1.18 !important;
+  letter-spacing: -0.06em !important;
+  word-break: keep-all !important;
+}
+
+.benefit-list {
+  margin-top: 42px !important;
+}
+
+.auth-card {
+  min-height: 620px !important;
+}
+
+.auth-card-body {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+}
+
+.form-panel {
+  border-right: 0 !important;
+  padding: 42px 46px !important;
+}
+
+.signup-guide-panel {
+  display: none !important;
+}
+
+.form-heading h2 {
+  font-size: 34px !important;
+}
+
+.login-form {
+  max-width: 420px !important;
+}
+
+.form-help-row {
+  max-width: 420px !important;
+}
+
+.submit-button {
+  max-width: 420px !important;
+}
+
+@media (max-width: 1120px) {
+  .auth-page {
+    grid-template-columns: 1fr !important;
+  }
+
+  .auth-visual-panel,
+  .auth-card {
+    min-height: 0 !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .auth-page {
+    width: min(100% - 28px, var(--container-width)) !important;
+    padding-top: 18px !important;
+  }
+
+  .auth-visual-panel h1 {
+    font-size: 40px !important;
+  }
+
+  .form-panel {
+    padding: 28px 24px !important;
+  }
+}
+
+
+/* === 주연: 로그인 폼 중앙 정렬 === */
+.auth-card-body {
+  min-height: 540px !important;
+}
+
+.form-panel {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  border-right: 0 !important;
+}
+
+.form-heading,
+.login-form,
+.success-message,
+.error-message {
+  width: min(100%, 430px) !important;
+}
+
+.form-heading {
+  text-align: left !important;
+}
+
+.login-form {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.form-help-row {
+  width: min(100%, 430px) !important;
+}
+
+.submit-button {
+  width: min(100%, 430px) !important;
+  max-width: 430px !important;
 }
 
 </style>

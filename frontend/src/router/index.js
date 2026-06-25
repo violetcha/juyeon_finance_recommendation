@@ -81,11 +81,7 @@ const router = createRouter({
       name: 'reset-password',
       component: ResetPasswordView,
     },
-    {
-      path: '/spot-assets',
-      name: 'SpotAsset',
-      component: () => import('@/views/SpotAssetView.vue'),
-    },
+
   ],
 })
 

@@ -2,17 +2,8 @@
   <main class="community-page">
     <section class="community-hero">
       <div>
-        <p class="eyebrow">FINANCIAL COMMUNITY</p>
+        
         <h1>금융 커뮤니티</h1>
-        <p>
-          예적금 후기, 금융상품 질문, 재테크 팁을 실제 회원들과 나누는 공간입니다.
-        </p>
-      </div>
-
-      <div class="community-hero-art" aria-hidden="true">
-        <div class="bubble-card">💬</div>
-        <div class="piggy-card">🐷</div>
-        <div class="coin-card">₩</div>
       </div>
     </section>
 
@@ -75,7 +66,7 @@
 
           <div v-else class="post-list">
             <article
-              v-for="post in filteredPosts"
+              v-for="post in paginatedPosts"
               :key="post.id"
               class="post-list-item"
               @click="openPost(post.id)"
@@ -116,6 +107,34 @@
               <time>{{ getRelativeTime(post.created_at) }}</time>
             </article>
           </div>
+
+          <div v-if="filteredPosts.length > pageSize" class="community-pagination">
+            <button
+              type="button"
+              :disabled="currentPage === 1"
+              @click="goPage(currentPage - 1)"
+            >
+              ‹
+            </button>
+
+            <button
+              v-for="page in visiblePageNumbers"
+              :key="page"
+              type="button"
+              :class="{ active: currentPage === page }"
+              @click="goPage(page)"
+            >
+              {{ page }}
+            </button>
+
+            <button
+              type="button"
+              :disabled="currentPage === totalPages"
+              @click="goPage(currentPage + 1)"
+            >
+              ›
+            </button>
+          </div>
         </section>
 
         <aside class="community-sidebar">
@@ -142,23 +161,6 @@
             </p>
           </section>
 
-          <section class="side-card">
-            <div class="side-title">
-              <h2>인기 태그</h2>
-              <span>실제 카테고리 기준</span>
-            </div>
-
-            <div class="tag-cloud">
-              <button
-                v-for="tag in popularTags"
-                :key="tag"
-                type="button"
-              >
-                # {{ tag }}
-              </button>
-            </div>
-          </section>
-
           <section class="side-card guide">
             <div class="side-title">
               <h2>커뮤니티 이용 가이드</h2>
@@ -178,9 +180,8 @@
     <section v-else-if="viewMode === 'write'" class="post-form-card">
       <div class="detail-header">
         <div>
-          <p class="eyebrow">WRITE</p>
+          
           <h2>{{ editingPostId ? '게시글 수정' : '새 게시글 작성' }}</h2>
-          <p>금융 정보를 나누되 개인정보나 광고성 내용은 제외해주세요.</p>
         </div>
 
         <button type="button" class="ghost-button" @click="goList">
@@ -193,9 +194,9 @@
           <label for="post-category">카테고리</label>
           <select id="post-category" v-model="postForm.category">
             <option value="free">자유게시판</option>
-            <option value="product">상품질문</option>
-            <option value="review">가입후기</option>
-            <option value="tip">금융팁</option>
+            <option value="review">예적금후기</option>
+            <option value="tip">재테크 팁</option>
+            <option value="product">질문답변</option>
           </select>
         </div>
 
@@ -428,6 +429,8 @@ const selectedCategory = ref('all')
 const searchTarget = ref('all')
 const keyword = ref('')
 const sortType = ref('latest')
+const currentPage = ref(1)
+const pageSize = 10
 
 const editingPostId = ref(null)
 const commentContent = ref('')
@@ -442,9 +445,9 @@ const postForm = reactive({
 
 const categoryMap = {
   free: '자유게시판',
-  product: '상품질문',
-  review: '가입후기',
-  tip: '금융팁',
+  review: '예적금후기',
+  tip: '재테크 팁',
+  product: '질문답변',
 }
 
 const filteredPosts = computed(() => {
@@ -498,6 +501,40 @@ const filteredPosts = computed(() => {
     return new Date(b.created_at) - new Date(a.created_at)
   })
 })
+
+
+const totalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredPosts.value.length / pageSize))
+})
+
+const paginatedPosts = computed(() => {
+  const safePage = Math.min(currentPage.value, totalPages.value)
+  const start = (safePage - 1) * pageSize
+
+  return filteredPosts.value.slice(start, start + pageSize)
+})
+
+const visiblePageNumbers = computed(() => {
+  const pages = []
+  const maxVisible = 5
+  let start = Math.max(1, currentPage.value - Math.floor(maxVisible / 2))
+  let end = Math.min(totalPages.value, start + maxVisible - 1)
+
+  if (end - start + 1 < maxVisible) {
+    start = Math.max(1, end - maxVisible + 1)
+  }
+
+  for (let page = start; page <= end; page += 1) {
+    pages.push(page)
+  }
+
+  return pages
+})
+
+const goPage = (page) => {
+  const nextPage = Math.min(Math.max(1, page), totalPages.value)
+  currentPage.value = nextPage
+}
 
 const fetchPosts = async () => {
   loading.value = true
@@ -870,7 +907,7 @@ const categoryItems = computed(() => {
   const base = [
     { value: 'all', label: '전체' },
     { value: 'free', label: '자유게시판' },
-    { value: 'review', label: '예적금 후기' },
+    { value: 'review', label: '예적금후기' },
     { value: 'tip', label: '재테크 팁' },
     { value: 'product', label: '질문답변' },
   ]
@@ -887,22 +924,7 @@ const popularPosts = computed(() => {
     .slice(0, 5)
 })
 
-const popularTags = computed(() => {
-  const tags = [
-    { label: '예적금', value: 'review' },
-    { label: '상품질문', value: 'product' },
-    { label: '재테크', value: 'tip' },
-    { label: '자유게시판', value: 'free' },
-  ]
-
-  const dynamicTags = posts.value
-    .map((post) => getCategoryLabel(post.category))
-    .filter(Boolean)
-
-  const uniqueLabels = [...new Set([...tags.map((tag) => tag.label), ...dynamicTags])]
-
-  return uniqueLabels.slice(0, 8)
-})
+const popularTags = computed(() => [])
 
 const getCategoryCount = (category) => {
   if (category === 'all') {
@@ -969,7 +991,22 @@ const getRelativeTime = (value) => {
 
 const changeCategory = (category) => {
   selectedCategory.value = category
+  currentPage.value = 1
 }
+
+
+watch(
+  [selectedCategory, searchTarget, keyword, sortType],
+  () => {
+    currentPage.value = 1
+  }
+)
+
+watch(totalPages, (pageCount) => {
+  if (currentPage.value > pageCount) {
+    currentPage.value = pageCount
+  }
+})
 
 watch(
   () => route.fullPath,
@@ -1823,4 +1860,270 @@ watch(
     justify-content: flex-start;
   }
 }
+
+/* === 주연 공통 톤 보정: 커뮤니티 페이지 === */
+.community-page {
+  width: min(var(--container-width, 1360px), calc(100% - 48px));
+  padding: 28px 0 72px;
+}
+
+.community-hero {
+  display: block;
+  min-height: 0;
+  margin-bottom: 22px;
+}
+
+.community-hero h1 {
+  font-size: clamp(36px, 4vw, 48px);
+  line-height: 1.08;
+  letter-spacing: -0.07em;
+}
+
+.community-hero p,
+.community-hero-art {
+  display: none;
+}
+
+.community-layout {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 22px;
+}
+
+.board-card,
+.post-detail-card,
+.post-form-card,
+.side-card {
+  border-radius: 22px;
+  box-shadow: 0 18px 44px rgba(15, 27, 61, 0.07);
+}
+
+.category-tabs {
+  padding: 18px 20px 14px;
+  gap: 10px;
+}
+
+.category-tabs button {
+  min-height: 42px;
+  padding: 0 18px;
+  border-radius: 13px;
+}
+
+.board-tools {
+  grid-template-columns: minmax(320px, 1fr) 130px 130px 118px;
+  gap: 12px;
+  padding: 18px 20px;
+}
+
+.search-box input,
+.board-tools select {
+  min-height: 45px;
+  border-radius: 13px;
+}
+
+.write-button {
+  min-height: 45px;
+  border-radius: 13px;
+}
+
+.post-list-item {
+  grid-template-columns: minmax(0, 1.6fr) 128px 112px 148px 74px;
+  gap: 14px;
+  min-height: 88px;
+  padding: 18px 20px;
+}
+
+.post-title-row h2 {
+  font-size: 19px;
+  letter-spacing: -0.04em;
+}
+
+.post-preview {
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.author-avatar {
+  width: 34px;
+  height: 34px;
+}
+
+.category-badge {
+  min-height: 30px;
+  border-radius: 999px;
+}
+
+.side-card {
+  padding: 22px;
+}
+
+.side-title h2 {
+  font-size: 22px;
+  letter-spacing: -0.045em;
+}
+
+.popular-post {
+  min-height: 44px;
+  gap: 10px;
+}
+
+.tag-cloud {
+  gap: 8px;
+}
+
+.tag-cloud button {
+  min-height: 34px;
+  border-radius: 999px;
+}
+
+.guide ul {
+  gap: 12px;
+}
+
+.post-form-card,
+.post-detail-card {
+  padding: 28px;
+}
+
+.detail-header h2 {
+  font-size: 30px;
+  letter-spacing: -0.05em;
+}
+
+@media (max-width: 1120px) {
+  .community-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .community-sidebar {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+@media (max-width: 900px) {
+  .board-tools,
+  .post-list-item,
+  .community-sidebar {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* === 주연: 커뮤니티 페이지 불필요 문구/태그 정리 === */
+.community-hero {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: flex-end !important;
+  min-height: 0 !important;
+  margin-bottom: 22px !important;
+}
+
+.community-hero .eyebrow,
+.community-hero p,
+.community-hero-art,
+.bubble-card,
+.piggy-card,
+.coin-card {
+  display: none !important;
+}
+
+.community-hero h1 {
+  margin: 0 !important;
+}
+
+.community-sidebar .side-card:has(.tag-cloud) {
+  display: none !important;
+}
+
+.post-form-card .detail-header {
+  align-items: center !important;
+  margin-bottom: 24px !important;
+}
+
+.post-form-card .detail-header .eyebrow,
+.post-form-card .detail-header p {
+  display: none !important;
+}
+
+.post-form-card .detail-header h2 {
+  margin: 0 !important;
+}
+
+.post-form select {
+  max-width: 100% !important;
+}
+
+
+/* === 주연: 커뮤니티 게시글 10개 단위 페이지네이션 === */
+.community-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 0 2px;
+  border-top: 1px solid var(--color-border);
+  background: #fff;
+}
+
+.community-pagination button {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.community-pagination button.active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(17, 22, 184, 0.16);
+}
+
+.community-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.post-list {
+  min-height: 640px;
+}
+
+
+/* === 주연: 커뮤니티 페이지네이션 여백 재조정 === */
+.post-list {
+  min-height: 0 !important;
+}
+
+.community-pagination {
+  padding: 18px 0 22px !important;
+  margin-top: 0 !important;
+  border-top: 1px solid var(--color-border);
+}
+
+.board-card {
+  overflow: hidden;
+}
+
+.post-list-item {
+  min-height: 82px;
+}
+
+.post-list:has(.post-list-item:only-child) {
+  padding-bottom: 24px;
+}
+
+@media (max-width: 760px) {
+  .community-pagination {
+    padding-bottom: 18px !important;
+  }
+}
+
 </style>

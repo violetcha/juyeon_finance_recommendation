@@ -2,8 +2,7 @@
   <header class="navbar">
     <div class="nav-inner">
       <RouterLink :to="{ name: 'home' }" class="logo" aria-label="주연 홈" @click="closeMenu">
-        <span class="logo-mark">주</span>
-        <span class="logo-text">주연</span>
+        <img :src="juyeonLogo" alt="주연" class="logo-image" />
       </RouterLink>
 
       <button
@@ -55,6 +54,7 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import juyeonLogo from '@/assets/branding/juyeon-logo.png'
 
 const router = useRouter()
 const isMenuOpen = ref(false)
@@ -62,8 +62,8 @@ const isLoggedIn = ref(!!localStorage.getItem('token'))
 
 const navLinks = [
   { name: 'products', label: '예적금' },
-  { name: 'recommend', label: '맞춤추천' },
   { name: 'main-bank', label: '주거래은행' },
+  { name: 'recommend', label: '맞춤추천' },
   { name: 'exchange', label: '환율' },
   { name: 'community', label: '커뮤니티' },
 ]
@@ -120,30 +120,18 @@ onBeforeUnmount(() => {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  color: var(--color-text);
-  font-size: 22px;
-  font-weight: 950;
-  letter-spacing: -0.05em;
+  height: 100%;
+  padding: 0 4px;
+  text-decoration: none;
 }
 
-.logo-mark {
-  width: 34px;
-  height: 34px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
-  color: #fff;
-  font-size: 18px;
-  font-weight: 950;
-  letter-spacing: -0.04em;
-  box-shadow: 0 10px 20px rgba(31, 79, 216, 0.18);
-}
-
-.logo-text {
-  font-weight: 950;
+.logo-image {
+  display: block;
+  width: auto;
+  height: 42px;
+  max-width: 132px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(9, 38, 91, 0.08));
 }
 
 .nav-menu {

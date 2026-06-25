@@ -57,7 +57,7 @@
         <label class="form-group">
           <span>내 주거래은행</span>
           <select v-model="form.main_bank" class="input-base">
-            <option value="없음">마이페이지 정보 사용 또는 아직 없음</option>
+            <option value="없음">아직 없음</option>
             <option value="국민은행">국민은행</option>
             <option value="신한은행">신한은행</option>
             <option value="하나은행">하나은행</option>
@@ -261,7 +261,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, watch, onMounted, computed } from 'vue'
+import { reactive, ref, watch, onMounted, onActivated, computed } from 'vue'
 import { recommendProducts } from '@/api/recommendations'
 import { getProfile } from '@/api/accounts'
 import { getFavoriteProducts, toggleFavoriteProduct } from '@/api/favorites'
@@ -278,6 +278,78 @@ const currentUserId = ref(null)
 const profileUsed = ref(null)
 const favoriteProductIds = ref(new Set())
 const favoriteLoadingProductId = ref(null)
+const isInitializingRecommendationState = ref(true)
+const GLOBAL_RECOMMENDATION_STORAGE_KEY = 'productRecommendationState:last'
+
+
+const finalMainBankNames = [
+  '국민은행',
+  '신한은행',
+  '하나은행',
+  '우리은행',
+  'NH농협은행',
+  '부산은행',
+  '경남은행',
+  '광주은행',
+  '전북은행',
+  '제주은행',
+  'IBK기업은행',
+  'SC제일은행',
+  'iM뱅크',
+  'KDB산업은행',
+  '수협은행',
+  '카카오뱅크',
+  '토스뱅크',
+  '케이뱅크',
+]
+
+const normalizeMainBankSelection = (bankName) => {
+  const rawName = String(bankName || '').trim()
+
+  if (!rawName || rawName === '없음' || rawName === '마이페이지 정보 사용 또는 아직 없음') {
+    return ''
+  }
+
+  const aliasMap = {
+    KB국민은행: '국민은행',
+    국민은행: '국민은행',
+    신한은행: '신한은행',
+    KEB하나은행: '하나은행',
+    하나은행: '하나은행',
+    우리은행: '우리은행',
+    농협은행: 'NH농협은행',
+    NH농협은행: 'NH농협은행',
+    부산은행: '부산은행',
+    경남은행: '경남은행',
+    광주은행: '광주은행',
+    전북은행: '전북은행',
+    제주은행: '제주은행',
+    IBK기업은행: 'IBK기업은행',
+    기업은행: 'IBK기업은행',
+    SC제일은행: 'SC제일은행',
+    iM뱅크: 'iM뱅크',
+    대구은행: 'iM뱅크',
+    KDB산업은행: 'KDB산업은행',
+    산업은행: 'KDB산업은행',
+    수협은행: '수협은행',
+    카카오뱅크: '카카오뱅크',
+    토스뱅크: '토스뱅크',
+    케이뱅크: '케이뱅크',
+  }
+
+  const displayName = aliasMap[rawName] || getBankDisplayName(rawName)
+  const normalizedName = aliasMap[displayName] || displayName
+
+  return finalMainBankNames.includes(normalizedName) ? normalizedName : ''
+}
+
+const applyProfileMainBankToForm = () => {
+  const profileMainBank = normalizeMainBankSelection(profileUsed.value?.main_bank)
+
+  if (profileMainBank && form.main_bank === '없음') {
+    form.main_bank = profileMainBank
+  }
+}
 
 const defaultForm = {
   product_type: 'auto',
@@ -311,12 +383,26 @@ const getPersistedForm = () => ({
   join_preference: form.join_preference,
 })
 
-const storageKey = computed(() => {
-  if (!currentUserId.value) {
+const isLoggedIn = () => {
+  return Boolean(localStorage.getItem('token'))
+}
+
+const getTokenStorageKey = () => {
+  const token = localStorage.getItem('token')
+
+  if (!token) {
     return null
   }
 
-  return `productRecommendationState:user:${currentUserId.value}`
+  return `productRecommendationState:token:${token.slice(-32)}`
+}
+
+const storageKey = computed(() => {
+  if (currentUserId.value) {
+    return `productRecommendationState:user:${currentUserId.value}`
+  }
+
+  return getTokenStorageKey()
 })
 
 const topRecommendation = computed(() => recommendations.value[0] || null)
@@ -580,7 +666,9 @@ const getDetailRoute = (item) => ({
 })
 
 const handleReset = () => {
+  isInitializingRecommendationState.value = false
   Object.assign(form, { ...defaultForm })
+  applyProfileMainBankToForm()
   delete form.saving_style
 
   recommendations.value = []
@@ -593,13 +681,28 @@ const handleReset = () => {
   if (storageKey.value) {
     localStorage.removeItem(storageKey.value)
   }
+
+  const tokenKey = getTokenStorageKey()
+
+  if (tokenKey) {
+    localStorage.removeItem(tokenKey)
+  }
+
+  localStorage.removeItem(GLOBAL_RECOMMENDATION_STORAGE_KEY)
 }
 
 const loadCurrentUser = async () => {
   try {
     const response = await getProfile()
-    currentUserId.value = response.data.id
-    profileUsed.value = response.data.profile || null
+    currentUserId.value =
+      response.data.id ||
+      response.data.user?.id ||
+      response.data.pk ||
+      response.data.username ||
+      response.data.email ||
+      null
+    profileUsed.value = response.data.profile || response.data || null
+    applyProfileMainBankToForm()
   } catch (error) {
     console.error('현재 사용자 정보 조회 실패:', error)
     currentUserId.value = null
@@ -608,11 +711,15 @@ const loadCurrentUser = async () => {
 }
 
 const restoreRecommendationState = () => {
-  if (!storageKey.value) {
-    return
-  }
+  const candidateKeys = [
+    storageKey.value,
+    getTokenStorageKey(),
+    GLOBAL_RECOMMENDATION_STORAGE_KEY,
+  ].filter(Boolean)
 
-  const savedState = localStorage.getItem(storageKey.value)
+  const savedState = candidateKeys
+    .map((key) => localStorage.getItem(key))
+    .find((value) => !!value)
 
   if (!savedState) {
     return
@@ -637,9 +744,11 @@ const restoreRecommendationState = () => {
 
     if (Array.isArray(parsedState.recommendations)) {
       recommendations.value = parsedState.recommendations
-      selectedRecommendationKey.value = recommendations.value[0]
-        ? getRecommendationKey(recommendations.value[0])
-        : null
+      selectedRecommendationKey.value =
+        parsedState.selectedRecommendationKey ||
+        (recommendations.value[0]
+          ? getRecommendationKey(recommendations.value[0])
+          : null)
     }
 
     if (parsedState.profileUsed) {
@@ -649,27 +758,45 @@ const restoreRecommendationState = () => {
     if (typeof parsedState.hasSearched === 'boolean') {
       hasSearched.value = parsedState.hasSearched
     }
+
   } catch (error) {
     console.error('추천 조건 복원 실패:', error)
-    localStorage.removeItem(storageKey.value)
+
+    candidateKeys.forEach((key) => {
+      localStorage.removeItem(key)
+    })
   }
 }
 
 const saveRecommendationState = () => {
-  if (!storageKey.value) {
+  if (isInitializingRecommendationState.value) {
     return
   }
 
-  localStorage.setItem(
-    storageKey.value,
-    JSON.stringify({
-      userId: currentUserId.value,
-      form: getPersistedForm(),
-      recommendations: recommendations.value,
-      profileUsed: profileUsed.value,
-      hasSearched: hasSearched.value,
-    })
-  )
+  const state = JSON.stringify({
+    userId: currentUserId.value,
+    form: getPersistedForm(),
+    recommendations: recommendations.value,
+    selectedRecommendationKey: selectedRecommendationKey.value,
+    profileUsed: profileUsed.value,
+    hasSearched: hasSearched.value,
+  })
+
+  const keys = new Set([GLOBAL_RECOMMENDATION_STORAGE_KEY])
+
+  if (storageKey.value) {
+    keys.add(storageKey.value)
+  }
+
+  const tokenKey = getTokenStorageKey()
+
+  if (tokenKey) {
+    keys.add(tokenKey)
+  }
+
+  keys.forEach((key) => {
+    localStorage.setItem(key, state)
+  })
 }
 
 const extractFavoriteProductId = (favorite) => {
@@ -731,15 +858,19 @@ const isFavoriteProduct = (productId) => {
 }
 
 const handleRecommend = async () => {
-  loading.value = true
-  hasSearched.value = true
   errorMessage.value = ''
   successMessage.value = ''
   noticeTone.value = 'success'
+
+  if (!isLoggedIn()) {
+    errorMessage.value = '회원가입 후 로그인하면 맞춤 추천을 받을 수 있습니다.'
+    return
+  }
+
+  loading.value = true
+  hasSearched.value = true
   recommendations.value = []
   selectedRecommendationKey.value = null
-
-  saveRecommendationState()
 
   try {
     const response = await recommendProducts({
@@ -761,9 +892,15 @@ const handleRecommend = async () => {
   } catch (error) {
     console.error(error)
 
-    errorMessage.value =
-      error.response?.data?.message ||
-      '추천 상품을 불러오지 못했습니다. recommendations API를 확인해주세요.'
+    const statusCode = error.response?.status
+
+    if (statusCode === 401 || statusCode === 403) {
+      errorMessage.value = '회원가입 후 로그인하면 맞춤 추천을 받을 수 있습니다.'
+    } else {
+      errorMessage.value =
+        error.response?.data?.message ||
+        '추천 상품을 불러오지 못했습니다. recommendations API를 확인해주세요.'
+    }
 
     saveRecommendationState()
   } finally {
@@ -840,6 +977,10 @@ const selectRecommendation = (item) => {
 }
 
 const isSelectedRecommendation = (item) => {
+  if (!selectedRecommendation.value) {
+    return false
+  }
+
   return getRecommendationKey(item) === getRecommendationKey(selectedRecommendation.value)
 }
 
@@ -859,9 +1000,23 @@ const formatRate = (value) => {
 }
 
 onMounted(async () => {
-  await loadCurrentUser()
+  isInitializingRecommendationState.value = true
+
   restoreRecommendationState()
+  await loadCurrentUser()
+  applyProfileMainBankToForm()
   await loadFavoriteProducts()
+
+  isInitializingRecommendationState.value = false
+  saveRecommendationState()
+})
+
+onActivated(() => {
+  if (!hasSearched.value || recommendations.value.length === 0) {
+    isInitializingRecommendationState.value = true
+    restoreRecommendationState()
+    isInitializingRecommendationState.value = false
+  }
 })
 
 watch(
@@ -1063,6 +1218,184 @@ watch(
   align-items: start;
 }
 }
+
+/* === 주연: 맞춤추천 주거래은행 기본값 + 점수 카드 줄맞춤 보정 === */
+.product-analysis-grid {
+  grid-template-columns: minmax(0, 1fr) 320px !important;
+  gap: 18px !important;
+}
+
+.score-detail-card {
+  width: 100% !important;
+  padding: 20px !important;
+}
+
+.score-detail-card h2 {
+  margin-bottom: 8px !important;
+  font-size: 19px !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.04em !important;
+  word-break: keep-all !important;
+}
+
+.selected-score-product {
+  margin: 0 0 18px !important;
+  color: var(--color-text-muted) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  font-weight: 850 !important;
+  word-break: keep-all !important;
+  overflow-wrap: anywhere !important;
+}
+
+.score-detail-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 46px !important;
+  gap: 8px 10px !important;
+  align-items: center !important;
+  padding: 14px 0 !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.score-detail-label {
+  grid-column: 1 / -1 !important;
+  display: grid !important;
+  grid-template-columns: 78px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  align-items: start !important;
+  min-width: 0 !important;
+}
+
+.score-detail-label strong {
+  display: block !important;
+  color: var(--color-text) !important;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.03em !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+}
+
+.score-detail-label span {
+  display: block !important;
+  color: var(--color-text-muted) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  font-weight: 700 !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  text-align: right !important;
+}
+
+.score-bar-wrap {
+  grid-column: 1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 7px !important;
+}
+
+.score-detail-row em {
+  grid-column: 2 !important;
+  justify-self: end !important;
+  color: #10b981 !important;
+  font-size: 12px !important;
+  font-style: normal !important;
+  font-weight: 950 !important;
+  white-space: nowrap !important;
+}
+
+.total-score-row {
+  margin-top: 18px !important;
+  align-items: baseline !important;
+}
+
+.total-score-row strong {
+  white-space: nowrap !important;
+}
+
+.total-score-row span {
+  white-space: nowrap !important;
+}
+
+@media (max-width: 1260px) {
+  .product-analysis-grid {
+    grid-template-columns: minmax(0, 1fr) 300px !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .product-analysis-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .score-detail-label span {
+    text-align: left !important;
+  }
+}
+
+
+/* === 주연: 맞춤 점수 상세 분석 설명 문구 제거 === */
+.score-detail-label {
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+}
+
+.score-detail-label span {
+  display: none !important;
+}
+
+.score-detail-row {
+  grid-template-columns: minmax(0, 1fr) 48px !important;
+  gap: 8px 10px !important;
+  padding: 15px 0 !important;
+}
+
+.score-detail-label strong {
+  font-size: 15px !important;
+}
+
+.score-bar-wrap {
+  margin-top: 4px !important;
+}
+
+.score-detail-row em {
+  align-self: center !important;
+}
+
+.selected-score-product {
+  margin-bottom: 20px !important;
+}
+
+.total-score-row {
+  padding-top: 6px !important;
+}
+
+
+/* === 주연: 추천 결과 유지 + 비로그인 안내 문구 === */
+.notice-message.error {
+  border-color: #fecaca !important;
+  background: #fff1f2 !important;
+  color: #dc2626 !important;
+  font-weight: 900 !important;
+  word-break: keep-all !important;
+}
+
+.notice-message.error::before {
+  content: '안내';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 950;
+}
+
 </style>
 
 <style scoped>
@@ -1663,4 +1996,182 @@ watch(
   align-items: start;
 }
 }
+
+/* === 주연: 맞춤추천 주거래은행 기본값 + 점수 카드 줄맞춤 보정 === */
+.product-analysis-grid {
+  grid-template-columns: minmax(0, 1fr) 320px !important;
+  gap: 18px !important;
+}
+
+.score-detail-card {
+  width: 100% !important;
+  padding: 20px !important;
+}
+
+.score-detail-card h2 {
+  margin-bottom: 8px !important;
+  font-size: 19px !important;
+  line-height: 1.25 !important;
+  letter-spacing: -0.04em !important;
+  word-break: keep-all !important;
+}
+
+.selected-score-product {
+  margin: 0 0 18px !important;
+  color: var(--color-text-muted) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  font-weight: 850 !important;
+  word-break: keep-all !important;
+  overflow-wrap: anywhere !important;
+}
+
+.score-detail-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 46px !important;
+  gap: 8px 10px !important;
+  align-items: center !important;
+  padding: 14px 0 !important;
+  border-bottom: 1px solid var(--color-border) !important;
+}
+
+.score-detail-label {
+  grid-column: 1 / -1 !important;
+  display: grid !important;
+  grid-template-columns: 78px minmax(0, 1fr) !important;
+  gap: 10px !important;
+  align-items: start !important;
+  min-width: 0 !important;
+}
+
+.score-detail-label strong {
+  display: block !important;
+  color: var(--color-text) !important;
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+  font-weight: 950 !important;
+  letter-spacing: -0.03em !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
+}
+
+.score-detail-label span {
+  display: block !important;
+  color: var(--color-text-muted) !important;
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  font-weight: 700 !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  text-align: right !important;
+}
+
+.score-bar-wrap {
+  grid-column: 1 !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 7px !important;
+}
+
+.score-detail-row em {
+  grid-column: 2 !important;
+  justify-self: end !important;
+  color: #10b981 !important;
+  font-size: 12px !important;
+  font-style: normal !important;
+  font-weight: 950 !important;
+  white-space: nowrap !important;
+}
+
+.total-score-row {
+  margin-top: 18px !important;
+  align-items: baseline !important;
+}
+
+.total-score-row strong {
+  white-space: nowrap !important;
+}
+
+.total-score-row span {
+  white-space: nowrap !important;
+}
+
+@media (max-width: 1260px) {
+  .product-analysis-grid {
+    grid-template-columns: minmax(0, 1fr) 300px !important;
+  }
+}
+
+@media (max-width: 980px) {
+  .product-analysis-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .score-detail-label span {
+    text-align: left !important;
+  }
+}
+
+
+/* === 주연: 맞춤 점수 상세 분석 설명 문구 제거 === */
+.score-detail-label {
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+}
+
+.score-detail-label span {
+  display: none !important;
+}
+
+.score-detail-row {
+  grid-template-columns: minmax(0, 1fr) 48px !important;
+  gap: 8px 10px !important;
+  padding: 15px 0 !important;
+}
+
+.score-detail-label strong {
+  font-size: 15px !important;
+}
+
+.score-bar-wrap {
+  margin-top: 4px !important;
+}
+
+.score-detail-row em {
+  align-self: center !important;
+}
+
+.selected-score-product {
+  margin-bottom: 20px !important;
+}
+
+.total-score-row {
+  padding-top: 6px !important;
+}
+
+
+/* === 주연: 추천 결과 유지 + 비로그인 안내 문구 === */
+.notice-message.error {
+  border-color: #fecaca !important;
+  background: #fff1f2 !important;
+  color: #dc2626 !important;
+  font-weight: 900 !important;
+  word-break: keep-all !important;
+}
+
+.notice-message.error::before {
+  content: '안내';
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  margin-right: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 950;
+}
+
 </style>

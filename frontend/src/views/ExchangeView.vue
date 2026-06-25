@@ -1,30 +1,11 @@
 <template>
   <main class="exchange-page">
     <section class="exchange-hero">
-      <div>
-        <p class="eyebrow">EXCHANGE & ASSET DATA</p>
-        <h1>환율 계산 · 시세 확인</h1>
-        <p>
-          한국수출입은행 환율 API와 금·은 엑셀 데이터를 기반으로
-          환율 계산, 기간별 그래프, 금·은 가격 변동을 한 화면에서 확인합니다.
-        </p>
+      <h1>환율 계산 · 시세 확인</h1>
 
-        <div class="hero-actions">
-          <a href="#exchange-chart" class="hero-link primary">환율 그래프 보기</a>
-          <a href="#asset-section" class="hero-link">금·은 시세 보기</a>
-        </div>
-      </div>
-
-      <div class="hero-art" aria-hidden="true">
-        <div class="screen-card">
-          <span></span>
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <div class="globe-card">🌐</div>
-        <div class="coin-card">₩</div>
-        <div class="percent-card">%</div>
+      <div class="hero-actions">
+        <a href="#exchange-chart" class="hero-link primary">환율 그래프 보기</a>
+        <a href="#asset-section" class="hero-link">금·은 시세 보기</a>
       </div>
     </section>
 
@@ -33,7 +14,7 @@
         <div class="card-title-row">
           <div>
             <h2>환율 계산기</h2>
-            <p>선택한 기준일의 실제 환율 데이터로 계산합니다.</p>
+            
           </div>
         </div>
 
@@ -45,13 +26,6 @@
             type="date"
             @change="fetchRates"
           >
-          <p>
-            API 기준일:
-            <strong>{{ baseDate || '조회 전' }}</strong>
-            <span v-if="baseDate && selectedDate !== baseDate">
-              · 선택일 데이터가 없어 가까운 이전 영업일 기준
-            </span>
-          </p>
         </div>
 
         <p v-if="loading" class="state-message compact">환율 정보를 불러오는 중입니다...</p>
@@ -67,7 +41,7 @@
                   :key="currency.code"
                   :value="currency.code"
                 >
-                  {{ getCurrencyIcon(currency.code) }} {{ currency.code }} · {{ currency.name }}
+                  {{ currency.code }} · {{ currency.name }}
                 </option>
               </select>
 
@@ -94,7 +68,7 @@
                   :key="currency.code"
                   :value="currency.code"
                 >
-                  {{ getCurrencyIcon(currency.code) }} {{ currency.code }} · {{ currency.name }}
+                  {{ currency.code }} · {{ currency.name }}
                 </option>
               </select>
 
@@ -150,7 +124,7 @@
             @click="selectRateFromTable(rate)"
           >
             <div class="currency-name">
-              <strong>{{ getCurrencyIcon(rate.code) }} {{ rate.code }}</strong>
+              <strong>{{ rate.code }}</strong>
               <span>{{ rate.name }}</span>
             </div>
 
@@ -177,7 +151,7 @@
         <div class="card-title-row">
           <div>
             <h2>{{ chartCurrency }}/KRW 환율 추이</h2>
-            <p>최대 31일 범위에서 실제 API 응답 데이터로 그래프를 표시합니다.</p>
+            
           </div>
         </div>
 
@@ -343,11 +317,8 @@
     <section id="asset-section" class="asset-section card">
       <div class="asset-header">
         <div>
-          <p class="eyebrow">GOLD & SILVER DATA</p>
+          
           <h2>금·은 가격 변동 시각화</h2>
-          <p>
-            기존 금·은 페이지의 실제 엑셀 기반 데이터를 환율 페이지 안에서 더 길게 확인합니다.
-          </p>
         </div>
 
         <div class="asset-buttons">
@@ -601,7 +572,7 @@
           @click="selectRateFromDrawer(rate)"
         >
           <div>
-            <strong>{{ getCurrencyIcon(rate.code) }} {{ rate.code }}</strong>
+            <strong>{{ rate.code }}</strong>
             <span>{{ rate.name }}</span>
           </div>
           <em>{{ formatRate(rate.ratePerUnit) }} KRW</em>
@@ -2162,4 +2133,470 @@ onMounted(async () => {
     flex-direction: column;
   }
 }
+
+/* === 주연 공통 톤 보정: 환율 페이지 === */
+.exchange-page {
+  width: min(var(--container-width, 1360px), calc(100% - 48px));
+  padding: 28px 0 72px;
+}
+
+.exchange-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.hero-copy {
+  display: grid;
+  gap: 16px;
+}
+
+.exchange-hero h1 {
+  margin: 0;
+  font-size: clamp(36px, 4vw, 48px);
+  line-height: 1.08;
+  letter-spacing: -0.07em;
+}
+
+.hero-actions {
+  margin-top: 0;
+}
+
+.hero-link {
+  min-height: 42px;
+  border-radius: 13px;
+}
+
+.hero-art {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hero-icon-card {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  min-width: 122px;
+  padding: 18px 18px 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 14px 36px rgba(15, 27, 61, 0.06);
+}
+
+.hero-icon-card strong {
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.hero-graph-icon {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  height: 48px;
+}
+
+.hero-graph-icon span {
+  display: block;
+  width: 10px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #5b6cff 0%, #2f46df 100%);
+}
+
+.hero-graph-icon span:nth-child(1) { height: 22px; }
+.hero-graph-icon span:nth-child(2) { height: 40px; }
+.hero-graph-icon span:nth-child(3) { height: 28px; }
+.hero-graph-icon span:nth-child(4) { height: 46px; background: linear-gradient(180deg, #4dd4b1 0%, #2bb98f 100%); }
+
+.hero-circle-icon {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #eef4ff 0%, #f8fbff 100%);
+  color: var(--color-primary);
+  font-size: 34px;
+  font-weight: 900;
+}
+
+.calculator-card,
+.rates-card,
+.chart-card,
+.asset-card,
+.asset-section,
+.summary-card {
+  padding: 24px;
+}
+
+.exchange-grid {
+  grid-template-columns: 430px minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.card,
+.calculator-card,
+.rates-card,
+.chart-card,
+.asset-card,
+.asset-section,
+.summary-card {
+  border-radius: 22px;
+  box-shadow: 0 18px 44px rgba(15, 27, 61, 0.07);
+}
+
+.card-title-row {
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.card-title-row h2,
+.asset-header h2 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: -0.045em;
+}
+
+.card-title-row p,
+.asset-header p,
+.exchange-hero .eyebrow,
+.asset-header .eyebrow {
+  display: none;
+}
+
+.date-box,
+.currency-input-card,
+.result-strip {
+  border-radius: 16px;
+}
+
+.date-box p {
+  display: none;
+}
+
+.converter-box {
+  gap: 14px;
+}
+
+.currency-input-card {
+  padding: 16px;
+  background: var(--color-surface-soft);
+  border: 1px solid var(--color-border);
+}
+
+.currency-input-card label {
+  margin-bottom: 10px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.currency-input-card span {
+  margin-top: 8px;
+  color: var(--color-text-soft);
+  font-size: 12px;
+}
+
+.currency-line {
+  gap: 10px;
+}
+
+.currency-line select,
+.currency-line input,
+.date-box input,
+.chart-controls select,
+.chart-controls input,
+.asset-filter-row input {
+  min-height: 45px;
+  border-radius: 13px;
+}
+
+.swap-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+
+.primary-button,
+.outline-button {
+  min-height: 44px;
+  border-radius: 13px;
+}
+
+.rate-table-head,
+.rate-row {
+  grid-template-columns: minmax(160px, 1fr) 120px 110px 110px;
+  min-height: 64px;
+}
+
+.chart-grid,
+.asset-grid,
+#exchange-chart,
+#asset-section {
+  margin-top: 20px;
+}
+
+.chart-controls,
+.asset-controls,
+.asset-filter-row {
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+}
+
+.canvas-wrap,
+.chart-surface {
+  min-height: 360px;
+  border-radius: 18px;
+}
+
+.asset-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.asset-buttons button {
+  min-height: 44px;
+  border-radius: 999px;
+}
+
+@media (max-width: 1180px) {
+  .exchange-hero,
+  .exchange-grid,
+  .chart-grid,
+  .asset-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-art {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .summary-card {
+    order: -1;
+  }
+
+  .asset-summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .exchange-page {
+    width: min(100% - 28px, var(--container-width));
+  }
+
+  .hero-art {
+    display: none;
+  }
+
+  .rate-table-head {
+    display: none;
+  }
+
+  .rate-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 12px 0;
+  }
+
+  .currency-line,
+  .chart-controls,
+  .asset-filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .asset-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .asset-header,
+  .card-title-row {
+    flex-direction: column;
+  }
+}
+
+/* === 주연: 환율 통화 선택 UI 최종 정리 === */
+.exchange-hero {
+  grid-template-columns: 1fr !important;
+}
+
+.hero-art,
+.hero-icon-card,
+.hero-circle-icon,
+.hero-graph-icon {
+  display: none !important;
+}
+
+.exchange-grid {
+  grid-template-columns: 430px minmax(0, 1fr) !important;
+}
+
+.converter-box {
+  gap: 16px !important;
+}
+
+.currency-input-card {
+  padding: 18px !important;
+  overflow: visible !important;
+}
+
+.currency-line {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.25fr) minmax(118px, 0.75fr) !important;
+  gap: 12px !important;
+  align-items: center !important;
+}
+
+.currency-line select,
+.currency-line input {
+  min-width: 0 !important;
+  height: 48px !important;
+  padding: 0 14px !important;
+  font-size: 14px !important;
+  line-height: 48px !important;
+  white-space: nowrap !important;
+}
+
+.currency-line select {
+  text-overflow: ellipsis !important;
+}
+
+.currency-line input {
+  text-align: right !important;
+  font-size: 18px !important;
+  font-weight: 950 !important;
+}
+
+.currency-input-card span {
+  display: block !important;
+  min-height: 16px !important;
+  margin-top: 8px !important;
+  text-align: right !important;
+}
+
+.rate-row .currency-name strong,
+.drawer-rate-item strong {
+  letter-spacing: 0 !important;
+}
+
+@media (max-width: 1180px) {
+  .exchange-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .currency-line {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+
+/* === 주연: 환율 페이지 상단 버튼 위치/간격 조정 === */
+.exchange-hero {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: end !important;
+  gap: 24px !important;
+  margin-bottom: 30px !important;
+  padding-top: 2px !important;
+}
+
+.exchange-hero h1 {
+  margin: 0 !important;
+}
+
+.hero-copy {
+  display: contents !important;
+}
+
+.hero-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-top: 0 !important;
+  align-self: end !important;
+  transform: translateY(-2px);
+}
+
+.hero-link {
+  white-space: nowrap !important;
+}
+
+.exchange-grid {
+  margin-top: 0 !important;
+}
+
+@media (max-width: 760px) {
+  .exchange-hero {
+    grid-template-columns: 1fr !important;
+    align-items: start !important;
+    margin-bottom: 24px !important;
+  }
+
+  .hero-actions {
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    transform: none;
+  }
+}
+
+
+/* === 주연: 환율 페이지 최상단 여백/앵커 이동 위치 보정 === */
+.exchange-page {
+  padding-top: 10px !important;
+}
+
+.exchange-hero {
+  min-height: auto !important;
+  margin-top: 0 !important;
+  margin-bottom: 22px !important;
+  padding-top: 0 !important;
+  align-items: end !important;
+}
+
+.exchange-hero h1 {
+  margin: 0 !important;
+  line-height: 1.05 !important;
+}
+
+.hero-actions {
+  transform: translateY(-4px) !important;
+}
+
+#exchange-chart,
+#asset-section {
+  scroll-margin-top: calc(var(--header-height, 64px) + 14px) !important;
+}
+
+.chart-grid {
+  scroll-margin-top: calc(var(--header-height, 64px) + 14px) !important;
+}
+
+@media (max-width: 760px) {
+  .exchange-page {
+    padding-top: 14px !important;
+  }
+
+  .exchange-hero {
+    margin-bottom: 20px !important;
+  }
+
+  .hero-actions {
+    transform: none !important;
+  }
+}
+
 </style>

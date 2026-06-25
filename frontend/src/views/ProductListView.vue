@@ -435,7 +435,6 @@ const allProducts = computed(() => {
 const bankOrderMap = new Map(BANK_LOGO_LIST.map((bank, index) => [bank.name, index]))
 
 const fixedBankOptions = [
-  '전체 은행',
   '국민은행',
   '신한은행',
   '하나은행',
@@ -479,7 +478,7 @@ const bankFilterAliasMap = {
 }
 
 const isBankMatched = (rawBankName, selectedBankName) => {
-  if (!selectedBankName || selectedBankName === '전체 은행') return true
+  if (!selectedBankName || selectedBankName === 'all' || selectedBankName === '전체 은행') return true
 
   const raw = String(rawBankName || '')
   const aliases = bankFilterAliasMap[selectedBankName] || [selectedBankName]
@@ -487,7 +486,7 @@ const isBankMatched = (rawBankName, selectedBankName) => {
   return aliases.some((alias) => raw.includes(alias) || alias.includes(raw))
 }
 
-const bankOptions = computed(() => fixedBankOptions)
+const bankOptions = computed(() => [...new Set(fixedBankOptions.filter((bank) => bank !== '전체 은행'))])
 
 const termOptions = computed(() => {
   const terms = allProducts.value.flatMap((product) => {

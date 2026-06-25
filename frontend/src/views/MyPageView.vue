@@ -1,9 +1,7 @@
 <template>
   <div class="mypage-view">
     <section class="page-header">
-      <span class="eyebrow">MY FINANCE DASHBOARD</span>
       <h1>마이페이지</h1>
-      <p>회원님의 금융 생활, 관심상품, 저장한 금융 콘텐츠를 한눈에 관리하세요.</p>
     </section>
 
     <p v-if="pageLoading" class="status-message">
@@ -29,10 +27,8 @@
           <div class="profile-title">
             <div class="title-row">
               <h2>{{ profileUser.username || '사용자' }}님</h2>
-              <span class="profile-badge">{{ profileBadgeText }}</span>
             </div>
             <p>{{ profileUser.email || '이메일 정보 없음' }}</p>
-            <small>마이페이지 금융 프로필은 맞춤 추천 결과에 반영됩니다.</small>
           </div>
         </div>
 
@@ -110,8 +106,7 @@
       <section v-if="isEditingProfile" class="profile-edit-panel card">
         <div class="section-title-row compact">
           <div>
-            <h2>프로필 수정 / 계정 관리</h2>
-            <p>성별과 나이 정보는 가입대상 조건을 걸러내는 맞춤 추천에 사용됩니다.</p>
+            <h2>프로필 수정</h2>
           </div>
           <button type="button" class="secondary-button" @click="cancelEditProfile">
             닫기
@@ -259,67 +254,8 @@
             </button>
           </div>
         </form>
-
-        <div class="account-management-grid">
-          <div class="account-manage-card">
-            <div class="account-card-title">
-              <span>🔒</span>
-              <div>
-                <h2>비밀번호 변경</h2>
-                <p>보안을 위해 현재 비밀번호 확인 후 새 비밀번호로 변경합니다.</p>
-              </div>
-            </div>
-
-            <form class="account-manage-form" @submit.prevent="handleChangePassword">
-              <label>
-                현재 비밀번호
-                <input v-model="passwordForm.current_password" type="password" autocomplete="current-password">
-              </label>
-
-              <label>
-                새 비밀번호
-                <input v-model="passwordForm.new_password" type="password" autocomplete="new-password">
-              </label>
-
-              <label>
-                새 비밀번호 확인
-                <input v-model="passwordForm.new_password_confirm" type="password" autocomplete="new-password">
-              </label>
-
-              <p v-if="passwordMessage" class="form-message">{{ passwordMessage }}</p>
-
-              <button type="submit" class="primary-button full" :disabled="passwordSaving">
-                {{ passwordSaving ? '변경 중...' : '비밀번호 변경' }}
-              </button>
-            </form>
-          </div>
-
-          <div class="account-manage-card danger">
-            <div class="account-card-title">
-              <span>👤</span>
-              <div>
-                <h2>회원탈퇴</h2>
-                <p>탈퇴하면 계정이 비활성화되어 다시 로그인할 수 없습니다.</p>
-              </div>
-            </div>
-
-            <form class="account-manage-form" @submit.prevent="handleWithdraw">
-              <label>
-                비밀번호 확인
-                <input v-model="withdrawPassword" type="password" autocomplete="current-password">
-              </label>
-
-              <p v-if="withdrawMessage" class="form-message">{{ withdrawMessage }}</p>
-
-              <button type="submit" class="delete-button full" :disabled="withdrawSaving">
-                {{ withdrawSaving ? '탈퇴 처리 중...' : '회원탈퇴' }}
-              </button>
-            </form>
-          </div>
-        </div>
       </section>
-
-      <div class="content-grid">
+<div class="content-grid">
         <section class="favorites-section card">
           <div class="section-title-row">
             <div>
@@ -349,7 +285,14 @@
                 :key="favorite.id"
                 class="favorite-card"
               >
-                <span class="favorite-icon deposit">💼</span>
+                <span class="favorite-bank-logo">
+                  <img
+                    v-if="getFavoriteBankLogo(favorite)"
+                    :src="getFavoriteBankLogo(favorite)"
+                    :alt="`${getBankName(favorite)} 로고`"
+                  >
+                  <em v-else>{{ getBankName(favorite).slice(0, 1) }}</em>
+                </span>
                 <div class="favorite-info">
                   <span class="product-type-badge">예금</span>
                   <h4>{{ getProductName(favorite) }}</h4>
@@ -382,7 +325,14 @@
                 :key="favorite.id"
                 class="favorite-card"
               >
-                <span class="favorite-icon saving">🐷</span>
+                <span class="favorite-bank-logo">
+                  <img
+                    v-if="getFavoriteBankLogo(favorite)"
+                    :src="getFavoriteBankLogo(favorite)"
+                    :alt="`${getBankName(favorite)} 로고`"
+                  >
+                  <em v-else>{{ getBankName(favorite).slice(0, 1) }}</em>
+                </span>
                 <div class="favorite-info">
                   <span class="product-type-badge saving">적금</span>
                   <h4>{{ getProductName(favorite) }}</h4>
@@ -456,8 +406,8 @@
         </section>
       </div>
 
-      <section v-if="!isEditingProfile" class="account-shortcuts">
-        <button type="button" class="account-shortcut-card" @click="startEditProfile">
+      <section class="account-shortcuts">
+        <button type="button" class="account-shortcut-card" @click="openAccountPanel('password')">
           <span>🔒</span>
           <div>
             <strong>비밀번호 변경</strong>
@@ -466,7 +416,7 @@
           <em>›</em>
         </button>
 
-        <button type="button" class="account-shortcut-card danger" @click="startEditProfile">
+        <button type="button" class="account-shortcut-card danger" @click="openAccountPanel('withdraw')">
           <span>👤</span>
           <div>
             <strong>회원탈퇴</strong>
@@ -475,12 +425,80 @@
           <em>›</em>
         </button>
       </section>
+
+
+      <section ref="passwordPanelRef" v-if="activeAccountPanel === 'password'" class="account-action-panel card">
+        <div class="section-title-row compact">
+          <div>
+            <h2>비밀번호 변경</h2>
+          </div>
+        </div>
+
+        <form class="account-manage-form single" @submit.prevent="handleChangePassword">
+          <label>
+            현재 비밀번호
+            <input v-model="passwordForm.current_password" type="password" autocomplete="current-password">
+          </label>
+
+          <label>
+            새 비밀번호
+            <input v-model="passwordForm.new_password" type="password" autocomplete="new-password">
+          </label>
+
+          <label>
+            새 비밀번호 확인
+            <input v-model="passwordForm.new_password_confirm" type="password" autocomplete="new-password">
+          </label>
+
+          <p v-if="passwordMessage" class="form-message">{{ passwordMessage }}</p>
+
+          <div class="form-actions">
+            <button type="submit" class="primary-button" :disabled="passwordSaving">
+              {{ passwordSaving ? '변경 중...' : '비밀번호 변경' }}
+            </button>
+
+            <button type="button" class="secondary-button" @click="closeAccountPanel">
+              취소
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section ref="withdrawPanelRef" v-if="activeAccountPanel === 'withdraw'" class="account-action-panel danger card">
+        <div class="section-title-row compact">
+          <div>
+            <h2>회원탈퇴</h2>
+            <p>탈퇴하면 계정이 비활성화되어 다시 로그인할 수 없습니다.</p>
+          </div>
+        </div>
+
+        <form class="account-manage-form single" @submit.prevent="handleWithdraw">
+          <label>
+            비밀번호 확인
+            <input v-model="withdrawPassword" type="password" autocomplete="current-password">
+          </label>
+
+          <p v-if="withdrawMessage" class="form-message">{{ withdrawMessage }}</p>
+
+          <div class="form-actions">
+            <button type="submit" class="delete-button" :disabled="withdrawSaving">
+              {{ withdrawSaving ? '탈퇴 처리 중...' : '회원탈퇴' }}
+            </button>
+
+            <button type="button" class="secondary-button" @click="closeAccountPanel">
+              취소
+            </button>
+          </div>
+        </form>
+      </section>
+
+      
     </template>
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import {
@@ -492,6 +510,7 @@ import {
 } from '@/api/accounts'
 import { getFavoriteProducts, toggleFavoriteProduct } from '@/api/favorites'
 import { getSavedVideos, deleteSavedVideo } from '@/api/videos'
+import { getBankDisplayName, getBankLogo } from '@/constants/bankLogoMap'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -532,6 +551,9 @@ const profileOptions = ref({
 })
 
 const isEditingProfile = ref(false)
+const activeAccountPanel = ref('')
+const passwordPanelRef = ref(null)
+const withdrawPanelRef = ref(null)
 const profileMessage = ref('')
 const profileSaving = ref(false)
 const profileImageUrl = ref('')
@@ -562,14 +584,6 @@ const profileInitial = computed(() => {
   return profileUser.value.username.slice(0, 1).toUpperCase()
 })
 
-
-const profileBadgeText = computed(() => {
-  if (!profileForm.value.age) {
-    return '금융 프로필 준비 중'
-  }
-
-  return `${profileForm.value.age}세 맞춤 프로필`
-})
 
 const genderLabel = computed(() => {
   return getOptionLabel('gender', profileForm.value.gender)
@@ -616,9 +630,28 @@ const getProductName = (favorite) => {
   return product.name || '상품명 없음'
 }
 
-const getBankName = (favorite) => {
+const normalizeFinalBankDisplayName = (bankName) => {
+  const displayName = getBankDisplayName(bankName)
+
+  const finalNameMap = {
+    KB국민은행: '국민은행',
+    KEB하나은행: '하나은행',
+  }
+
+  return finalNameMap[displayName] || displayName
+}
+
+const getRawBankName = (favorite) => {
   const product = getProduct(favorite)
-  return product.bank?.name || product.bank_name || product.kor_co_nm || '은행명 없음'
+  return product.bank?.name || product.bank_name || product.kor_co_nm || product.fin_co_nm || ''
+}
+
+const getBankName = (favorite) => {
+  return normalizeFinalBankDisplayName(getRawBankName(favorite)) || '은행명 없음'
+}
+
+const getFavoriteBankLogo = (favorite) => {
+  return getBankLogo(getRawBankName(favorite) || getBankName(favorite))
 }
 
 const getMaxInterestRate = (favorite) => {
@@ -754,6 +787,9 @@ const fetchMyPageData = async () => {
 
 const startEditProfile = () => {
   profileMessage.value = ''
+  passwordMessage.value = ''
+  withdrawMessage.value = ''
+  activeAccountPanel.value = ''
   originalProfileForm.value = { ...profileForm.value }
   isEditingProfile.value = true
 }
@@ -766,6 +802,39 @@ const cancelEditProfile = () => {
   profileMessage.value = ''
   isEditingProfile.value = false
   clearProfileImageSelection()
+}
+
+const openAccountPanel = async (panelName) => {
+  isEditingProfile.value = false
+  activeAccountPanel.value = panelName
+  passwordMessage.value = ''
+  withdrawMessage.value = ''
+
+  if (panelName === 'password') {
+    clearPasswordForm()
+  }
+
+  if (panelName === 'withdraw') {
+    withdrawPassword.value = ''
+  }
+
+  await nextTick()
+
+  const targetPanel =
+    panelName === 'password' ? passwordPanelRef.value : withdrawPanelRef.value
+
+  targetPanel?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center',
+  })
+}
+
+const closeAccountPanel = () => {
+  activeAccountPanel.value = ''
+  passwordMessage.value = ''
+  withdrawMessage.value = ''
+  clearPasswordForm()
+  withdrawPassword.value = ''
 }
 
 const clearProfileImageSelection = () => {
@@ -1714,4 +1783,559 @@ onBeforeUnmount(() => {
     align-items: stretch;
   }
 }
+
+/* === 주연: 마이페이지 불필요 문구 제거 + 계정 관리 분리 === */
+.page-header .eyebrow,
+.page-header > p,
+.profile-badge,
+.profile-title small {
+  display: none !important;
+}
+
+.page-header {
+  margin-bottom: 22px !important;
+}
+
+.profile-title {
+  justify-content: center;
+}
+
+.profile-title .title-row {
+  margin-bottom: 8px;
+}
+
+.profile-title p {
+  margin: 0;
+}
+
+.profile-edit-panel,
+.account-action-panel {
+  margin-bottom: 18px;
+}
+
+.profile-edit-panel .section-title-row p {
+  display: none !important;
+}
+
+.account-action-panel {
+  padding: 24px;
+}
+
+.account-action-panel.danger {
+  border-color: #fecaca;
+  background: linear-gradient(180deg, #fff, #fff7f7);
+}
+
+.account-action-panel .account-manage-form.single {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.account-action-panel.danger .account-manage-form.single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 520px;
+}
+
+.account-action-panel .form-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+.account-action-panel .form-actions .primary-button,
+.account-action-panel .form-actions .delete-button,
+.account-action-panel .form-actions .secondary-button {
+  min-width: 140px;
+}
+
+@media (max-width: 900px) {
+  .account-action-panel .account-manage-form.single {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* === 주연: 마이페이지 버튼 유지/액션 위치/프로필 사진 정렬 보정 === */
+.image-edit-box {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  text-align: center !important;
+}
+
+.image-edit-box .profile-image.small {
+  margin: 0 auto 16px !important;
+}
+
+.image-edit-box .file-label {
+  width: 100% !important;
+  text-align: left !important;
+}
+
+.image-edit-box .help-text {
+  width: 100% !important;
+  text-align: left !important;
+}
+
+.account-shortcuts {
+  margin-top: 18px !important;
+  margin-bottom: 16px !important;
+}
+
+.account-action-panel {
+  margin-top: 0 !important;
+  margin-bottom: 18px !important;
+}
+
+.account-shortcut-card {
+  cursor: pointer;
+}
+
+.account-shortcut-card:hover {
+  transform: translateY(-1px);
+}
+
+
+/* === 주연: 계정관리 세로형 폼 + 관심상품 은행 로고/은행명 적용 === */
+.account-action-panel {
+  max-width: 560px !important;
+  padding: 24px !important;
+}
+
+.account-action-panel .section-title-row {
+  margin-bottom: 18px !important;
+}
+
+.account-action-panel .account-manage-form.single {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  gap: 14px !important;
+  max-width: 430px !important;
+}
+
+.account-action-panel .account-manage-form.single label {
+  display: grid !important;
+  gap: 8px !important;
+  font-weight: 900 !important;
+}
+
+.account-action-panel .account-manage-form.single input {
+  width: 100% !important;
+  min-height: 44px !important;
+}
+
+.account-action-panel .form-actions {
+  display: flex !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  grid-column: auto !important;
+  margin-top: 2px !important;
+}
+
+.account-action-panel .form-actions .primary-button,
+.account-action-panel .form-actions .delete-button,
+.account-action-panel .form-actions .secondary-button {
+  min-width: 120px !important;
+  width: auto !important;
+}
+
+.account-action-panel.danger {
+  max-width: 560px !important;
+}
+
+.favorite-bank-logo {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  flex: 0 0 54px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(15, 27, 61, 0.05);
+}
+
+.favorite-bank-logo img {
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+}
+
+.favorite-bank-logo em {
+  color: var(--color-primary);
+  font-style: normal;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.favorite-card {
+  align-items: center !important;
+}
+
+.favorite-info p {
+  word-break: keep-all;
+}
+
+
+/* === 주연: 계정관리 닫기 버튼 제거 + 회원탈퇴 우측 배치 === */
+.account-action-panel .section-title-row.compact {
+  justify-content: flex-start !important;
+}
+
+.account-action-panel.danger {
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+.account-action-panel:not(.danger) {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+.account-action-panel.danger .account-manage-form.single {
+  margin-left: auto !important;
+  margin-right: 0 !important;
+}
+
+.account-action-panel .form-actions {
+  justify-content: flex-start !important;
+}
+
+.account-action-panel.danger .form-actions {
+  justify-content: flex-start !important;
+}
+
+
+/* === 주연: 회원탈퇴 내부 정렬 + 계정 패널 자동 스크롤 보정 === */
+.account-action-panel {
+  scroll-margin-top: calc(var(--header-height, 64px) + 24px);
+}
+
+.account-action-panel.danger {
+  margin-left: auto !important;
+  margin-right: 0 !important;
+  text-align: left !important;
+}
+
+.account-action-panel.danger .section-title-row.compact,
+.account-action-panel .section-title-row.compact {
+  display: flex !important;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+  text-align: left !important;
+}
+
+.account-action-panel.danger .account-manage-form.single,
+.account-action-panel .account-manage-form.single {
+  width: 100% !important;
+  max-width: 430px !important;
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+.account-action-panel.danger .account-manage-form.single label,
+.account-action-panel .account-manage-form.single label {
+  align-items: stretch !important;
+  text-align: left !important;
+}
+
+.account-action-panel.danger .form-actions,
+.account-action-panel .form-actions {
+  display: flex !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.account-action-panel.danger .form-actions .delete-button,
+.account-action-panel .form-actions .primary-button,
+.account-action-panel .form-actions .secondary-button {
+  height: 42px !important;
+  min-width: 118px !important;
+  padding: 0 18px !important;
+  border-radius: 12px !important;
+}
+
+.account-action-panel.danger .section-title-row p {
+  max-width: 420px !important;
+  margin-top: 6px !important;
+  line-height: 1.55 !important;
+}
+
+
+/* === 주연: 관심상품 카드 예/적금 배지와 로고/텍스트 높이 정렬 === */
+.favorite-card {
+  display: grid !important;
+  grid-template-columns: 58px minmax(0, 1fr) auto !important;
+  gap: 14px !important;
+  align-items: center !important;
+  padding: 16px 14px !important;
+}
+
+.favorite-bank-logo {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  align-self: center !important;
+  width: 54px !important;
+  height: 54px !important;
+}
+
+.favorite-info {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  grid-template-areas:
+    "badge title"
+    ". bank";
+  column-gap: 10px !important;
+  row-gap: 4px !important;
+  align-items: center !important;
+  min-width: 0 !important;
+}
+
+.favorite-info .product-type-badge {
+  grid-area: badge !important;
+  align-self: center !important;
+  justify-self: start !important;
+  margin: 0 !important;
+  transform: translateY(-1px);
+}
+
+.favorite-info h4 {
+  grid-area: title !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+  color: var(--color-text) !important;
+  font-size: 16px !important;
+  line-height: 1.25 !important;
+  font-weight: 950 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.favorite-info p {
+  grid-area: bank !important;
+  margin: 0 !important;
+  color: var(--color-text-muted) !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.favorite-card .card-actions {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  align-self: center !important;
+  display: flex !important;
+  gap: 8px !important;
+  margin-left: 8px !important;
+}
+
+@media (max-width: 720px) {
+  .favorite-card {
+    grid-template-columns: 54px minmax(0, 1fr) !important;
+  }
+
+  .favorite-card .card-actions {
+    grid-column: 1 / -1 !important;
+    grid-row: auto !important;
+    margin-left: 0 !important;
+    justify-content: flex-end !important;
+  }
+
+  .favorite-info {
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "badge"
+      "title"
+      "bank";
+  }
+}
+
+
+/* === 주연: 관심상품 예금/적금 배지와 은행 로고 위치 교체 === */
+.favorite-card {
+  display: grid !important;
+  grid-template-columns: 50px 58px minmax(0, 1fr) auto !important;
+  gap: 12px !important;
+  align-items: center !important;
+  padding: 16px 14px !important;
+}
+
+.favorite-card .favorite-bank-logo {
+  grid-column: 2 !important;
+  grid-row: 1 / span 2 !important;
+  align-self: center !important;
+  justify-self: center !important;
+  width: 54px !important;
+  height: 54px !important;
+}
+
+.favorite-card .favorite-info {
+  display: contents !important;
+}
+
+.favorite-card .favorite-info .product-type-badge {
+  grid-column: 1 !important;
+  grid-row: 1 / span 2 !important;
+  align-self: center !important;
+  justify-self: center !important;
+  margin: 0 !important;
+  transform: none !important;
+}
+
+.favorite-card .favorite-info h4 {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  align-self: end !important;
+  margin: 0 0 2px !important;
+  min-width: 0 !important;
+  color: var(--color-text) !important;
+  font-size: 16px !important;
+  line-height: 1.25 !important;
+  font-weight: 950 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.favorite-card .favorite-info p {
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+  align-self: start !important;
+  margin: 2px 0 0 !important;
+  min-width: 0 !important;
+  color: var(--color-text-muted) !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.favorite-card .card-actions {
+  grid-column: 4 !important;
+  grid-row: 1 / span 2 !important;
+  align-self: center !important;
+  display: flex !important;
+  gap: 8px !important;
+  margin-left: 8px !important;
+}
+
+@media (max-width: 720px) {
+  .favorite-card {
+    grid-template-columns: 46px 54px minmax(0, 1fr) !important;
+  }
+
+  .favorite-card .card-actions {
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
+    margin-left: 0 !important;
+    justify-content: flex-end !important;
+  }
+}
+
+
+/* === 주연: 마이페이지 관심상품/영상 영역 폭 조정 === */
+.content-grid {
+  display: grid !important;
+  grid-template-columns: minmax(620px, 1.35fr) minmax(360px, 0.85fr) !important;
+  gap: 20px !important;
+  align-items: stretch !important;
+}
+
+.favorites-section {
+  min-width: 0 !important;
+}
+
+.videos-section {
+  min-width: 0 !important;
+}
+
+.favorite-card {
+  grid-template-columns: 50px 58px minmax(220px, 1fr) auto !important;
+}
+
+.favorite-card .favorite-info h4 {
+  max-width: none !important;
+}
+
+.account-shortcuts {
+  display: grid !important;
+  grid-template-columns: minmax(620px, 1.35fr) minmax(360px, 0.85fr) !important;
+  gap: 20px !important;
+  align-items: stretch !important;
+}
+
+.account-shortcut-card {
+  width: 100% !important;
+}
+
+@media (max-width: 1180px) {
+  .content-grid,
+  .account-shortcuts {
+    grid-template-columns: 1fr !important;
+  }
+
+  .favorite-card {
+    grid-template-columns: 50px 58px minmax(0, 1fr) auto !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .favorite-card {
+    grid-template-columns: 46px 54px minmax(0, 1fr) !important;
+  }
+}
+
+
+/* === 주연: 마이페이지 관심상품 폭 재조정 === */
+/* 직전 버전이 너무 길어져서 원래 비밀번호 변경 카드 폭 정도로 되돌림 */
+.content-grid {
+  display: grid !important;
+  grid-template-columns: minmax(520px, 1fr) minmax(460px, 1fr) !important;
+  gap: 20px !important;
+  align-items: stretch !important;
+}
+
+.account-shortcuts {
+  display: grid !important;
+  grid-template-columns: minmax(520px, 1fr) minmax(460px, 1fr) !important;
+  gap: 20px !important;
+  align-items: stretch !important;
+}
+
+.favorites-section,
+.videos-section {
+  min-width: 0 !important;
+}
+
+.favorite-card {
+  grid-template-columns: 46px 54px minmax(0, 1fr) auto !important;
+  gap: 10px !important;
+}
+
+.favorite-card .favorite-info h4 {
+  max-width: 100% !important;
+}
+
+@media (max-width: 1180px) {
+  .content-grid,
+  .account-shortcuts {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .favorite-card {
+    grid-template-columns: 44px 52px minmax(0, 1fr) !important;
+  }
+}
+
 </style>
