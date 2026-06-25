@@ -13,14 +13,18 @@
         </p>
 
         <div class="hero-actions">
-          <RouterLink :to="{ name: 'recommend' }" class="btn-primary">
+          <button type="button" class="btn-primary" @click="goProtectedPage('recommend')">
             맞춤 상품 추천받기
             <span>→</span>
-          </RouterLink>
-          <RouterLink :to="{ name: 'main-bank' }" class="btn-secondary">
+          </button>
+          <button type="button" class="btn-secondary" @click="goProtectedPage('main-bank')">
             주거래은행 찾기
-          </RouterLink>
+          </button>
         </div>
+
+        <p v-if="loginRequiredMessage" class="auth-required-message">
+          {{ loginRequiredMessage }}
+        </p>
       </div>
 
       <aside class="hero-panel" aria-label="서비스 요약">
@@ -124,9 +128,9 @@
         </div>
 
 
-        <RouterLink :to="{ name: 'main-bank' }" class="btn-primary block-button">
+        <button type="button" class="btn-primary block-button" @click="goProtectedPage('main-bank')">
           테스트 시작하기
-        </RouterLink>
+        </button>
       </article>
 
       <article class="card exchange-card">
@@ -192,14 +196,18 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 import * as productApi from '@/api/products'
 import { getPosts } from '@/api/community'
 import { getExchangeRates } from '@/api/exchanges'
 import BankLogo from '@/components/BankLogo.vue'
 import { getBankDisplayName } from '@/constants/bankLogoMap'
 
+
+const router = useRouter()
+const loginRequiredMessage = ref('')
+let loginWarningTimer = null
 
 const productLoading = ref(false)
 const productError = ref('')
@@ -221,6 +229,29 @@ const processSteps = [
   { icon: '🎯', label: '추천 결과' },
   { icon: '✅', label: '비교·선택' },
 ]
+
+
+const showLoginRequiredMessage = () => {
+  loginRequiredMessage.value = '로그인 후 이용할 수 있습니다.'
+
+  if (loginWarningTimer) {
+    window.clearTimeout(loginWarningTimer)
+  }
+
+  loginWarningTimer = window.setTimeout(() => {
+    loginRequiredMessage.value = ''
+    loginWarningTimer = null
+  }, 2200)
+}
+
+const goProtectedPage = (routeName) => {
+  if (!localStorage.getItem('token')) {
+    showLoginRequiredMessage()
+    return
+  }
+
+  router.push({ name: routeName })
+}
 
 const currencyMeta = {
   USD: { flag: '🇺🇸', name: '미국 달러' },
@@ -515,6 +546,12 @@ onMounted(() => {
   fetchPreviewProducts()
   fetchExchangeSummary()
   fetchCommunitySummary()
+})
+
+onBeforeUnmount(() => {
+  if (loginWarningTimer) {
+    window.clearTimeout(loginWarningTimer)
+  }
 })
 </script>
 
@@ -941,6 +978,28 @@ onMounted(() => {
   background: #fff1f2;
   color: var(--color-danger);
   font-weight: 800;
+}
+
+
+.auth-required-message {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  margin: 16px 0 0;
+  padding: 0 14px;
+  border: 1px solid #fecaca;
+  border-radius: 14px;
+  background: #fff5f5;
+  color: var(--color-danger);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+button.btn-primary,
+button.btn-secondary {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 @media (max-width: 1120px) {

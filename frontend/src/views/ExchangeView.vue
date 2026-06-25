@@ -3,23 +3,6 @@
     <section class="page-hero-row">
       <h1>환율 계산 · 시세 확인</h1>
 
-      <div class="page-hero-actions">
-        <button
-          type="button"
-          :class="activeView === 'exchange' ? 'hero-primary-button' : 'hero-outline-button'"
-          @click="scrollToExchangeChart"
-        >
-          환율 그래프 보기
-        </button>
-
-        <button
-          type="button"
-          :class="activeView === 'asset' ? 'hero-primary-button' : 'hero-outline-button'"
-          @click="scrollToAssetSection"
-        >
-          금·은 시세 보기
-        </button>
-      </div>
     </section>
 
     <section class="exchange-grid">
@@ -101,12 +84,9 @@
         </div>
 
         <button type="button" class="primary-button" @click="fetchRates">
-          계산 기준 환율 새로고침
+          환율 새로고침
         </button>
 
-        <p class="disclaimer">
-          고시환율은 참고용이며, 실제 환전 시 적용 환율은 금융기관별로 다를 수 있습니다.
-        </p>
       </article>
 
       <article class="rates-card card">
@@ -185,12 +165,14 @@
             <button type="button" @click="setExchangePreset(30)">1M</button>
           </div>
 
-          <input v-model="startDate" type="date">
-          <input v-model="endDate" type="date">
+          <div class="chart-date-action-group">
+            <input v-model="startDate" type="date">
+            <input v-model="endDate" type="date">
 
-          <button type="button" class="primary-button small" :disabled="!chartCurrency || historyLoading" @click="fetchHistory">
-            그래프 조회
-          </button>
+            <button type="button" class="primary-button small" :disabled="!chartCurrency || historyLoading" @click="fetchHistory">
+              그래프 조회
+            </button>
+          </div>
         </div>
 
         <p v-if="historyLoading" class="state-message compact">기간별 환율 데이터를 불러오는 중입니다...</p>
@@ -327,229 +309,6 @@
       </article>
     </section>
 
-    <section id="asset-section" class="asset-section card">
-      <div class="asset-header">
-        <div>
-          
-          <h2>금·은 가격 변동 시각화</h2>
-        </div>
-
-        <div class="asset-buttons">
-          <button
-            type="button"
-            :class="{ active: selectedAsset === 'gold' }"
-            @click="changeAsset('gold')"
-          >
-            🟡 금 Gold
-          </button>
-
-          <button
-            type="button"
-            :class="{ active: selectedAsset === 'silver' }"
-            @click="changeAsset('silver')"
-          >
-            ⚪ 은 Silver
-          </button>
-        </div>
-      </div>
-
-      <div class="asset-filter-row">
-        <div class="preset-group">
-          <button type="button" @click="setAssetPreset(30)">1M</button>
-          <button type="button" @click="setAssetPreset(90)">3M</button>
-          <button type="button" @click="setAssetPreset(365)">1Y</button>
-          <button type="button" @click="setAssetAll">전체</button>
-        </div>
-
-        <label>
-          시작일
-          <input
-            v-model="assetStartDate"
-            type="date"
-            :min="MIN_ASSET_DATE"
-            :max="MAX_ASSET_DATE"
-          >
-        </label>
-
-        <label>
-          종료일
-          <input
-            v-model="assetEndDate"
-            type="date"
-            :min="MIN_ASSET_DATE"
-            :max="MAX_ASSET_DATE"
-          >
-        </label>
-
-        <button type="button" class="primary-button small" @click="fetchAssetPrices">
-          금·은 데이터 조회
-        </button>
-      </div>
-
-      <p v-if="assetLoading" class="state-message compact">금·은 데이터를 불러오는 중입니다...</p>
-      <p v-if="assetError" class="error-message">{{ assetError }}</p>
-
-      <template v-if="assetSummary">
-        <div class="asset-summary-grid">
-          <article>
-            <span>조회 기간</span>
-            <strong>{{ assetSummary.first_date }} ~ {{ assetSummary.latest_date }}</strong>
-          </article>
-          <article>
-            <span>최근 종가</span>
-            <strong>{{ formatAssetPrice(assetSummary.latest_close) }}</strong>
-          </article>
-          <article>
-            <span>기간 최저</span>
-            <strong>{{ formatAssetPrice(assetSummary.min_close) }}</strong>
-          </article>
-          <article>
-            <span>기간 최고</span>
-            <strong>{{ formatAssetPrice(assetSummary.max_close) }}</strong>
-          </article>
-          <article>
-            <span>기간 변동</span>
-            <strong :class="assetSummary.change >= 0 ? 'up' : 'down'">
-              {{ assetSummary.change >= 0 ? '+' : '' }}{{ formatAssetPrice(assetSummary.change) }}
-            </strong>
-          </article>
-          <article>
-            <span>변동률</span>
-            <strong :class="assetSummary.change_rate >= 0 ? 'up' : 'down'">
-              {{ assetSummary.change_rate >= 0 ? '+' : '' }}{{ formatRate(assetSummary.change_rate) }}%
-            </strong>
-          </article>
-        </div>
-
-        <div class="asset-content-grid">
-          <section class="asset-chart-panel">
-            <div class="canvas-wrap asset chart-surface">
-              <svg
-                v-if="assetChart.points.length > 0"
-                class="line-chart"
-                viewBox="0 0 1000 340"
-                role="img"
-                :aria-label="`${assetLabelMap[selectedAsset]} 가격 추이 그래프`"
-                @mouseleave="hoveredAssetPoint = null"
-              >
-                <defs>
-                  <linearGradient id="assetGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop :stop-color="selectedAsset === 'gold' ? '#f59e0b' : '#64748b'" offset="0%" stop-opacity="0.2" />
-                    <stop :stop-color="selectedAsset === 'gold' ? '#f59e0b' : '#64748b'" offset="100%" stop-opacity="0.02" />
-                  </linearGradient>
-                </defs>
-
-                <g>
-                  <line
-                    v-for="tick in assetChart.yTicks"
-                    :key="tick.label"
-                    x1="64"
-                    x2="960"
-                    :y1="tick.y"
-                    :y2="tick.y"
-                    class="chart-grid-line"
-                  />
-                  <text
-                    v-for="tick in assetChart.yTicks"
-                    :key="`${tick.label}-text`"
-                    x="50"
-                    :y="tick.y + 4"
-                    class="chart-y-label"
-                    text-anchor="end"
-                  >
-                    {{ tick.label }}
-                  </text>
-                </g>
-
-                <path :d="assetChart.areaPath" fill="url(#assetGradient)" />
-                <polyline
-                  :points="assetChart.polyline"
-                  class="chart-line"
-                  :class="selectedAsset === 'gold' ? 'gold' : 'silver'"
-                />
-
-                <circle
-                  v-for="point in assetChart.focusPoints"
-                  :key="point.date"
-                  :cx="point.x"
-                  :cy="point.y"
-                  r="4"
-                  class="chart-point"
-                  :class="selectedAsset === 'gold' ? 'gold' : 'silver'"
-                >
-                  <title>{{ point.date }} · {{ formatAssetPrice(point.value) }}</title>
-                </circle>
-
-                <circle
-                  v-for="point in assetChart.points"
-                  :key="`${point.date}-asset-hover`"
-                  :cx="point.x"
-                  :cy="point.y"
-                  r="10"
-                  class="chart-hover-target"
-                  @mouseenter="hoveredAssetPoint = point"
-                  @mousemove="hoveredAssetPoint = point"
-                />
-
-                <g
-                  v-if="hoveredAssetPoint"
-                  class="chart-tooltip"
-                  :transform="getTooltipTransform(hoveredAssetPoint)"
-                >
-                  <rect width="210" height="62" rx="14" />
-                  <text x="14" y="24" class="tooltip-date">
-                    {{ hoveredAssetPoint.date }}
-                  </text>
-                  <text x="14" y="46" class="tooltip-value">
-                    {{ assetLabelMap[selectedAsset] }} {{ formatAssetPrice(hoveredAssetPoint.value) }}
-                  </text>
-                </g>
-
-                <text x="64" y="326" class="chart-x-label">{{ assetChart.firstLabel }}</text>
-                <text x="960" y="326" class="chart-x-label" text-anchor="end">{{ assetChart.lastLabel }}</text>
-              </svg>
-
-              <p v-else class="state-message compact">
-                그래프를 표시할 금·은 데이터가 없습니다.
-              </p>
-            </div>
-          </section>
-
-          <section class="asset-table-panel">
-            <div class="table-title">
-              <h3>가격 데이터</h3>
-              <p>총 {{ assetRows.length.toLocaleString() }}건</p>
-            </div>
-
-            <div class="asset-table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>날짜</th>
-                    <th>종가</th>
-                    <th>시가</th>
-                    <th>고가</th>
-                    <th>저가</th>
-                    <th>거래량</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="row in assetRows" :key="row.date">
-                    <td>{{ row.date }}</td>
-                    <td>{{ formatAssetPrice(row.close) }}</td>
-                    <td>{{ formatAssetPrice(row.open) }}</td>
-                    <td>{{ formatAssetPrice(row.high) }}</td>
-                    <td>{{ formatAssetPrice(row.low) }}</td>
-                    <td>{{ formatVolume(row.volume) }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
-        </div>
-      </template>
-    </section>
-
     <div
       v-if="isRateDrawerOpen"
       class="drawer-backdrop"
@@ -600,12 +359,10 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import api from '@/api/api'
 
 const today = new Date()
-const activeView = ref('exchange')
-
 const toDateInputValue = (date) => {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -627,8 +384,8 @@ const getPreviousDay = (dateString) => {
 
 const selectedDate = ref(toDateInputValue(today))
 const amount = ref(1000)
-const fromCurrency = ref('USD')
-const toCurrency = ref('KRW')
+const fromCurrency = ref('KRW')
+const toCurrency = ref('USD')
 
 const rates = ref([])
 const previousRateMap = ref({})
@@ -643,20 +400,10 @@ const historyRows = ref([])
 const historyLoading = ref(false)
 const historyError = ref('')
 
-const selectedAsset = ref('gold')
-const MIN_ASSET_DATE = '2023-01-01'
-const MAX_ASSET_DATE = '2024-12-31'
-const assetStartDate = ref('2024-01-01')
-const assetEndDate = ref('2024-12-31')
-const assetRows = ref([])
-const assetSummary = ref(null)
-const assetLoading = ref(false)
-const assetError = ref('')
 
 const isRateDrawerOpen = ref(false)
 const drawerKeyword = ref('')
 const hoveredExchangePoint = ref(null)
-const hoveredAssetPoint = ref(null)
 
 const krwRate = {
   code: 'KRW',
@@ -679,11 +426,6 @@ const currencyIconMap = {
   HKD: '🇭🇰',
   SGD: '🇸🇬',
   CHF: '🇨🇭',
-}
-
-const assetLabelMap = {
-  gold: '금',
-  silver: '은',
 }
 
 const currencyOptions = computed(() => {
@@ -775,18 +517,6 @@ const exchangeChart = computed(() => {
   )
 })
 
-const assetChart = computed(() => {
-  return buildChartData(
-    assetRows.value.map((row) => ({
-      date: row.date,
-      value: Number(row.close),
-    })),
-    formatAssetPrice,
-    true
-  )
-})
-
-
 const parseRateNumber = (value) => {
   if (value === null || value === undefined) {
     return 0
@@ -859,11 +589,15 @@ const syncSelectedCurrencies = () => {
   const defaultCurrency = resolveDefaultCurrency()
 
   if (!rates.value.some((item) => item.code === fromCurrency.value) && fromCurrency.value !== 'KRW') {
-    fromCurrency.value = defaultCurrency
+    fromCurrency.value = 'KRW'
   }
 
   if (!rates.value.some((item) => item.code === toCurrency.value) && toCurrency.value !== 'KRW') {
-    toCurrency.value = 'KRW'
+    toCurrency.value = defaultCurrency
+  }
+
+  if (fromCurrency.value === toCurrency.value) {
+    toCurrency.value = defaultCurrency
   }
 
   if (!rates.value.some((item) => item.code === chartCurrency.value)) {
@@ -893,29 +627,6 @@ const fetchPreviousRates = async (dateString) => {
   }
 }
 
-
-const scrollToSection = async (sectionId, nextView) => {
-  activeView.value = nextView
-
-  await nextTick()
-
-  const target = document.getElementById(sectionId)
-
-  if (target) {
-    target.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
-  }
-}
-
-const scrollToExchangeChart = () => {
-  scrollToSection('exchange-chart', 'exchange')
-}
-
-const scrollToAssetSection = () => {
-  scrollToSection('asset-section', 'asset')
-}
 
 const fetchRates = async () => {
   loading.value = true
@@ -1011,48 +722,6 @@ const fetchHistory = async () => {
     historyLoading.value = false
   }
 }
-
-const fetchAssetPrices = async () => {
-  assetLoading.value = true
-  assetError.value = ''
-
-  if (assetStartDate.value > assetEndDate.value) {
-    assetError.value = '시작일은 종료일보다 늦을 수 없습니다.'
-    assetLoading.value = false
-    return
-  }
-
-  try {
-    const response = await api.get('/assets/prices/', {
-      params: {
-        asset: selectedAsset.value,
-        start_date: assetStartDate.value,
-        end_date: assetEndDate.value,
-      },
-    })
-
-    assetRows.value = response.data.rows || []
-    assetSummary.value = response.data.summary || null
-
-    if (assetRows.value.length === 0) {
-      assetError.value = response.data.message || '선택한 기간에 해당하는 금·은 데이터가 없습니다.'
-      return
-    }
-  } catch (error) {
-    console.error(error)
-
-    assetRows.value = []
-    assetSummary.value = null
-
-    assetError.value =
-      error.response?.data?.message ||
-      '금·은 가격 데이터를 불러오지 못했습니다. assets API와 엑셀 파일을 확인해주세요.'
-  } finally {
-    assetLoading.value = false
-  }
-}
-
-
 
 const handleSelectedDateChange = async () => {
   const loaded = await fetchRates()
@@ -1197,6 +866,7 @@ const selectRateFromTable = (rate) => {
   }
 
   chartCurrency.value = rate.code
+  fromCurrency.value = 'KRW'
   toCurrency.value = rate.code
   setExchangePreset(7)
 }
@@ -1220,28 +890,6 @@ const setExchangePreset = async (days) => {
   endDate.value = baseDate.value || selectedDate.value || toDateInputValue(today)
   startDate.value = getDateBefore(days, new Date(endDate.value))
   await fetchHistory()
-}
-
-const setAssetPreset = async (days) => {
-  assetEndDate.value = MAX_ASSET_DATE
-  assetStartDate.value = getDateBefore(days, new Date(MAX_ASSET_DATE))
-
-  if (assetStartDate.value < MIN_ASSET_DATE) {
-    assetStartDate.value = MIN_ASSET_DATE
-  }
-
-  await fetchAssetPrices()
-}
-
-const setAssetAll = async () => {
-  assetStartDate.value = MIN_ASSET_DATE
-  assetEndDate.value = MAX_ASSET_DATE
-  await fetchAssetPrices()
-}
-
-const changeAsset = async (asset) => {
-  selectedAsset.value = asset
-  await fetchAssetPrices()
 }
 
 const getCurrencyIcon = (code) => {
@@ -1384,8 +1032,6 @@ onMounted(async () => {
     startDate.value = getDateBefore(7, new Date(endDate.value))
     await fetchHistory()
   }
-
-  await fetchAssetPrices()
 })
 
 </script>
@@ -2820,5 +2466,235 @@ onMounted(async () => {
   margin-bottom: 24px !important;
 }
 
+
+
+/* === 주연: 환율 그래프 조회 필터 정렬 보정 === */
+.chart-controls {
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.chart-controls select,
+.chart-controls input {
+  height: 40px !important;
+  min-height: 40px !important;
+  box-sizing: border-box !important;
+}
+
+.chart-controls .preset-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  height: 40px !important;
+}
+
+.chart-controls .preset-group button {
+  height: 40px !important;
+  min-height: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 12px !important;
+  line-height: 1 !important;
+}
+
+.chart-date-action-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  flex-wrap: nowrap !important;
+}
+
+.chart-date-action-group input {
+  width: 132px !important;
+}
+
+.chart-date-action-group .primary-button.small {
+  height: 40px !important;
+  min-height: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 14px !important;
+  line-height: 1 !important;
+}
+
+@media (max-width: 900px) {
+  .chart-date-action-group {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+
+  .chart-date-action-group input,
+  .chart-date-action-group .primary-button.small {
+    flex: 1 1 130px !important;
+  }
+}
+
+
+/* === 주연: 환율 그래프 필터 한 줄·중앙 정렬 최종 보정 === */
+#exchange-chart .chart-card .card-title-row {
+  margin-bottom: 22px !important;
+}
+
+#exchange-chart .chart-card .chart-controls {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  width: max-content !important;
+  max-width: 100% !important;
+  margin: 0 auto 24px !important;
+  overflow-x: auto !important;
+  padding: 0 2px 2px !important;
+}
+
+#exchange-chart .chart-card .chart-controls select {
+  flex: 0 0 184px !important;
+  width: 184px !important;
+  min-width: 184px !important;
+  height: 40px !important;
+}
+
+#exchange-chart .chart-card .preset-group {
+  flex: 0 0 auto !important;
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+  height: 40px !important;
+}
+
+#exchange-chart .chart-card .preset-group button {
+  flex: 0 0 38px !important;
+  width: 38px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+}
+
+#exchange-chart .chart-card .chart-date-action-group {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#exchange-chart .chart-card .chart-date-action-group input {
+  flex: 0 0 118px !important;
+  width: 118px !important;
+  min-width: 118px !important;
+  height: 40px !important;
+  padding: 0 8px !important;
+}
+
+#exchange-chart .chart-card .chart-date-action-group .primary-button.small {
+  flex: 0 0 auto !important;
+  width: auto !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 14px !important;
+  white-space: nowrap !important;
+}
+
+#exchange-chart .chart-card .canvas-wrap {
+  margin-top: 0 !important;
+}
+
+
+/* === 주연: 환율 그래프 필터 폭 재조정 - 날짜 잘림 방지 === */
+#exchange-chart .chart-card .card-title-row {
+  margin-bottom: 18px !important;
+}
+
+#exchange-chart .chart-card .chart-controls {
+  display: grid !important;
+  grid-template-columns: minmax(136px, 1fr) 34px 34px 38px minmax(138px, 1fr) minmax(138px, 1fr) 82px !important;
+  align-items: center !important;
+  column-gap: 5px !important;
+  row-gap: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 0 24px !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+#exchange-chart .chart-card .chart-controls select,
+#exchange-chart .chart-card .chart-controls input,
+#exchange-chart .chart-card .chart-controls button {
+  box-sizing: border-box !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  border-radius: 12px !important;
+  font-size: 12px !important;
+  line-height: 1 !important;
+}
+
+#exchange-chart .chart-card .chart-controls select {
+  grid-column: 1 !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 30px 0 12px !important;
+}
+
+#exchange-chart .chart-card .preset-group,
+#exchange-chart .chart-card .chart-date-action-group {
+  display: contents !important;
+}
+
+#exchange-chart .chart-card .preset-group button {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+}
+
+#exchange-chart .chart-card .chart-date-action-group input {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 6px !important;
+  font-size: 12px !important;
+  font-weight: 850 !important;
+}
+
+#exchange-chart .chart-card .chart-date-action-group .primary-button.small {
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  white-space: nowrap !important;
+}
+
+#exchange-chart .chart-card .canvas-wrap {
+  margin-top: 0 !important;
+}
+
+@media (max-width: 760px) {
+  #exchange-chart .chart-card .chart-controls {
+    grid-template-columns: minmax(130px, 1fr) 34px 34px 38px !important;
+    row-gap: 8px !important;
+  }
+
+  #exchange-chart .chart-card .chart-date-action-group input:first-of-type {
+    grid-column: 1 / 3 !important;
+  }
+
+  #exchange-chart .chart-card .chart-date-action-group input:last-of-type {
+    grid-column: 3 / 5 !important;
+  }
+
+  #exchange-chart .chart-card .chart-date-action-group .primary-button.small {
+    grid-column: 1 / 5 !important;
+  }
+}
 
 </style>

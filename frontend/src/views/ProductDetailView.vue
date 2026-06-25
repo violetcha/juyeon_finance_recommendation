@@ -179,14 +179,6 @@
 
             <dl class="info-list">
               <div>
-                <dt>은행 코드</dt>
-                <dd>{{ product.bank?.code || '정보 없음' }}</dd>
-              </div>
-              <div>
-                <dt>상품 코드</dt>
-                <dd>{{ product.fin_prdt_cd || '정보 없음' }}</dd>
-              </div>
-              <div>
                 <dt>가입 대상</dt>
                 <dd>{{ product.join_member || '정보 없음' }}</dd>
               </div>
@@ -205,20 +197,12 @@
 
             <dl class="info-list">
               <div>
-                <dt>공시 월</dt>
-                <dd>{{ product.dcls_month || '정보 없음' }}</dd>
-              </div>
-              <div>
                 <dt>공시 시작일</dt>
                 <dd>{{ formatDisclosureDate(product.dcls_strt_day) }}</dd>
               </div>
               <div>
                 <dt>공시 종료일</dt>
                 <dd>{{ formatDisclosureDate(product.dcls_end_day) }}</dd>
-              </div>
-              <div>
-                <dt>제출일</dt>
-                <dd>{{ formatDisclosureDate(product.fin_co_subm_day) }}</dd>
               </div>
             </dl>
           </section>

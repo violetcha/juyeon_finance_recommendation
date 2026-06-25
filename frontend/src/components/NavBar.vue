@@ -22,7 +22,7 @@
           v-for="link in navLinks"
           :key="link.name"
           :to="{ name: link.name }"
-          @click="closeMenu"
+          @click="handleNavClick($event, link)"
         >
           {{ link.label }}
         </RouterLink>
@@ -47,6 +47,10 @@
           </RouterLink>
         </template>
       </div>
+
+      <p v-if="navWarning" class="nav-warning">
+        {{ navWarning }}
+      </p>
     </div>
   </header>
 </template>
@@ -54,17 +58,21 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { logout } from '@/api/accounts'
 import juyeonLogo from '@/assets/branding/juyeon-logo.png'
 
 const router = useRouter()
 const isMenuOpen = ref(false)
 const isLoggedIn = ref(!!localStorage.getItem('token'))
+const navWarning = ref('')
+let warningTimer = null
 
 const navLinks = [
   { name: 'products', label: '예적금' },
-  { name: 'main-bank', label: '주거래은행' },
-  { name: 'recommend', label: '맞춤추천' },
+  { name: 'main-bank', label: '주거래은행', requiresAuth: true },
+  { name: 'recommend', label: '맞춤추천', requiresAuth: true },
   { name: 'exchange', label: '환율' },
+  { name: 'spot-assets', label: '금·은 시세' },
   { name: 'community', label: '커뮤니티' },
 ]
 
@@ -74,6 +82,30 @@ const closeMenu = () => {
 
 const checkLoginStatus = () => {
   isLoggedIn.value = !!localStorage.getItem('token')
+}
+
+const showNavWarning = (message = '로그인 후 이용할 수 있습니다.') => {
+  navWarning.value = message
+
+  if (warningTimer) {
+    window.clearTimeout(warningTimer)
+  }
+
+  warningTimer = window.setTimeout(() => {
+    navWarning.value = ''
+    warningTimer = null
+  }, 2200)
+}
+
+const handleNavClick = (event, link) => {
+  if (link.requiresAuth && !isLoggedIn.value) {
+    event.preventDefault()
+    closeMenu()
+    showNavWarning('로그인 후 이용할 수 있습니다.')
+    return
+  }
+
+  closeMenu()
 }
 
 const clearRecommendationStorage = () => {
@@ -98,25 +130,39 @@ const clearRecommendationStorage = () => {
   })
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
   clearRecommendationStorage()
 
-  localStorage.removeItem('token')
-  isLoggedIn.value = false
-  closeMenu()
-  alert('로그아웃되었습니다.')
-  router.push({ name: 'home' })
+  try {
+    if (localStorage.getItem('token')) {
+      await logout()
+    }
+  } catch (error) {
+    console.error('로그아웃 API 호출 실패:', error)
+  } finally {
+    localStorage.removeItem('token')
+    isLoggedIn.value = false
+    closeMenu()
+    window.dispatchEvent(new Event('logout-success'))
+    router.push({ name: 'login' })
+  }
 }
 
 onMounted(() => {
   checkLoginStatus()
   window.addEventListener('storage', checkLoginStatus)
   window.addEventListener('login-success', checkLoginStatus)
+  window.addEventListener('logout-success', checkLoginStatus)
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('storage', checkLoginStatus)
   window.removeEventListener('login-success', checkLoginStatus)
+  window.removeEventListener('logout-success', checkLoginStatus)
+
+  if (warningTimer) {
+    window.clearTimeout(warningTimer)
+  }
 })
 </script>
 
@@ -132,6 +178,7 @@ onBeforeUnmount(() => {
 }
 
 .nav-inner {
+  position: relative;
   width: min(var(--container-width), calc(100% - 48px));
   height: 100%;
   margin: 0 auto;
@@ -262,6 +309,7 @@ onBeforeUnmount(() => {
   }
 
   .nav-inner {
+  position: relative;
     position: relative;
     min-height: var(--header-height);
     flex-wrap: wrap;
@@ -304,4 +352,21 @@ onBeforeUnmount(() => {
     flex-wrap: wrap;
   }
 }
+
+.nav-warning {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 70;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 14px;
+  background: #fff5f5;
+  color: var(--color-danger);
+  font-size: 13px;
+  font-weight: 950;
+  box-shadow: 0 12px 24px rgba(220, 38, 38, 0.12);
+}
+
 </style>

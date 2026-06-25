@@ -399,7 +399,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { signup, getProfileOptions } from '@/api/accounts'
+import { signup, login, getProfileOptions } from '@/api/accounts'
 import api from '@/api/api'
 
 const router = useRouter()
@@ -419,6 +419,7 @@ const checkEmail = (email) => {
 
 
 const finalMainBankOptions = [
+  '없음',
   '국민은행',
   '신한은행',
   '하나은행',
@@ -760,7 +761,7 @@ const submitSignup = async () => {
   submitting.value = true
 
   try {
-    await signup({
+    const signupResponse = await signup({
       username: form.value.username,
       email: form.value.email,
       password: form.value.password,
@@ -775,12 +776,25 @@ const submitSignup = async () => {
       personal_info_agree: form.value.personal_info_agree,
     })
 
-    router.push({
-      name: 'login',
-      query: {
-        signup: 'success',
-      },
-    })
+    let token = signupResponse.data?.token
+
+    if (!token) {
+      const loginResponse = await login({
+        username: form.value.username,
+        password: form.value.password,
+      })
+
+      token = loginResponse.data?.token
+    }
+
+    if (!token) {
+      throw new Error('회원가입은 완료되었지만 자동 로그인 토큰을 받지 못했습니다.')
+    }
+
+    localStorage.setItem('token', token)
+    window.dispatchEvent(new Event('login-success'))
+
+    router.push({ name: 'home' })
   } catch (error) {
     console.error(error)
     errorMessage.value = getSignupErrorMessage(error)

@@ -4,16 +4,7 @@
     :class="{ dragging: isDragging }"
     :style="floatingStyle"
   >
-    <button
-      v-if="!isOpen"
-      type="button"
-      class="chatbot-open-button"
-      @pointerdown="startClosedPointer"
-    >
-      <img :src="chatbotMascot" alt="주여니" class="chatbot-mascot-button" />
-    </button>
-
-    <section v-else class="chatbot-panel">
+    <section v-if="isOpen" class="chatbot-panel">
       <header class="chatbot-header" @pointerdown="startPanelPointer">
         <div class="chatbot-title-area">
           <span class="header-mascot-ring">
@@ -25,8 +16,8 @@
           </div>
         </div>
 
-        <button type="button" class="close-button" @click.stop="isOpen = false">
-          ×
+        <button type="button" class="close-button" @click.stop="closeChatbot" aria-label="챗봇 닫기">
+          <span aria-hidden="true">×</span>
         </button>
       </header>
 
@@ -73,6 +64,21 @@
         </button>
       </form>
     </section>
+
+    <template v-else>
+      <button
+        type="button"
+        class="chatbot-open-button"
+        @pointerdown="startClosedPointer"
+        aria-label="챗봇 열기"
+      >
+        <img :src="chatbotMascot" alt="주여니" class="chatbot-mascot-button" />
+      </button>
+
+      <p v-if="authWarning" class="chatbot-auth-warning">
+        {{ authWarning }}
+      </p>
+    </template>
   </div>
 </template>
 
@@ -85,6 +91,8 @@ const isOpen = ref(false)
 const inputMessage = ref('')
 const loading = ref(false)
 const messageListRef = ref(null)
+const authWarning = ref('')
+let authWarningTimer = null
 
 const position = reactive({
   x: Math.max(24, window.innerWidth - 116),
@@ -228,12 +236,38 @@ const cancelPointer = () => {
   dragState.moved = false
 }
 
+const showAuthWarning = () => {
+  authWarning.value = '로그인 후 챗봇을 이용할 수 있습니다.'
+
+  if (authWarningTimer) {
+    window.clearTimeout(authWarningTimer)
+  }
+
+  authWarningTimer = window.setTimeout(() => {
+    authWarning.value = ''
+    authWarningTimer = null
+  }, 2200)
+}
+
 const openChatbot = async () => {
+  if (!localStorage.getItem('token')) {
+    showAuthWarning()
+    return
+  }
+
+  authWarning.value = ''
   isOpen.value = true
 
   await nextTick()
   clampPosition()
   await scrollToBottom()
+}
+
+const closeChatbot = async () => {
+  isOpen.value = false
+
+  await nextTick()
+  clampPosition()
 }
 
 const scrollToBottom = async () => {
@@ -311,6 +345,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   cleanupPointerListeners()
+
+  if (authWarningTimer) {
+    window.clearTimeout(authWarningTimer)
+  }
 })
 </script>
 
@@ -370,6 +408,26 @@ onBeforeUnmount(() => {
   display: block;
   pointer-events: none;
   filter: drop-shadow(0 8px 16px rgba(31, 79, 216, 0.14));
+}
+
+
+.chatbot-auth-warning {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 10px);
+  width: max-content;
+  max-width: none;
+  margin: 0;
+  padding: 10px 13px;
+  border: 1px solid #fecaca;
+  border-radius: 14px;
+  background: #fff5f5;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 950;
+  line-height: 1.35;
+  white-space: nowrap;
+  box-shadow: 0 12px 24px rgba(220, 38, 38, 0.12);
 }
 
 .chatbot-panel {
@@ -449,11 +507,20 @@ onBeforeUnmount(() => {
   height: 36px;
   border: 1px solid #d5e0f2;
   border-radius: 50%;
+  padding: 0;
   background: rgba(255, 255, 255, 0.85);
   color: #516179;
-  font-size: 23px;
+  font-family: Arial, sans-serif;
+  font-size: 24px;
+  font-weight: 800;
   line-height: 1;
   cursor: pointer;
+}
+
+.close-button span {
+  display: block;
+  line-height: 1;
+  transform: translateY(-1px);
 }
 
 .close-button:hover {

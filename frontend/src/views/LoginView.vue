@@ -265,7 +265,11 @@ const handleLogin = async () => {
 
     window.dispatchEvent(new Event('login-success'))
 
-    router.push({ name: 'home' })
+    const redirectTarget = typeof route.query.redirect === 'string'
+      ? route.query.redirect
+      : null
+
+    router.push(redirectTarget || { name: 'home' })
   } catch (error) {
     console.error(error)
     errorMessage.value = getErrorMessage(error)

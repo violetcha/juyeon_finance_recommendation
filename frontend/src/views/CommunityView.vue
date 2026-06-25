@@ -102,7 +102,7 @@
               </span>
 
               <div class="post-stats">
-                <span>👍 {{ post.like_count || 0 }}</span>
+                <span>♥ {{ post.like_count || 0 }}</span>
                 <span>💬 {{ post.comment_count || 0 }}</span>
                 <span>👁 {{ post.view_count || 0 }}</span>
               </div>
@@ -156,7 +156,7 @@
             >
               <span class="rank-badge">{{ index + 1 }}</span>
               <strong>{{ post.title }}</strong>
-              <em>👍 {{ post.like_count || 0 }}</em>
+              <em>♥ {{ post.like_count || 0 }}</em>
             </button>
 
             <p v-if="popularPosts.length === 0" class="side-empty">
