@@ -1028,6 +1028,11 @@ const handleWithdraw = async () => {
 
     authStore.logoutUser()
 
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+
+    window.dispatchEvent(new Event('logout-success'))
+
     router.push({ name: 'home' })
   } catch (error) {
     console.error(error)
