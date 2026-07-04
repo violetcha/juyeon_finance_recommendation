@@ -17,8 +17,9 @@
 11. [환경 변수](#11-환경-변수)
 12. [데이터 및 외부 API](#12-데이터-및-외부-api)
 13. [인증 및 권한 정책](#13-인증-및-권한-정책)
-14. [시연 안정화 처리](#14-시연-안정화-처리)
-15. [프로젝트 후기](#15-프로젝트-후기)
+14. [트러블슈팅](#14-트러블슈팅)
+15. [시연 안정화 처리](#15-시연-안정화-처리)
+16. [프로젝트 후기](#16-프로젝트-후기)
 
 <br>
 
@@ -471,7 +472,45 @@ Kakao Maps API를 활용하여 사용자가 선택한 지역과 은행명을 기
 │   └── vite.config.js
 │
 ├── docs/
-│   └── images/
+│   ├── api/
+│   │   └── api_spec.md
+│   ├── architecture/
+│   │   ├── architecture.md
+│   │   └── architecture.png
+│   ├── erd/
+│   │   ├── erd_description.md
+│   │   ├── erd_finance_detail.png
+│   │   ├── erd_overview.png
+│   │   └── erd_service_detail.png
+│   ├── images/
+│   │   ├── 00_team_roles.png
+│   │   ├── 01_main.png
+│   │   ├── 02_mypage.png
+│   │   ├── 03_products_list.png
+│   │   ├── 04_product_detail.png
+│   │   ├── 05_gold_silver.png
+│   │   ├── 06_youtube.png
+│   │   ├── 07_bank_map.png
+│   │   ├── 08_community.png
+│   │   ├── 09_recommend.png
+│   │   └── 10_chatbot.png
+│   ├── requirements/
+│   │   └── requirements.xlsx
+│   ├── wireframe/
+│   │   ├── Bankmap.png
+│   │   ├── chatbot_1.png
+│   │   ├── chatbot_2.png
+│   │   ├── Community_and_Comments.png
+│   │   ├── Exchange_Calculator.png
+│   │   ├── log_in_and_out.png
+│   │   ├── MainBankTest_and_Result.png
+│   │   ├── mainpage.png
+│   │   ├── mypage.png
+│   │   └── Products_Recommendation.png
+│   └── PROJECT_ERD_ARCHITECTURE_SUMMARY.md
+│
+├── presentation/
+│   └── SSAFY 1학기 관통 프로젝트 - 금융 (1).pdf
 │
 └── README.md
 ```
@@ -717,7 +756,19 @@ YouTube Data API를 활용하여 주거래은행 선택, 금융생활, 은행별
 
 <br>
 
-## 14. 시연 안정화 처리
+## 14. 트러블슈팅
+
+프로젝트 진행 중 대표적으로 발생한 문제와 원인, 해결 방안을 정리했습니다.
+
+| 문제 | 원인 | 해결 |
+| --- | --- | --- |
+| 로그인 후 인증이 필요한 API 요청에서 401 Unauthorized 오류 발생 | 프론트 토큰 저장 방식과 백엔드 응답 구조 불일치 | 응답 구조를 통일하고 Axios interceptor로 Authorization 헤더 자동 적용 |
+| 환율 데이터 조회 API가 정상 응답하지 않음 | 외부 환율 API의 요청 URL 형식 변경 | 공식 문서 기준으로 요청 URL과 파라미터 수정 |
+| 금융상품 데이터 저장 과정에서 IntegrityError 발생 | 외부 API 응답에 Null 값이 포함됨 | 모델 필드와 저장 로직에서 Null 값 예외 처리 추가 |
+
+<br>
+
+## 15. 시연 안정화 처리
 
 외부 API를 사용하는 프로젝트 특성상 네트워크 상태나 API 응답 제한에 따라 시연 중 오류가 발생할 수 있습니다. 이를 줄이기 위해 다음과 같이 처리했습니다.
 
@@ -732,7 +783,7 @@ YouTube Data API를 활용하여 주거래은행 선택, 금융생활, 은행별
 
 <br>
 
-## 15. 프로젝트 후기
+## 16. 프로젝트 후기
 
 이번 프로젝트는 단순히 금융 상품을 조회하고 보여주는 서비스를 만드는 것을 넘어, 사용자가 실제로 금융생활을 시작할 때 필요한 기능들을 하나의 흐름으로 연결하는 데 중점을 두었습니다. 예적금 상품 비교, 맞춤 상품 추천, 주거래은행 탐색, 지도 기반 은행 검색, 커뮤니티, 챗봇 기능을 함께 구현하면서 사용자 중심의 금융 서비스 구조를 고민할 수 있었습니다.
 
